@@ -107,7 +107,13 @@ impl Dispatcher for ContentView {
                 for (shape, record) in file {
                     let shape_view =
                         View::with(ShapeView::new(shape, record.into_iter().collect()));
+                    shape_view.set_background_color(cacao::color::Color::SystemRed);
+                    LayoutConstraint::activate(&[
+                        shape_view.width.constraint_equal_to_constant(100.0),
+                        shape_view.height.constraint_equal_to_constant(100.0),
+                    ]);
                     self.content.add_subview(&shape_view);
+
                     self.sub_views.borrow_mut().push(shape_view);
                 }
             }
@@ -287,7 +293,7 @@ impl ListViewDelegate for AttributesListView {
             .dequeue::<AttributeViewRow>(ATTRIBUTE_ROW);
 
         if let Some(view) = &mut view.delegate {
-            let attribute = &self.attributes[row];
+            let attribute = &self.attributes[row - 25];
             view.configure_with(attribute);
         }
 
