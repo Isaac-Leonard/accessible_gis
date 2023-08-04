@@ -104,9 +104,9 @@ impl Dispatcher for ContentView {
             Message::GotFile(path) => {
                 eprint!("Got file");
                 let file = read(path).expect("Could'nt read shape file");
-                for (shape, record) in file {
+                for (i, (shape, record)) in file.into_iter().enumerate() {
                     let shape_view =
-                        View::with(ShapeView::new(shape, record.into_iter().collect()));
+                        View::with(ShapeView::new(shape, record.into_iter().collect(), i));
                     shape_view.set_background_color(cacao::color::Color::SystemRed);
                     self.content.add_subview(&shape_view);
                     self.sub_views.borrow_mut().push(shape_view);
@@ -121,15 +121,17 @@ struct ShapeView {
     label: Label,
     shape: Shape,
     attribute_table: ListView<AttributesListView>,
+    position: usize,
 }
 
 impl ShapeView {
-    fn new(shape: Shape, record: Vec<Attribute>) -> Self {
+    fn new(shape: Shape, record: Vec<Attribute>, position: usize) -> Self {
         ShapeView {
             content: View::new(),
             label: Label::default(),
             shape,
             attribute_table: ListView::with(AttributesListView::new(record)),
+            position,
         }
     }
 }
@@ -149,7 +151,8 @@ impl ViewDelegate for ShapeView {
         LayoutConstraint::activate(&[
             self.content
                 .top
-                .constraint_equal_to(&view.safe_layout_guide.top),
+                .constraint_equal_to(&view.safe_layout_guide.top)
+                .offset(self.position as f64 * 50.),
             self.content
                 .leading
                 .constraint_equal_to(&view.safe_layout_guide.leading),
