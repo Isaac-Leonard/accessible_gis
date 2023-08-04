@@ -108,11 +108,11 @@ impl Dispatcher for ContentView {
                     let shape_view =
                         View::with(ShapeView::new(shape, record.into_iter().collect()));
                     shape_view.set_background_color(cacao::color::Color::SystemRed);
+                    self.content.add_subview(&shape_view);
                     LayoutConstraint::activate(&[
                         shape_view.width.constraint_equal_to_constant(100.0),
                         shape_view.height.constraint_equal_to_constant(100.0),
                     ]);
-                    self.content.add_subview(&shape_view);
 
                     self.sub_views.borrow_mut().push(shape_view);
                 }
@@ -151,7 +151,7 @@ impl ViewDelegate for ShapeView {
         view.add_subview(&self.content);
         // Add layout constraints to be 100% excluding the safe area
         // Do last because it will crash because the view needs to be inside the hierarchy
-        cacao::layout::LayoutConstraint::activate(&[
+        LayoutConstraint::activate(&[
             self.content
                 .top
                 .constraint_equal_to(&view.safe_layout_guide.top),
@@ -262,18 +262,14 @@ impl ListViewDelegate for AttributesListView {
         view.register(ATTRIBUTE_ROW, AttributeViewRow::default);
         view.set_uses_alternating_backgrounds(true);
         view.set_row_height(64.);
+        let constraint = LayoutConstraint::activate(&[
+            view.height.constraint_equal_to_constant(50.0),
+            view.width.constraint_equal_to_constant(50.0),
+        ]);
         self.view = Some(view);
-        self.view
-            .as_ref()
-            .unwrap()
-            .perform_batch_updates(|list_view| {
-                let x = (0..self.attributes.len()).rev().collect::<Vec<_>>();
-                eprintln!("{:?}", x);
-                list_view.insert_rows(&x, RowAnimation::SlideUp)
-            });
     }
 
-    /// The number of todos we currently have.
+    /// The number of attributes we have.
     fn number_of_items(&self) -> usize {
         self.attributes.len()
     }
@@ -293,7 +289,7 @@ impl ListViewDelegate for AttributesListView {
             .dequeue::<AttributeViewRow>(ATTRIBUTE_ROW);
 
         if let Some(view) = &mut view.delegate {
-            let attribute = &self.attributes[row - 25];
+            let attribute = &self.attributes[row];
             view.configure_with(attribute);
         }
 
