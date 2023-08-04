@@ -109,11 +109,6 @@ impl Dispatcher for ContentView {
                         View::with(ShapeView::new(shape, record.into_iter().collect()));
                     shape_view.set_background_color(cacao::color::Color::SystemRed);
                     self.content.add_subview(&shape_view);
-                    LayoutConstraint::activate(&[
-                        shape_view.width.constraint_equal_to_constant(100.0),
-                        shape_view.height.constraint_equal_to_constant(100.0),
-                    ]);
-
                     self.sub_views.borrow_mut().push(shape_view);
                 }
             }
