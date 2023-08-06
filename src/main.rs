@@ -1,5 +1,5 @@
 mod audio;
-use audio::play;
+use audio::{get_audio, AudioMessage};
 use cacao::appkit::window::Window;
 use cacao::appkit::{App, AppDelegate};
 use cacao::button::Button;
@@ -11,12 +11,14 @@ use cacao::notification_center::Dispatcher;
 use cacao::text::Label;
 use cacao::view::{View, ViewController, ViewDelegate};
 use cacao::{button, view};
+
 use geotiff::TIFF;
 use shapefile::dbase::FieldValue;
 use shapefile::{read, Shape};
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::mpsc::Sender;
 
 struct BasicApp {
     window: Window,
@@ -64,6 +66,7 @@ struct ContentView {
     content: view::View,
     button: Option<Button>,
     sub_views: Rc<RefCell<Vec<LayerView>>>,
+    audio: Option<Sender<AudioMessage>>,
 }
 
 enum LayerView {
@@ -81,7 +84,7 @@ impl ViewDelegate for ContentView {
         self.content.add_subview(&btn);
         self.button = Some(btn);
         view.add_subview(&self.content);
-
+        self.audio = Some(get_audio());
         // Add layout constraints to be 100% excluding the safe area
         // Do last because it will crash because the view needs to be inside the hierarchy
         cacao::layout::LayoutConstraint::activate(&[
@@ -128,6 +131,12 @@ impl Dispatcher for ContentView {
     /// Handles a message that came over on the main (UI) thread.
     fn on_ui_message(&self, message: Self::Message) {
         match message {
+            Message::ToggleAudio => self
+                .audio
+                .as_ref()
+                .unwrap()
+                .send(AudioMessage::PlayPause)
+                .unwrap(),
             Message::ClickedSelectFile => FileSelectPanel::new().show(file_selection_handler),
             Message::GotShapeFile(path) => {
                 let file = read(path).expect("Could'nt read shape file");
@@ -239,9 +248,8 @@ impl ViewDelegate for TiffView {
         self.label
             .set_text_color(cacao::color::Color::rgb(255, 255, 255));
         self.content.add_subview(&self.label);
-        self.play_pause_btn.set_action(|| {
-            std::thread::spawn(play);
-        });
+        self.play_pause_btn
+            .set_action(|| dispatch_ui(Message::ToggleAudio));
         self.content.add_subview(&self.play_pause_btn);
         view.add_subview(&self.content);
         // Add layout constraints to be 100% excluding the safe area
@@ -276,6 +284,7 @@ enum Message {
     GotShapeFile(PathBuf),
     GotTiffFile(PathBuf),
     InvalidFile(PathBuf),
+    ToggleAudio,
 }
 
 #[derive(Default, Debug)]
