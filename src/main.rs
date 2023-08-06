@@ -2,6 +2,7 @@ use cacao::appkit::window::Window;
 use cacao::appkit::{App, AppDelegate};
 use cacao::button::Button;
 use cacao::filesystem::FileSelectPanel;
+use cacao::foundation::NSURL;
 use cacao::layout::{Layout, LayoutConstraint};
 use cacao::listview::{ListView, ListViewDelegate, RowAnimation};
 use cacao::notification_center::Dispatcher;
@@ -59,7 +60,11 @@ impl AppDelegate for BasicApp {
 struct ContentView {
     content: view::View,
     button: Option<Button>,
-    sub_views: Rc<RefCell<Vec<View<ShapeView>>>>,
+    sub_views: Rc<RefCell<Vec<LayerView>>>,
+}
+
+enum LayerView {
+    Shape(View<ShapeView>),
 }
 
 impl ViewDelegate for ContentView {
@@ -92,26 +97,53 @@ impl ViewDelegate for ContentView {
     }
 }
 
+fn file_selection_handler(paths: Vec<NSURL>) {
+    if paths.is_empty() {
+        // User canceled
+        return;
+    }
+    let path = paths[0].pathbuf();
+    // Simplistic check for shape file
+    if path.is_dir() {
+        dispatch_ui(Message::InvalidFile(path));
+        return;
+    }
+    let path_as_str = path.to_str().expect("non-Utf8 file path found");
+    if path_as_str.ends_with(".shp") {
+        dispatch_ui(Message::GotShapeFile(path))
+    } else if path_as_str.ends_with(".tif") {
+        dispatch_ui(Message::GotTiffFile(path))
+    } else {
+        dispatch_ui(Message::InvalidFile(path));
+    }
+}
+
 impl Dispatcher for ContentView {
     type Message = Message;
 
     /// Handles a message that came over on the main (UI) thread.
     fn on_ui_message(&self, message: Self::Message) {
         match message {
-            Message::ClickedSelectFile => {
-                FileSelectPanel::new().show(|path| dispatch_ui(Message::GotFile(path[0].pathbuf())))
-            }
-            Message::GotFile(path) => {
-                eprint!("Got file");
+            Message::ClickedSelectFile => FileSelectPanel::new().show(file_selection_handler),
+            Message::GotShapeFile(path) => {
                 let file = read(path).expect("Could'nt read shape file");
                 for (i, (shape, record)) in file.into_iter().enumerate() {
                     let shape_view =
                         View::with(ShapeView::new(shape, record.into_iter().collect(), i));
                     shape_view.set_background_color(cacao::color::Color::SystemRed);
                     self.content.add_subview(&shape_view);
-                    self.sub_views.borrow_mut().push(shape_view);
+                    self.sub_views
+                        .borrow_mut()
+                        .push(LayerView::Shape(shape_view));
                 }
             }
+            // Cant display for now
+            Message::GotTiffFile(path) => {
+                let tiff =
+                    geotiff::TIFF::open(path).expect("Something went wrong reading the tiff file");
+            }
+            // Don't do anything for now
+            Message::InvalidFile(_) => {}
         }
     }
 }
@@ -175,7 +207,9 @@ fn dispatch_ui(message: Message) {
 #[derive(Clone, Debug)]
 enum Message {
     ClickedSelectFile,
-    GotFile(PathBuf),
+    GotShapeFile(PathBuf),
+    GotTiffFile(PathBuf),
+    InvalidFile(PathBuf),
 }
 
 #[derive(Default, Debug)]
@@ -260,7 +294,7 @@ impl ListViewDelegate for AttributesListView {
         view.register(ATTRIBUTE_ROW, AttributeViewRow::default);
         view.set_uses_alternating_backgrounds(true);
         view.set_row_height(64.);
-        let constraint = LayoutConstraint::activate(&[
+        LayoutConstraint::activate(&[
             view.height.constraint_equal_to_constant(50.0),
             view.width.constraint_equal_to_constant(50.0),
         ]);

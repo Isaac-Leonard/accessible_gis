@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 cacao = "0.3.2"
+geotiff = { git = "https://github.com/Isaac-Leonard/geotiff", rev = "54836e37a302845a0399bab4d7236b6b743ae331"}
 shapefile = "0.4.0"
