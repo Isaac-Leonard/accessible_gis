@@ -9,6 +9,7 @@ use cacao::notification_center::Dispatcher;
 use cacao::text::Label;
 use cacao::view::{View, ViewController, ViewDelegate};
 use cacao::{button, view};
+use geotiff::TIFF;
 use shapefile::dbase::FieldValue;
 use shapefile::{read, Shape};
 use std::cell::RefCell;
@@ -65,6 +66,7 @@ struct ContentView {
 
 enum LayerView {
     Shape(View<ShapeView>),
+    Tiff(View<TiffView>),
 }
 
 impl ViewDelegate for ContentView {
@@ -127,9 +129,12 @@ impl Dispatcher for ContentView {
             Message::ClickedSelectFile => FileSelectPanel::new().show(file_selection_handler),
             Message::GotShapeFile(path) => {
                 let file = read(path).expect("Could'nt read shape file");
-                for (i, (shape, record)) in file.into_iter().enumerate() {
-                    let shape_view =
-                        View::with(ShapeView::new(shape, record.into_iter().collect(), i));
+                for (shape, record) in file {
+                    let shape_view = View::with(ShapeView::new(
+                        shape,
+                        record.into_iter().collect(),
+                        self.sub_views.borrow_mut().len(),
+                    ));
                     shape_view.set_background_color(cacao::color::Color::SystemRed);
                     self.content.add_subview(&shape_view);
                     self.sub_views
@@ -137,10 +142,14 @@ impl Dispatcher for ContentView {
                         .push(LayerView::Shape(shape_view));
                 }
             }
-            // Cant display for now
+            // Basic display for now
             Message::GotTiffFile(path) => {
                 let tiff =
                     geotiff::TIFF::open(path).expect("Something went wrong reading the tiff file");
+                let tiff_view = View::with(TiffView::new(tiff, self.sub_views.borrow_mut().len()));
+                tiff_view.set_background_color(cacao::color::Color::SystemRed);
+                self.content.add_subview(&tiff_view);
+                self.sub_views.borrow_mut().push(LayerView::Tiff(tiff_view));
             }
             // Don't do anything for now
             Message::InvalidFile(_) => {}
@@ -177,6 +186,58 @@ impl ViewDelegate for ShapeView {
         self.label
             .set_text_color(cacao::color::Color::rgb(255, 255, 255));
         self.content.add_subview(&self.label);
+        view.add_subview(&self.content);
+        // Add layout constraints to be 100% excluding the safe area
+        // Do last because it will crash because the view needs to be inside the hierarchy
+        LayoutConstraint::activate(&[
+            self.content
+                .top
+                .constraint_equal_to(&view.safe_layout_guide.top)
+                .offset(self.position as f64 * 50.),
+            self.content
+                .leading
+                .constraint_equal_to(&view.safe_layout_guide.leading),
+            self.content
+                .trailing
+                .constraint_equal_to(&view.safe_layout_guide.trailing),
+            self.content
+                .bottom
+                .constraint_equal_to(&view.safe_layout_guide.bottom),
+        ])
+    }
+}
+
+struct TiffView {
+    pub content: view::View,
+    label: Label,
+    tiff: Box<TIFF>,
+    position: usize,
+    play_pause_btn: Button,
+    playing: bool,
+}
+
+impl TiffView {
+    fn new(tiff: Box<TIFF>, position: usize) -> Self {
+        TiffView {
+            content: View::new(),
+            label: Label::default(),
+            tiff,
+            position,
+            play_pause_btn: Button::new("play"),
+            playing: false,
+        }
+    }
+}
+
+impl ViewDelegate for TiffView {
+    const NAME: &'static str = "TiffView";
+
+    fn did_load(&mut self, view: View) {
+        self.label.set_text(format!("Tiff file"));
+        self.label
+            .set_text_color(cacao::color::Color::rgb(255, 255, 255));
+        self.content.add_subview(&self.label);
+        self.content.add_subview(&self.play_pause_btn);
         view.add_subview(&self.content);
         // Add layout constraints to be 100% excluding the safe area
         // Do last because it will crash because the view needs to be inside the hierarchy
