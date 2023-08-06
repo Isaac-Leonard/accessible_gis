@@ -1,3 +1,5 @@
+mod audio;
+use audio::play;
 use cacao::appkit::window::Window;
 use cacao::appkit::{App, AppDelegate};
 use cacao::button::Button;
@@ -237,6 +239,9 @@ impl ViewDelegate for TiffView {
         self.label
             .set_text_color(cacao::color::Color::rgb(255, 255, 255));
         self.content.add_subview(&self.label);
+        self.play_pause_btn.set_action(|| {
+            std::thread::spawn(play);
+        });
         self.content.add_subview(&self.play_pause_btn);
         view.add_subview(&self.content);
         // Add layout constraints to be 100% excluding the safe area
