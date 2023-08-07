@@ -296,6 +296,7 @@ impl ViewDelegate for TiffView {
         connect_button!(self.halve_width_btn, TiffViewerrMessage::HalveWidth);
 
         self.content.add_subview(&self.cell_value_label);
+        self.content.add_subview(&self.positional_information_label);
         self.content.add_subview(&self.move_north_btn);
         self.update_value();
         view.add_subview(&self.content);
@@ -326,6 +327,10 @@ impl TiffView {
             calc_average_value(self.tiff.as_ref(), data.x, data.y, data.width, data.height)
                 .to_string(),
         );
+        self.positional_information_label.set_text(format!(
+            "x: {}, y: {}, width: {}, height: {}",
+            data.x, data.y, data.width, data.height
+        ));
     }
 }
 #[derive(Debug, Clone, Copy)]
