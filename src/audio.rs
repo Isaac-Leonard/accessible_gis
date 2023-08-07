@@ -24,7 +24,7 @@ pub fn get_audio() -> mpsc::Sender<AudioMessage> {
         stream.pause();
         let mut playing = false;
         loop {
-            let message = rx.recv().unwrap();
+            let _message = rx.recv().unwrap();
             if playing {
                 stream.pause();
             } else {
