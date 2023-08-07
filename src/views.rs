@@ -120,6 +120,7 @@ impl Dispatcher for ContentView {
             }
             // Don't do anything for now
             Message::InvalidFile(_) => {}
+            Message::TiffViewerAction(_action) => {}
         }
     }
 }
@@ -180,7 +181,21 @@ pub struct TiffView {
     tiff: Box<TIFF>,
     position: usize,
     play_pause_btn: Button,
+    move_west_btn: Button,
+    move_east_btn: Button,
+    move_north_btn: Button,
+    move_south_btn: Button,
+    double_width_btn: Button,
+    double_height_btn: Button,
+    halve_width_btn: Button,
+    halve_height_btn: Button,
     playing: bool,
+    x: usize,
+    y: usize,
+    width: usize,
+    height: usize,
+    cell_value_label: Label,
+    positional_information_label: Label,
 }
 
 impl TiffView {
@@ -188,10 +203,24 @@ impl TiffView {
         TiffView {
             content: View::new(),
             label: Label::default(),
-            tiff,
             position,
             play_pause_btn: Button::new("play"),
             playing: false,
+            move_east_btn: Button::new("East"),
+            move_west_btn: Button::new("West"),
+            move_north_btn: Button::new("North"),
+            move_south_btn: Button::new("South"),
+            double_width_btn: Button::new("Double width"),
+            halve_width_btn: Button::new("Half width"),
+            double_height_btn: Button::new("Double height"),
+            halve_height_btn: Button::new("Halve height"),
+            x: 0,
+            y: 0,
+            width: tiff.image_data[0].len(),
+            height: tiff.image_data.len(),
+            positional_information_label: Label::new(),
+            cell_value_label: Label::new(),
+            tiff,
         }
     }
 }
@@ -200,6 +229,13 @@ impl ViewDelegate for TiffView {
     const NAME: &'static str = "TiffView";
 
     fn did_load(&mut self, view: View) {
+        macro_rules! connect_button {
+            ($btn:expr, $action:expr) => {{
+                $btn.set_action(|| dispatch_ui(Message::TiffViewerAction($action)));
+                self.content.add_subview(&$btn);
+            }};
+        }
+
         self.label.set_text("Tiff file");
         self.label
             .set_text_color(cacao::color::Color::rgb(255, 255, 255));
@@ -207,6 +243,20 @@ impl ViewDelegate for TiffView {
         self.play_pause_btn
             .set_action(|| dispatch_ui(Message::ToggleAudio));
         self.content.add_subview(&self.play_pause_btn);
+        connect_button!(self.move_north_btn, TiffViewerrMessage::MoveNorth);
+        connect_button!(self.move_east_btn, TiffViewerrMessage::MoveEast);
+        connect_button!(self.move_south_btn, TiffViewerrMessage::MoveSouth);
+        connect_button!(self.move_west_btn, TiffViewerrMessage::MoveWest);
+        connect_button!(self.double_height_btn, TiffViewerrMessage::DoubleHeight);
+        connect_button!(self.halve_height_btn, TiffViewerrMessage::HalveHeight);
+        connect_button!(self.double_width_btn, TiffViewerrMessage::DoubleWidth);
+        connect_button!(self.halve_width_btn, TiffViewerrMessage::HalveWidth);
+        self.cell_value_label.set_text(
+            calc_average_value(self.tiff.as_ref(), self.x, self.y, self.width, self.height)
+                .to_string(),
+        );
+        self.content.add_subview(&self.cell_value_label);
+        self.content.add_subview(&self.move_north_btn);
         view.add_subview(&self.content);
         // Add layout constraints to be 100% excluding the safe area
         // Do last because it will crash because the view needs to be inside the hierarchy
@@ -228,6 +278,18 @@ impl ViewDelegate for TiffView {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum TiffViewerrMessage {
+    MoveNorth,
+    MoveEast,
+    MoveSouth,
+    MoveWest,
+    DoubleHeight,
+    DoubleWidth,
+    HalveHeight,
+    HalveWidth,
+}
+
 #[derive(Clone, Debug)]
 pub enum Message {
     ClickedSelectFile,
@@ -235,6 +297,7 @@ pub enum Message {
     GotTiffFile(PathBuf),
     InvalidFile(PathBuf),
     ToggleAudio,
+    TiffViewerAction(TiffViewerrMessage),
 }
 
 #[derive(Default, Debug)]
@@ -352,4 +415,14 @@ impl ListViewDelegate for AttributesListView {
 
         view.into_row()
     }
+}
+
+fn calc_average_value(tiff: &TIFF, x: usize, y: usize, width: usize, height: usize) -> usize {
+    let mut val = 0;
+    for j in x..(x + width) {
+        for i in y..(y + height) {
+            val += tiff.image_data[i][j][0];
+        }
+    }
+    val / width / height
 }

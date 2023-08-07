@@ -6,17 +6,8 @@ use cacao::view::ViewController;
 use crate::views::{ContentView, Message};
 
 pub struct BasicApp {
-    window: Window,
-    content_view: ViewController<ContentView>,
-}
-
-impl Default for BasicApp {
-    fn default() -> Self {
-        Self {
-            window: Window::default(),
-            content_view: ViewController::new(ContentView::default()),
-        }
-    }
+    pub window: Window,
+    pub content_view: ViewController<ContentView>,
 }
 
 impl Dispatcher for BasicApp {
@@ -45,6 +36,7 @@ impl AppDelegate for BasicApp {
         true
     }
 }
+
 /// Dispatch a message on a background thread.
 pub fn dispatch_ui(message: Message) {
     println!("Dispatching UI message: {:?}", message);
