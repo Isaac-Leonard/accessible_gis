@@ -224,14 +224,40 @@ impl TiffView {
     fn on_message(&self, message: Message) {
         match message {
             Message::TiffViewerAction(action) => {
-                match action {
-                    TiffViewerrMessage::HalveWidth => {
-                        eprintln!("Halving width");
-                        let mut data = self.data.borrow_mut();
-                        data.width = data.width / 2;
+                // Must keep the mutable borrow of data in its own block so its released before calling update_value
+                {
+                    let mut data = self.data.borrow_mut();
+                    match action {
+                        TiffViewerrMessage::MoveNorth => data.y += data.height,
+                        TiffViewerrMessage::MoveEast => data.x += data.width,
+                        TiffViewerrMessage::MoveSouth => {
+                            data.y = data.y.checked_sub(data.height).unwrap_or(0)
+                        }
+                        TiffViewerrMessage::MoveWest => {
+                            data.x = data.x.checked_sub(data.width).unwrap_or(0)
+                        }
+
+                        TiffViewerrMessage::HalveWidth => {
+                            data.width = data.width / 2;
+                        }
+                        TiffViewerrMessage::DoubleWidth => {
+                            data.width = data.width * 2;
+                        }
+                        TiffViewerrMessage::HalveHeight => {
+                            data.height = data.height / 2;
+                        }
+                        TiffViewerrMessage::DoubleHeight => {
+                            data.height = data.height * 2;
+                        }
+                        _ => {}
+                    };
+                    if data.width == 0 {
+                        data.width = 1
                     }
-                    _ => {}
-                };
+                    if data.height == 0 {
+                        data.height = 1
+                    }
+                }
                 self.update_value();
             }
             _ => {}
