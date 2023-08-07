@@ -30,6 +30,19 @@ pub enum LayerView {
     Tiff(View<TiffView>),
 }
 
+impl LayerView {
+    fn on_message(&self, message: Message) {
+        match self {
+            Self::Shape(_shape_view) => {}
+            Self::Tiff(tiff_view) => {
+                if let Some(ref view) = tiff_view.delegate {
+                    view.as_ref().on_message(message)
+                }
+            }
+        }
+    }
+}
+
 impl ViewDelegate for ContentView {
     const NAME: &'static str = "SafeAreaView";
 
@@ -120,7 +133,12 @@ impl Dispatcher for ContentView {
             }
             // Don't do anything for now
             Message::InvalidFile(_) => {}
-            Message::TiffViewerAction(_action) => {}
+            Message::TiffViewerAction(action) => {
+                let views = self.sub_views.borrow();
+                views
+                    .iter()
+                    .for_each(|view| view.on_message(Message::TiffViewerAction(action)))
+            }
         }
     }
 }
@@ -175,6 +193,13 @@ impl ViewDelegate for ShapeView {
     }
 }
 
+pub struct TiffViewerData {
+    x: usize,
+    y: usize,
+    width: usize,
+    height: usize,
+}
+
 pub struct TiffView {
     pub content: view::View,
     label: Label,
@@ -190,12 +215,28 @@ pub struct TiffView {
     halve_width_btn: Button,
     halve_height_btn: Button,
     playing: bool,
-    x: usize,
-    y: usize,
-    width: usize,
-    height: usize,
     cell_value_label: Label,
     positional_information_label: Label,
+    data: Rc<RefCell<TiffViewerData>>,
+}
+
+impl TiffView {
+    fn on_message(&self, message: Message) {
+        match message {
+            Message::TiffViewerAction(action) => {
+                match action {
+                    TiffViewerrMessage::HalveWidth => {
+                        eprintln!("Halving width");
+                        let mut data = self.data.borrow_mut();
+                        data.width = data.width / 2;
+                    }
+                    _ => {}
+                };
+                self.update_value();
+            }
+            _ => {}
+        }
+    }
 }
 
 impl TiffView {
@@ -214,10 +255,12 @@ impl TiffView {
             halve_width_btn: Button::new("Half width"),
             double_height_btn: Button::new("Double height"),
             halve_height_btn: Button::new("Halve height"),
-            x: 0,
-            y: 0,
-            width: tiff.image_data[0].len(),
-            height: tiff.image_data.len(),
+            data: Rc::new(RefCell::new(TiffViewerData {
+                x: 0,
+                y: 0,
+                width: tiff.image_data[0].len(),
+                height: tiff.image_data.len(),
+            })),
             positional_information_label: Label::new(),
             cell_value_label: Label::new(),
             tiff,
@@ -251,12 +294,10 @@ impl ViewDelegate for TiffView {
         connect_button!(self.halve_height_btn, TiffViewerrMessage::HalveHeight);
         connect_button!(self.double_width_btn, TiffViewerrMessage::DoubleWidth);
         connect_button!(self.halve_width_btn, TiffViewerrMessage::HalveWidth);
-        self.cell_value_label.set_text(
-            calc_average_value(self.tiff.as_ref(), self.x, self.y, self.width, self.height)
-                .to_string(),
-        );
+
         self.content.add_subview(&self.cell_value_label);
         self.content.add_subview(&self.move_north_btn);
+        self.update_value();
         view.add_subview(&self.content);
         // Add layout constraints to be 100% excluding the safe area
         // Do last because it will crash because the view needs to be inside the hierarchy
@@ -278,6 +319,15 @@ impl ViewDelegate for TiffView {
     }
 }
 
+impl TiffView {
+    fn update_value(&self) {
+        let data = self.data.borrow();
+        self.cell_value_label.set_text(
+            calc_average_value(self.tiff.as_ref(), data.x, data.y, data.width, data.height)
+                .to_string(),
+        );
+    }
+}
 #[derive(Debug, Clone, Copy)]
 pub enum TiffViewerrMessage {
     MoveNorth,
