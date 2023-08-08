@@ -422,7 +422,7 @@ dependencies = [
 [[package]]
 name = "geotiff"
 version = "0.0.1"
-source = "git+https://github.com/Isaac-Leonard/geotiff?rev=54836e37a302845a0399bab4d7236b6b743ae331#54836e37a302845a0399bab4d7236b6b743ae331"
+source = "git+https://github.com/Isaac-Leonard/geotiff?rev=917970e1e406b14cc1532044b041e124ffc69ddf#917970e1e406b14cc1532044b041e124ffc69ddf"
 dependencies = [
  "byteorder",
  "enum_primitive",
