@@ -244,6 +244,7 @@ pub struct TiffView {
     cell_value_label: Label,
     positional_information_label: Label,
     stats_label: Label,
+    geo_keys_label: Label,
     data: Rc<RefCell<TiffViewerData>>,
 }
 
@@ -318,6 +319,7 @@ impl TiffView {
             cell_value_label: Label::new(),
             stats_label: Label::new(),
             tiff,
+            geo_keys_label: Label::new(),
         }
     }
 }
@@ -351,8 +353,18 @@ impl ViewDelegate for TiffView {
 
         self.content.add_subview(&self.cell_value_label);
         self.content.add_subview(&self.positional_information_label);
-        self.content.add_subview(&self.move_north_btn);
         self.content.add_subview(&self.stats_label);
+        self.geo_keys_label.set_text(format!(
+            "Geo keys:\n{}",
+            self.tiff.ifds[0]
+                .get_geo_keys()
+                .unwrap()
+                .iter()
+                .map(|x| format!("{:?}", x))
+                .collect::<Vec<_>>()
+                .join("\n"),
+        ));
+        self.content.add_subview(&self.geo_keys_label);
         self.update_value();
         view.add_subview(&self.content);
         // Add layout constraints to be 100% excluding the safe area
@@ -390,6 +402,7 @@ impl TiffView {
             .set_text(format!("min: {}, max: {}", data.stats.min, data.stats.max))
     }
 }
+
 #[derive(Debug, Clone, Copy)]
 pub enum TiffViewerrMessage {
     MoveNorth,
