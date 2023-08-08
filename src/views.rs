@@ -193,11 +193,37 @@ impl ViewDelegate for ShapeView {
     }
 }
 
+pub struct TiffStats {
+    pub max: usize,
+    pub min: usize,
+}
+
+impl TiffStats {
+    fn new(tiff: &TIFF) -> Self {
+        let mut min = 0;
+        let mut max = 0;
+        for row in tiff.image_data.iter() {
+            for row in row {
+                for v in row {
+                    if *v < min {
+                        min = *v
+                    };
+                    if *v > max {
+                        max = *v
+                    }
+                }
+            }
+        }
+        Self { min, max }
+    }
+}
+
 pub struct TiffViewerData {
     x: usize,
     y: usize,
     width: usize,
     height: usize,
+    stats: TiffStats,
 }
 
 pub struct TiffView {
@@ -217,6 +243,7 @@ pub struct TiffView {
     playing: bool,
     cell_value_label: Label,
     positional_information_label: Label,
+    stats_label: Label,
     data: Rc<RefCell<TiffViewerData>>,
 }
 
@@ -249,7 +276,6 @@ impl TiffView {
                         TiffViewerrMessage::DoubleHeight => {
                             data.height = data.height * 2;
                         }
-                        _ => {}
                     };
                     if data.width == 0 {
                         data.width = 1
@@ -282,6 +308,7 @@ impl TiffView {
             double_height_btn: Button::new("Double height"),
             halve_height_btn: Button::new("Halve height"),
             data: Rc::new(RefCell::new(TiffViewerData {
+                stats: TiffStats::new(tiff.as_ref()),
                 x: 0,
                 y: 0,
                 width: tiff.image_data[0].len(),
@@ -289,6 +316,7 @@ impl TiffView {
             })),
             positional_information_label: Label::new(),
             cell_value_label: Label::new(),
+            stats_label: Label::new(),
             tiff,
         }
     }
@@ -324,6 +352,7 @@ impl ViewDelegate for TiffView {
         self.content.add_subview(&self.cell_value_label);
         self.content.add_subview(&self.positional_information_label);
         self.content.add_subview(&self.move_north_btn);
+        self.content.add_subview(&self.stats_label);
         self.update_value();
         view.add_subview(&self.content);
         // Add layout constraints to be 100% excluding the safe area
@@ -357,6 +386,8 @@ impl TiffView {
             "x: {}, y: {}, width: {}, height: {}",
             data.x, data.y, data.width, data.height
         ));
+        self.stats_label
+            .set_text(format!("min: {}, max: {}", data.stats.min, data.stats.max))
     }
 }
 #[derive(Debug, Clone, Copy)]
