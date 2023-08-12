@@ -7,7 +7,9 @@ use cacao::text::Label;
 use cacao::view::{View, ViewDelegate};
 use cacao::{button, button::Button, view};
 
-use geotiff::TIFF;
+use gdal::raster::StatisticsAll;
+use gdal::vector::LayerAccess;
+use gdal::Dataset;
 use shapefile::dbase::FieldValue;
 use shapefile::{read, Shape};
 use std::cell::RefCell;
@@ -124,9 +126,10 @@ impl Dispatcher for ContentView {
             }
             // Basic display for now
             Message::GotTiffFile(path) => {
-                let tiff =
-                    geotiff::TIFF::open(path).expect("Something went wrong reading the tiff file");
-                let tiff_view = View::with(TiffView::new(tiff, self.sub_views.borrow_mut().len()));
+                let dataset =
+                    Dataset::open(path).expect("Something went wrong reading the tiff file");
+                let tiff_view =
+                    View::with(TiffView::new(dataset, self.sub_views.borrow_mut().len()));
                 tiff_view.set_background_color(cacao::color::Color::SystemRed);
                 self.content.add_subview(&tiff_view);
                 self.sub_views.borrow_mut().push(LayerView::Tiff(tiff_view));
@@ -193,43 +196,18 @@ impl ViewDelegate for ShapeView {
     }
 }
 
-pub struct TiffStats {
-    pub max: usize,
-    pub min: usize,
-}
-
-impl TiffStats {
-    fn new(tiff: &TIFF) -> Self {
-        let mut min = 0;
-        let mut max = 0;
-        for row in tiff.image_data.iter() {
-            for row in row {
-                for v in row {
-                    if *v < min {
-                        min = *v
-                    };
-                    if *v > max {
-                        max = *v
-                    }
-                }
-            }
-        }
-        Self { min, max }
-    }
-}
-
 pub struct TiffViewerData {
     x: usize,
     y: usize,
     width: usize,
     height: usize,
-    stats: TiffStats,
+    stats: StatisticsAll,
 }
 
 pub struct TiffView {
     pub content: view::View,
     label: Label,
-    tiff: Box<TIFF>,
+    dataset: Dataset,
     position: usize,
     play_pause_btn: Button,
     move_west_btn: Button,
@@ -293,7 +271,7 @@ impl TiffView {
 }
 
 impl TiffView {
-    fn new(tiff: Box<TIFF>, position: usize) -> Self {
+    fn new(dataset: Dataset, position: usize) -> Self {
         TiffView {
             content: View::new(),
             label: Label::default(),
@@ -309,16 +287,21 @@ impl TiffView {
             double_height_btn: Button::new("Double height"),
             halve_height_btn: Button::new("Halve height"),
             data: Rc::new(RefCell::new(TiffViewerData {
-                stats: TiffStats::new(tiff.as_ref()),
+                stats: dataset
+                    .rasterband(1)
+                    .unwrap()
+                    .get_statistics(true, true)
+                    .unwrap()
+                    .unwrap(),
                 x: 0,
                 y: 0,
-                width: tiff.image_data[0].len(),
-                height: tiff.image_data.len(),
+                width: dataset.raster_size().0,
+                height: dataset.raster_size().1,
             })),
             positional_information_label: Label::new(),
             cell_value_label: Label::new(),
             stats_label: Label::new(),
-            tiff,
+            dataset,
             geo_keys_label: Label::new(),
         }
     }
@@ -354,16 +337,6 @@ impl ViewDelegate for TiffView {
         self.content.add_subview(&self.cell_value_label);
         self.content.add_subview(&self.positional_information_label);
         self.content.add_subview(&self.stats_label);
-        self.geo_keys_label.set_text(format!(
-            "Geo keys:\n{}",
-            self.tiff.ifds[0]
-                .get_geo_keys()
-                .unwrap()
-                .iter()
-                .map(|x| format!("{:?}", x))
-                .collect::<Vec<_>>()
-                .join("\n"),
-        ));
         self.content.add_subview(&self.geo_keys_label);
         self.update_value();
         view.add_subview(&self.content);
@@ -390,10 +363,7 @@ impl ViewDelegate for TiffView {
 impl TiffView {
     fn update_value(&self) {
         let data = self.data.borrow();
-        self.cell_value_label.set_text(
-            calc_average_value(self.tiff.as_ref(), data.x, data.y, data.width, data.height)
-                .to_string(),
-        );
+        self.cell_value_label.set_text(data.stats.mean.to_string());
         self.positional_information_label.set_text(format!(
             "x: {}, y: {}, width: {}, height: {}",
             data.x, data.y, data.width, data.height
@@ -540,14 +510,4 @@ impl ListViewDelegate for AttributesListView {
 
         view.into_row()
     }
-}
-
-fn calc_average_value(tiff: &TIFF, x: usize, y: usize, width: usize, height: usize) -> usize {
-    let mut val = 0;
-    for j in x..(x + width) {
-        for i in y..(y + height) {
-            val += tiff.image_data[i][j][0];
-        }
-    }
-    val / width / height
 }

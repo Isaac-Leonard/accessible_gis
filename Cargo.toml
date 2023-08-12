@@ -11,5 +11,5 @@ assert_no_alloc = "1.1.2"
 cacao = "0.3.2"
 cpal = "0.15.2"
 fundsp = "0.15.0"
-geotiff = { git = "https://github.com/Isaac-Leonard/geotiff", rev = "5ea5aace2a61fbcf76301e47ce6cd716999d156b"}
+gdal = {version = "0.15.0", features = ["array", "bindgen", "ndarray"]}
 shapefile = "0.4.0"
