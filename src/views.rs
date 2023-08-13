@@ -8,10 +8,8 @@ use cacao::view::{View, ViewDelegate};
 use cacao::{button, button::Button, view};
 
 use gdal::raster::StatisticsAll;
-use gdal::vector::LayerAccess;
+use gdal::vector::{FieldValue, Geometry, LayerAccess};
 use gdal::Dataset;
-use shapefile::dbase::FieldValue;
-use shapefile::{read, Shape};
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -110,11 +108,15 @@ impl Dispatcher for ContentView {
                 .unwrap(),
             Message::ClickedSelectFile => FileSelectPanel::new().show(file_selection_handler),
             Message::GotShapeFile(path) => {
-                let file = read(path).expect("Could'nt read shape file");
-                for (shape, record) in file {
+                let file = Dataset::open(path).expect("Could'nt read file");
+                let mut layer = file.layer(0).unwrap();
+                let features = layer.features();
+                for feature in features {
+                    let shape = feature.geometry().unwrap();
+                    let record = feature.fields();
                     let shape_view = View::with(ShapeView::new(
-                        shape,
-                        record.into_iter().collect(),
+                        shape.clone(),
+                        record.collect(),
                         self.sub_views.borrow_mut().len(),
                     ));
                     shape_view.set_background_color(cacao::color::Color::SystemRed);
@@ -149,13 +151,13 @@ impl Dispatcher for ContentView {
 pub struct ShapeView {
     pub content: view::View,
     label: Label,
-    shape: Shape,
+    shape: Geometry,
     attribute_table: ListView<AttributesListView>,
     position: usize,
 }
 
 impl ShapeView {
-    fn new(shape: Shape, record: Vec<Attribute>, position: usize) -> Self {
+    fn new(shape: Geometry, record: Vec<Attribute>, position: usize) -> Self {
         ShapeView {
             content: View::new(),
             label: Label::default(),
@@ -171,7 +173,8 @@ impl ViewDelegate for ShapeView {
 
     fn did_load(&mut self, view: View) {
         self.content.add_subview(&self.attribute_table);
-        self.label.set_text(format!("{:?}", self.shape.shapetype()));
+        self.label
+            .set_text(format!("{:?}", self.shape.geometry_name()));
         self.label
             .set_text_color(cacao::color::Color::rgb(255, 255, 255));
         self.content.add_subview(&self.label);
@@ -401,6 +404,8 @@ pub struct AttributeViewRow {
     pub value: Label,
 }
 
+type Attribute = (String, Option<FieldValue>);
+
 impl AttributeViewRow {
     /// Called when this view is being presented, and configures itself     pub
     fn configure_with(&mut self, (key, val): &Attribute) {
@@ -450,17 +455,15 @@ impl ViewDelegate for AttributeViewRow {
 
 /// An identifier for the cell(s) we dequeue.
 const ATTRIBUTE_ROW: &str = "AttributeViewRowCell";
-type Attribute = (String, FieldValue);
 
 /// The list view for attributes
-#[derive(Debug)]
 pub struct AttributesListView {
     view: Option<ListView>,
     attributes: Vec<Attribute>,
 }
 
 impl AttributesListView {
-    fn new(attributes: Vec<Attribute>) -> Self {
+    fn new<'a>(attributes: Vec<Attribute>) -> Self {
         Self {
             view: None,
             attributes,
@@ -468,7 +471,7 @@ impl AttributesListView {
     }
 }
 
-impl ListViewDelegate for AttributesListView {
+impl<'a> ListViewDelegate for AttributesListView {
     const NAME: &'static str = "AttributesListView";
 
     /// Essential configuration and retaining of a `ListView` handle to do updates later on.
@@ -505,7 +508,7 @@ impl ListViewDelegate for AttributesListView {
 
         if let Some(view) = &mut view.delegate {
             let attribute = &self.attributes[row];
-            view.configure_with(attribute);
+            view.configure_with(&attribute);
         }
 
         view.into_row()
