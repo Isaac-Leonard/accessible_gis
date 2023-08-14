@@ -5,10 +5,10 @@ use cacao::listview::{ListView, ListViewDelegate};
 use cacao::notification_center::Dispatcher;
 use cacao::text::Label;
 use cacao::view::{View, ViewDelegate};
-use cacao::{button, button::Button, view};
+use cacao::{button::Button, view};
 
-use gdal::raster::StatisticsAll;
-use gdal::vector::{FieldValue, Geometry, LayerAccess};
+use gdal::raster::{RasterBand, StatisticsAll};
+use gdal::vector::{Feature, FieldValue, Geometry, LayerAccess};
 use gdal::Dataset;
 use std::cell::RefCell;
 use std::path::PathBuf;
@@ -17,17 +17,107 @@ use std::sync::mpsc::Sender;
 
 use crate::app::dispatch_ui;
 use crate::audio::{get_audio, AudioMessage};
-#[derive(Default)]
-pub struct ContentView {
+
+pub struct MainView {
     content: view::View,
-    button: Option<Button>,
-    sub_views: Rc<RefCell<Vec<LayerView>>>,
-    audio: Option<Sender<AudioMessage>>,
+    button: Button,
+    dataset_view: Rc<RefCell<Option<View<DatasetView>>>>,
+}
+impl MainView {
+    pub fn new() -> Self {
+        Self {
+            content: View::new(),
+            button: Button::new("Select file"),
+            dataset_view: Rc::new(RefCell::new(None)),
+        }
+    }
+}
+
+impl Dispatcher for MainView {
+    type Message = Message;
+
+    /// Handles a message that came over on the main (UI) thread.
+    fn on_ui_message(&self, message: Self::Message) {
+        match message {
+            Message::ToggleAudio | Message::RasterViewerAction(_) => {
+                let dataset_view = self.dataset_view.borrow_mut();
+                dataset_view
+                    .as_ref()
+                    .and_then(|x| x.delegate.as_ref())
+                    .map(|x| x.on_ui_message(message));
+            }
+            Message::ClickedSelectFile => FileSelectPanel::new().show(file_selection_handler),
+            Message::GotFile(path) => {
+                let dataset = Dataset::open(path).expect("Could'nt read file");
+                let mut dataset_view = self.dataset_view.borrow_mut();
+                let sub_view = View::with(DatasetView::new(dataset));
+                self.content.add_subview(&sub_view);
+                *dataset_view = Some(sub_view);
+            }
+            Message::InvalidFile(_) => {}
+        }
+    }
+}
+
+pub struct DatasetView {
+    content: view::View,
+    sub_views: Rc<RefCell<Vec<View<LayerView>>>>,
+    audio: Sender<AudioMessage>,
+    dataset: Dataset,
+    projection_label: Label,
+}
+
+impl DatasetView {
+    fn new(dataset: Dataset) -> Self {
+        eprintln!("Here");
+        let audio = get_audio();
+        let view = Self {
+            content: View::new(),
+            dataset,
+            audio,
+            sub_views: Rc::new(RefCell::new(Vec::new())),
+            projection_label: Label::new(),
+        };
+        let mut sub_views = Vec::new();
+        let layers = view.dataset.layers();
+        let mut last_position = 0;
+        for mut layer in layers {
+            for feature in layer.features() {
+                let vector_view = View::with(FeatureView::new(feature, last_position));
+                vector_view.set_background_color(cacao::color::Color::SystemRed);
+                sub_views.push(View::with(LayerView::Vector(vector_view)));
+                last_position += 1;
+            }
+        }
+        // TODO: Lets try replace with a proper iterator
+        for i in 1..=view.dataset.raster_count() {
+            let band = view.dataset.rasterband(i).unwrap();
+            let raster_view = View::with(RasterView::new(band, i as usize + last_position));
+            raster_view.set_background_color(cacao::color::Color::SystemRed);
+            sub_views.push(View::with(LayerView::Raster(raster_view)));
+        }
+        view.sub_views.borrow_mut().append(&mut sub_views);
+        view
+    }
 }
 
 pub enum LayerView {
     Vector(View<FeatureView>),
     Raster(View<RasterView>),
+}
+
+impl ViewDelegate for LayerView {
+    const NAME: &'static str = "LayerView";
+    fn did_load(&mut self, view: View) {
+        match self {
+            Self::Raster(raster) => view.add_subview(raster),
+            Self::Vector(vector) => view.add_subview(vector),
+        }
+        LayoutConstraint::activate(&[
+            view.height.constraint_equal_to_constant(300.),
+            view.width.constraint_equal_to_constant(600.),
+        ])
+    }
 }
 
 impl LayerView {
@@ -43,17 +133,44 @@ impl LayerView {
     }
 }
 
-impl ViewDelegate for ContentView {
+impl ViewDelegate for MainView {
     const NAME: &'static str = "SafeAreaView";
 
     fn did_load(&mut self, view: View) {
-        let mut btn = button::Button::new("Select file");
-        btn.set_action(|| dispatch_ui(Message::ClickedSelectFile));
-        btn.set_key_equivalent("c");
-        self.content.add_subview(&btn);
-        self.button = Some(btn);
+        self.button
+            .set_action(|| dispatch_ui(Message::ClickedSelectFile));
+        self.button.set_key_equivalent("c");
+        self.content.add_subview(&self.button);
         view.add_subview(&self.content);
-        self.audio = Some(get_audio());
+        // Add layout constraints to be 100% excluding the safe area
+        // Do last because it will crash because the view needs to be inside the hierarchy
+        cacao::layout::LayoutConstraint::activate(&[
+            self.content
+                .top
+                .constraint_equal_to(&view.safe_layout_guide.top),
+            self.content
+                .leading
+                .constraint_equal_to(&view.safe_layout_guide.leading),
+            self.content
+                .trailing
+                .constraint_equal_to(&view.safe_layout_guide.trailing),
+            self.content
+                .bottom
+                .constraint_equal_to(&view.safe_layout_guide.bottom),
+        ])
+    }
+}
+
+impl ViewDelegate for DatasetView {
+    const NAME: &'static str = "DataSetView";
+
+    fn did_load(&mut self, view: View) {
+        for sub_view in self.sub_views.borrow().iter() {
+            self.content.add_subview(sub_view)
+        }
+        self.projection_label.set_text(self.dataset.projection());
+        self.content.add_subview(&self.projection_label);
+        view.add_subview(&self.content);
         // Add layout constraints to be 100% excluding the safe area
         // Do last because it will crash because the view needs to be inside the hierarchy
         cacao::layout::LayoutConstraint::activate(&[
@@ -84,59 +201,26 @@ fn file_selection_handler(paths: Vec<NSURL>) {
         dispatch_ui(Message::InvalidFile(path));
         return;
     }
-    let path_as_str = path.to_str().expect("non-Utf8 file path found");
     dispatch_ui(Message::GotFile(path))
 }
 
-impl Dispatcher for ContentView {
+impl Dispatcher for DatasetView {
     type Message = Message;
 
     /// Handles a message that came over on the main (UI) thread.
     fn on_ui_message(&self, message: Self::Message) {
         match message {
-            Message::ToggleAudio => self
-                .audio
-                .as_ref()
-                .unwrap()
-                .send(AudioMessage::PlayPause)
-                .unwrap(),
-            Message::ClickedSelectFile => FileSelectPanel::new().show(file_selection_handler),
-            Message::GotFile(path) => {
-                let dataset = Dataset::open(path).expect("Could'nt read file");
-                if dataset.raster_count() == 0 {
-                    let mut layer = dataset.layer(0).unwrap();
-                    let features = layer.features();
-                    for feature in features {
-                        let vector = feature.geometry().unwrap();
-                        let record = feature.fields();
-                        let vector_view = View::with(FeatureView::new(
-                            vector.clone(),
-                            record.collect(),
-                            self.sub_views.borrow_mut().len(),
-                        ));
-                        vector_view.set_background_color(cacao::color::Color::SystemRed);
-                        self.content.add_subview(&vector_view);
-                        self.sub_views
-                            .borrow_mut()
-                            .push(LayerView::Vector(vector_view));
-                    }
-                } else {
-                    let raster_view =
-                        View::with(RasterView::new(dataset, self.sub_views.borrow_mut().len()));
-                    raster_view.set_background_color(cacao::color::Color::SystemRed);
-                    self.content.add_subview(&raster_view);
-                    self.sub_views
-                        .borrow_mut()
-                        .push(LayerView::Raster(raster_view));
-                }
-            }
+            Message::ToggleAudio => self.audio.send(AudioMessage::PlayPause).unwrap(),
             Message::RasterViewerAction(action) => {
                 let views = self.sub_views.borrow();
                 views
                     .iter()
-                    .for_each(|view| view.on_message(Message::RasterViewerAction(action)))
+                    .filter_map(|v| v.delegate.as_ref())
+                    .for_each(|view| view.on_message(Message::RasterViewerAction(action)));
             }
             Message::InvalidFile(_) => {}
+            Message::GotFile(_) => {}
+            Message::ClickedSelectFile => {}
         }
     }
 }
@@ -144,21 +228,21 @@ impl Dispatcher for ContentView {
 pub struct FeatureView {
     pub content: view::View,
     label: Label,
-    geometry: Geometry,
     attribute_table: ListView<AttributesListView>,
     position: usize,
     projection_label: Label,
+    geometry: Geometry,
 }
 
 impl FeatureView {
-    fn new(vector: Geometry, record: Vec<Attribute>, position: usize) -> Self {
+    fn new(feature: Feature, position: usize) -> Self {
         FeatureView {
             content: View::new(),
             label: Label::default(),
-            geometry: vector,
-            attribute_table: ListView::with(AttributesListView::new(record)),
+            attribute_table: ListView::with(AttributesListView::new(feature.fields().collect())),
             position,
             projection_label: Label::new(),
+            geometry: feature.geometry().unwrap().clone(),
         }
     }
 }
@@ -168,8 +252,7 @@ impl ViewDelegate for FeatureView {
 
     fn did_load(&mut self, view: View) {
         self.content.add_subview(&self.attribute_table);
-        self.label
-            .set_text(format!("{:?}", self.geometry.geometry_name()));
+        self.label.set_text(self.geometry.geometry_name());
         self.label
             .set_text_color(cacao::color::Color::rgb(255, 255, 255));
         self.content.add_subview(&self.label);
@@ -207,7 +290,6 @@ pub struct RasterViewerData {
 pub struct RasterView {
     pub content: view::View,
     label: Label,
-    dataset: Dataset,
     position: usize,
     play_pause_btn: Button,
     move_west_btn: Button,
@@ -222,9 +304,7 @@ pub struct RasterView {
     cell_value_label: Label,
     positional_information_label: Label,
     stats_label: Label,
-    geo_keys_label: Label,
     data: Rc<RefCell<RasterViewerData>>,
-    projection_label: Label,
 }
 
 impl RasterView {
@@ -272,7 +352,7 @@ impl RasterView {
 }
 
 impl RasterView {
-    fn new(dataset: Dataset, position: usize) -> Self {
+    fn new(band: RasterBand, position: usize) -> Self {
         RasterView {
             content: View::new(),
             label: Label::default(),
@@ -288,23 +368,15 @@ impl RasterView {
             double_height_btn: Button::new("Double height"),
             halve_height_btn: Button::new("Halve height"),
             data: Rc::new(RefCell::new(RasterViewerData {
-                stats: dataset
-                    .rasterband(1)
-                    .unwrap()
-                    .get_statistics(true, true)
-                    .unwrap()
-                    .unwrap(),
+                stats: band.get_statistics(true, true).unwrap().unwrap(),
                 x: 0,
                 y: 0,
-                width: dataset.raster_size().0,
-                height: dataset.raster_size().1,
+                width: band.size().0,
+                height: band.size().1,
             })),
             positional_information_label: Label::new(),
             cell_value_label: Label::new(),
             stats_label: Label::new(),
-            dataset,
-            geo_keys_label: Label::new(),
-            projection_label: Label::new(),
         }
     }
 }
@@ -339,7 +411,6 @@ impl ViewDelegate for RasterView {
         self.content.add_subview(&self.cell_value_label);
         self.content.add_subview(&self.positional_information_label);
         self.content.add_subview(&self.stats_label);
-        self.content.add_subview(&self.projection_label);
         self.update_value();
         view.add_subview(&self.content);
         // Add layout constraints to be 100% excluding the safe area
@@ -372,7 +443,6 @@ impl RasterView {
         ));
         self.stats_label
             .set_text(format!("min: {}, max: {}", data.stats.min, data.stats.max));
-        self.projection_label.set_text(self.dataset.projection());
     }
 }
 

@@ -3,11 +3,11 @@ use cacao::appkit::{App, AppDelegate};
 use cacao::notification_center::Dispatcher;
 use cacao::view::ViewController;
 
-use crate::views::{ContentView, Message};
+use crate::views::{MainView, Message};
 
 pub struct BasicApp {
     pub window: Window,
-    pub content_view: ViewController<ContentView>,
+    pub content: ViewController<MainView>,
 }
 
 impl Dispatcher for BasicApp {
@@ -15,7 +15,7 @@ impl Dispatcher for BasicApp {
 
     /// Handles a message that came over on the main (UI) thread.
     fn on_ui_message(&self, message: Self::Message) {
-        if let Some(delegate) = &self.content_view.view.delegate {
+        if let Some(delegate) = &self.content.view.delegate {
             delegate.on_ui_message(message);
         }
     }
@@ -27,7 +27,7 @@ impl AppDelegate for BasicApp {
         self.window.set_minimum_content_size(400., 400.);
         self.window.set_title("Hello World!");
         self.window.set_movable_by_background(true);
-        self.window.set_content_view_controller(&self.content_view);
+        self.window.set_content_view_controller(&self.content);
         self.window.show();
         //        FileSelectPanel::new().show(|_| {});
     }
