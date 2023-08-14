@@ -85,13 +85,7 @@ fn file_selection_handler(paths: Vec<NSURL>) {
         return;
     }
     let path_as_str = path.to_str().expect("non-Utf8 file path found");
-    if path_as_str.ends_with(".shp") {
-        dispatch_ui(Message::GotShapeFile(path))
-    } else if path_as_str.ends_with(".tif") {
-        dispatch_ui(Message::GotTiffFile(path))
-    } else {
-        dispatch_ui(Message::InvalidFile(path));
-    }
+    dispatch_ui(Message::GotFile(path))
 }
 
 impl Dispatcher for ContentView {
@@ -107,43 +101,40 @@ impl Dispatcher for ContentView {
                 .send(AudioMessage::PlayPause)
                 .unwrap(),
             Message::ClickedSelectFile => FileSelectPanel::new().show(file_selection_handler),
-            Message::GotShapeFile(path) => {
-                let file = Dataset::open(path).expect("Could'nt read file");
-                let mut layer = file.layer(0).unwrap();
-                let features = layer.features();
-                for feature in features {
-                    let shape = feature.geometry().unwrap();
-                    let record = feature.fields();
-                    let shape_view = View::with(ShapeView::new(
-                        shape.clone(),
-                        record.collect(),
-                        self.sub_views.borrow_mut().len(),
-                    ));
-                    shape_view.set_background_color(cacao::color::Color::SystemRed);
-                    self.content.add_subview(&shape_view);
-                    self.sub_views
-                        .borrow_mut()
-                        .push(LayerView::Shape(shape_view));
+            Message::GotFile(path) => {
+                let dataset = Dataset::open(path).expect("Could'nt read file");
+                if dataset.raster_count() == 0 {
+                    let mut layer = dataset.layer(0).unwrap();
+                    let features = layer.features();
+                    for feature in features {
+                        let shape = feature.geometry().unwrap();
+                        let record = feature.fields();
+                        let shape_view = View::with(ShapeView::new(
+                            shape.clone(),
+                            record.collect(),
+                            self.sub_views.borrow_mut().len(),
+                        ));
+                        shape_view.set_background_color(cacao::color::Color::SystemRed);
+                        self.content.add_subview(&shape_view);
+                        self.sub_views
+                            .borrow_mut()
+                            .push(LayerView::Shape(shape_view));
+                    }
+                } else {
+                    let tiff_view =
+                        View::with(TiffView::new(dataset, self.sub_views.borrow_mut().len()));
+                    tiff_view.set_background_color(cacao::color::Color::SystemRed);
+                    self.content.add_subview(&tiff_view);
+                    self.sub_views.borrow_mut().push(LayerView::Tiff(tiff_view));
                 }
             }
-            // Basic display for now
-            Message::GotTiffFile(path) => {
-                let dataset =
-                    Dataset::open(path).expect("Something went wrong reading the tiff file");
-                let tiff_view =
-                    View::with(TiffView::new(dataset, self.sub_views.borrow_mut().len()));
-                tiff_view.set_background_color(cacao::color::Color::SystemRed);
-                self.content.add_subview(&tiff_view);
-                self.sub_views.borrow_mut().push(LayerView::Tiff(tiff_view));
-            }
-            // Don't do anything for now
-            Message::InvalidFile(_) => {}
             Message::TiffViewerAction(action) => {
                 let views = self.sub_views.borrow();
                 views
                     .iter()
                     .for_each(|view| view.on_message(Message::TiffViewerAction(action)))
             }
+            Message::InvalidFile(_) => {}
         }
     }
 }
@@ -391,8 +382,7 @@ pub enum TiffViewerrMessage {
 #[derive(Clone, Debug)]
 pub enum Message {
     ClickedSelectFile,
-    GotShapeFile(PathBuf),
-    GotTiffFile(PathBuf),
+    GotFile(PathBuf),
     InvalidFile(PathBuf),
     ToggleAudio,
     TiffViewerAction(TiffViewerrMessage),
@@ -463,7 +453,7 @@ pub struct AttributesListView {
 }
 
 impl AttributesListView {
-    fn new<'a>(attributes: Vec<Attribute>) -> Self {
+    fn new(attributes: Vec<Attribute>) -> Self {
         Self {
             view: None,
             attributes,
@@ -471,7 +461,7 @@ impl AttributesListView {
     }
 }
 
-impl<'a> ListViewDelegate for AttributesListView {
+impl ListViewDelegate for AttributesListView {
     const NAME: &'static str = "AttributesListView";
 
     /// Essential configuration and retaining of a `ListView` handle to do updates later on.
@@ -508,7 +498,7 @@ impl<'a> ListViewDelegate for AttributesListView {
 
         if let Some(view) = &mut view.delegate {
             let attribute = &self.attributes[row];
-            view.configure_with(&attribute);
+            view.configure_with(attribute);
         }
 
         view.into_row()
