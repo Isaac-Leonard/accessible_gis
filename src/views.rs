@@ -26,16 +26,16 @@ pub struct ContentView {
 }
 
 pub enum LayerView {
-    Shape(View<ShapeView>),
-    Tiff(View<TiffView>),
+    Vector(View<FeatureView>),
+    Raster(View<RasterView>),
 }
 
 impl LayerView {
     fn on_message(&self, message: Message) {
         match self {
-            Self::Shape(_shape_view) => {}
-            Self::Tiff(tiff_view) => {
-                if let Some(ref view) = tiff_view.delegate {
+            Self::Vector(_vector_view) => {}
+            Self::Raster(raster_view) => {
+                if let Some(ref view) = raster_view.delegate {
                     view.as_ref().on_message(message)
                 }
             }
@@ -79,7 +79,7 @@ fn file_selection_handler(paths: Vec<NSURL>) {
         return;
     }
     let path = paths[0].pathbuf();
-    // Simplistic check for shape file
+    // Simplistic check for vector file
     if path.is_dir() {
         dispatch_ui(Message::InvalidFile(path));
         return;
@@ -107,53 +107,55 @@ impl Dispatcher for ContentView {
                     let mut layer = dataset.layer(0).unwrap();
                     let features = layer.features();
                     for feature in features {
-                        let shape = feature.geometry().unwrap();
+                        let vector = feature.geometry().unwrap();
                         let record = feature.fields();
-                        let shape_view = View::with(ShapeView::new(
-                            shape.clone(),
+                        let vector_view = View::with(FeatureView::new(
+                            vector.clone(),
                             record.collect(),
                             self.sub_views.borrow_mut().len(),
                         ));
-                        shape_view.set_background_color(cacao::color::Color::SystemRed);
-                        self.content.add_subview(&shape_view);
+                        vector_view.set_background_color(cacao::color::Color::SystemRed);
+                        self.content.add_subview(&vector_view);
                         self.sub_views
                             .borrow_mut()
-                            .push(LayerView::Shape(shape_view));
+                            .push(LayerView::Vector(vector_view));
                     }
                 } else {
-                    let tiff_view =
-                        View::with(TiffView::new(dataset, self.sub_views.borrow_mut().len()));
-                    tiff_view.set_background_color(cacao::color::Color::SystemRed);
-                    self.content.add_subview(&tiff_view);
-                    self.sub_views.borrow_mut().push(LayerView::Tiff(tiff_view));
+                    let raster_view =
+                        View::with(RasterView::new(dataset, self.sub_views.borrow_mut().len()));
+                    raster_view.set_background_color(cacao::color::Color::SystemRed);
+                    self.content.add_subview(&raster_view);
+                    self.sub_views
+                        .borrow_mut()
+                        .push(LayerView::Raster(raster_view));
                 }
             }
-            Message::TiffViewerAction(action) => {
+            Message::RasterViewerAction(action) => {
                 let views = self.sub_views.borrow();
                 views
                     .iter()
-                    .for_each(|view| view.on_message(Message::TiffViewerAction(action)))
+                    .for_each(|view| view.on_message(Message::RasterViewerAction(action)))
             }
             Message::InvalidFile(_) => {}
         }
     }
 }
 
-pub struct ShapeView {
+pub struct FeatureView {
     pub content: view::View,
     label: Label,
-    shape: Geometry,
+    geometry: Geometry,
     attribute_table: ListView<AttributesListView>,
     position: usize,
     projection_label: Label,
 }
 
-impl ShapeView {
-    fn new(shape: Geometry, record: Vec<Attribute>, position: usize) -> Self {
-        ShapeView {
+impl FeatureView {
+    fn new(vector: Geometry, record: Vec<Attribute>, position: usize) -> Self {
+        FeatureView {
             content: View::new(),
             label: Label::default(),
-            shape,
+            geometry: vector,
             attribute_table: ListView::with(AttributesListView::new(record)),
             position,
             projection_label: Label::new(),
@@ -161,13 +163,13 @@ impl ShapeView {
     }
 }
 
-impl ViewDelegate for ShapeView {
-    const NAME: &'static str = "ShapeView";
+impl ViewDelegate for FeatureView {
+    const NAME: &'static str = "VectorView";
 
     fn did_load(&mut self, view: View) {
         self.content.add_subview(&self.attribute_table);
         self.label
-            .set_text(format!("{:?}", self.shape.geometry_name()));
+            .set_text(format!("{:?}", self.geometry.geometry_name()));
         self.label
             .set_text_color(cacao::color::Color::rgb(255, 255, 255));
         self.content.add_subview(&self.label);
@@ -194,7 +196,7 @@ impl ViewDelegate for ShapeView {
     }
 }
 
-pub struct TiffViewerData {
+pub struct RasterViewerData {
     x: usize,
     y: usize,
     width: usize,
@@ -202,7 +204,7 @@ pub struct TiffViewerData {
     stats: StatisticsAll,
 }
 
-pub struct TiffView {
+pub struct RasterView {
     pub content: view::View,
     label: Label,
     dataset: Dataset,
@@ -221,37 +223,37 @@ pub struct TiffView {
     positional_information_label: Label,
     stats_label: Label,
     geo_keys_label: Label,
-    data: Rc<RefCell<TiffViewerData>>,
+    data: Rc<RefCell<RasterViewerData>>,
     projection_label: Label,
 }
 
-impl TiffView {
+impl RasterView {
     fn on_message(&self, message: Message) {
         match message {
-            Message::TiffViewerAction(action) => {
+            Message::RasterViewerAction(action) => {
                 // Must keep the mutable borrow of data in its own block so its released before calling update_value
                 {
                     let mut data = self.data.borrow_mut();
                     match action {
-                        TiffViewerrMessage::MoveNorth => data.y += data.height,
-                        TiffViewerrMessage::MoveEast => data.x += data.width,
-                        TiffViewerrMessage::MoveSouth => {
+                        RasterViewerrMessage::MoveNorth => data.y += data.height,
+                        RasterViewerrMessage::MoveEast => data.x += data.width,
+                        RasterViewerrMessage::MoveSouth => {
                             data.y = data.y.checked_sub(data.height).unwrap_or(0)
                         }
-                        TiffViewerrMessage::MoveWest => {
+                        RasterViewerrMessage::MoveWest => {
                             data.x = data.x.checked_sub(data.width).unwrap_or(0)
                         }
 
-                        TiffViewerrMessage::HalveWidth => {
+                        RasterViewerrMessage::HalveWidth => {
                             data.width = data.width / 2;
                         }
-                        TiffViewerrMessage::DoubleWidth => {
+                        RasterViewerrMessage::DoubleWidth => {
                             data.width = data.width * 2;
                         }
-                        TiffViewerrMessage::HalveHeight => {
+                        RasterViewerrMessage::HalveHeight => {
                             data.height = data.height / 2;
                         }
-                        TiffViewerrMessage::DoubleHeight => {
+                        RasterViewerrMessage::DoubleHeight => {
                             data.height = data.height * 2;
                         }
                     };
@@ -269,9 +271,9 @@ impl TiffView {
     }
 }
 
-impl TiffView {
+impl RasterView {
     fn new(dataset: Dataset, position: usize) -> Self {
-        TiffView {
+        RasterView {
             content: View::new(),
             label: Label::default(),
             position,
@@ -285,7 +287,7 @@ impl TiffView {
             halve_width_btn: Button::new("Half width"),
             double_height_btn: Button::new("Double height"),
             halve_height_btn: Button::new("Halve height"),
-            data: Rc::new(RefCell::new(TiffViewerData {
+            data: Rc::new(RefCell::new(RasterViewerData {
                 stats: dataset
                     .rasterband(1)
                     .unwrap()
@@ -307,32 +309,32 @@ impl TiffView {
     }
 }
 
-impl ViewDelegate for TiffView {
-    const NAME: &'static str = "TiffView";
+impl ViewDelegate for RasterView {
+    const NAME: &'static str = "RasterView";
 
     fn did_load(&mut self, view: View) {
         macro_rules! connect_button {
             ($btn:expr, $action:expr) => {{
-                $btn.set_action(|| dispatch_ui(Message::TiffViewerAction($action)));
+                $btn.set_action(|| dispatch_ui(Message::RasterViewerAction($action)));
                 self.content.add_subview(&$btn);
             }};
         }
 
-        self.label.set_text("Tiff file");
+        self.label.set_text("Raster file");
         self.label
             .set_text_color(cacao::color::Color::rgb(255, 255, 255));
         self.content.add_subview(&self.label);
         self.play_pause_btn
             .set_action(|| dispatch_ui(Message::ToggleAudio));
         self.content.add_subview(&self.play_pause_btn);
-        connect_button!(self.move_north_btn, TiffViewerrMessage::MoveNorth);
-        connect_button!(self.move_east_btn, TiffViewerrMessage::MoveEast);
-        connect_button!(self.move_south_btn, TiffViewerrMessage::MoveSouth);
-        connect_button!(self.move_west_btn, TiffViewerrMessage::MoveWest);
-        connect_button!(self.double_height_btn, TiffViewerrMessage::DoubleHeight);
-        connect_button!(self.halve_height_btn, TiffViewerrMessage::HalveHeight);
-        connect_button!(self.double_width_btn, TiffViewerrMessage::DoubleWidth);
-        connect_button!(self.halve_width_btn, TiffViewerrMessage::HalveWidth);
+        connect_button!(self.move_north_btn, RasterViewerrMessage::MoveNorth);
+        connect_button!(self.move_east_btn, RasterViewerrMessage::MoveEast);
+        connect_button!(self.move_south_btn, RasterViewerrMessage::MoveSouth);
+        connect_button!(self.move_west_btn, RasterViewerrMessage::MoveWest);
+        connect_button!(self.double_height_btn, RasterViewerrMessage::DoubleHeight);
+        connect_button!(self.halve_height_btn, RasterViewerrMessage::HalveHeight);
+        connect_button!(self.double_width_btn, RasterViewerrMessage::DoubleWidth);
+        connect_button!(self.halve_width_btn, RasterViewerrMessage::HalveWidth);
 
         self.content.add_subview(&self.cell_value_label);
         self.content.add_subview(&self.positional_information_label);
@@ -360,7 +362,7 @@ impl ViewDelegate for TiffView {
     }
 }
 
-impl TiffView {
+impl RasterView {
     fn update_value(&self) {
         let data = self.data.borrow();
         self.cell_value_label.set_text(data.stats.mean.to_string());
@@ -375,7 +377,7 @@ impl TiffView {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum TiffViewerrMessage {
+pub enum RasterViewerrMessage {
     MoveNorth,
     MoveEast,
     MoveSouth,
@@ -392,7 +394,7 @@ pub enum Message {
     GotFile(PathBuf),
     InvalidFile(PathBuf),
     ToggleAudio,
-    TiffViewerAction(TiffViewerrMessage),
+    RasterViewerAction(RasterViewerrMessage),
 }
 
 #[derive(Default, Debug)]
