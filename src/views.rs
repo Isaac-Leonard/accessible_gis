@@ -145,6 +145,7 @@ pub struct ShapeView {
     shape: Geometry,
     attribute_table: ListView<AttributesListView>,
     position: usize,
+    projection_label: Label,
 }
 
 impl ShapeView {
@@ -155,6 +156,7 @@ impl ShapeView {
             shape,
             attribute_table: ListView::with(AttributesListView::new(record)),
             position,
+            projection_label: Label::new(),
         }
     }
 }
@@ -169,6 +171,8 @@ impl ViewDelegate for ShapeView {
         self.label
             .set_text_color(cacao::color::Color::rgb(255, 255, 255));
         self.content.add_subview(&self.label);
+
+        self.content.add_subview(&self.projection_label);
         view.add_subview(&self.content);
         // Add layout constraints to be 100% excluding the safe area
         // Do last because it will crash because the view needs to be inside the hierarchy
@@ -218,6 +222,7 @@ pub struct TiffView {
     stats_label: Label,
     geo_keys_label: Label,
     data: Rc<RefCell<TiffViewerData>>,
+    projection_label: Label,
 }
 
 impl TiffView {
@@ -297,6 +302,7 @@ impl TiffView {
             stats_label: Label::new(),
             dataset,
             geo_keys_label: Label::new(),
+            projection_label: Label::new(),
         }
     }
 }
@@ -331,7 +337,7 @@ impl ViewDelegate for TiffView {
         self.content.add_subview(&self.cell_value_label);
         self.content.add_subview(&self.positional_information_label);
         self.content.add_subview(&self.stats_label);
-        self.content.add_subview(&self.geo_keys_label);
+        self.content.add_subview(&self.projection_label);
         self.update_value();
         view.add_subview(&self.content);
         // Add layout constraints to be 100% excluding the safe area
@@ -363,7 +369,8 @@ impl TiffView {
             data.x, data.y, data.width, data.height
         ));
         self.stats_label
-            .set_text(format!("min: {}, max: {}", data.stats.min, data.stats.max))
+            .set_text(format!("min: {}, max: {}", data.stats.min, data.stats.max));
+        self.projection_label.set_text(self.dataset.projection());
     }
 }
 
