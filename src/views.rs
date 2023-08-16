@@ -1,14 +1,15 @@
 use crate::app::dispatch_ui;
 use crate::audio::{get_audio, AudioMessage};
+use crate::list_view::{ConfigurableRow, MyListView};
 use cacao::filesystem::FileSelectPanel;
 use cacao::foundation::NSURL;
 use cacao::layout::{Layout, LayoutConstraint};
-use cacao::listview::{ListView, ListViewDelegate};
+use cacao::listview::ListView;
 use cacao::notification_center::Dispatcher;
 use cacao::text::Label;
 use cacao::view::{View, ViewDelegate};
 use cacao::{button::Button, view};
-use gdal::raster::{reproject, RasterBand, StatisticsAll};
+use gdal::raster::{RasterBand, StatisticsAll};
 use gdal::vector::{Feature, FieldValue, Geometry, LayerAccess};
 use gdal::Dataset;
 use std::cell::RefCell;
@@ -244,7 +245,7 @@ impl Dispatcher for DatasetView {
 pub struct FeatureView {
     pub content: view::View,
     label: Label,
-    attribute_table: ListView<AttributesListView>,
+    attribute_table: ListView<MyListView<AttributeViewRow>>,
     position: usize,
     projection_label: Label,
     geometry: Geometry,
@@ -255,7 +256,7 @@ impl FeatureView {
         FeatureView {
             content: View::new(),
             label: Label::default(),
-            attribute_table: ListView::with(AttributesListView::new(feature.fields().collect())),
+            attribute_table: ListView::with(MyListView::new(feature.fields().collect())),
             position,
             projection_label: Label::new(),
             geometry: feature.geometry().unwrap().clone(),
@@ -491,13 +492,16 @@ pub struct AttributeViewRow {
 
 type Attribute = (String, Option<FieldValue>);
 
-impl AttributeViewRow {
+impl ConfigurableRow for AttributeViewRow {
+    type Data = Attribute;
     /// Called when this view is being presented, and configures itself     pub
-    fn configure_with(&mut self, (key, val): Attribute) {
+    fn configure_with(&mut self, (key, val): &Attribute) {
         self.key.set_text(key);
         self.value.set_text(format!(
             "{}",
-            val.map(custom_field_value_to_string).unwrap_or_default()
+            val.clone()
+                .map(custom_field_value_to_string)
+                .unwrap_or_default()
         ));
     }
 }
@@ -538,62 +542,6 @@ impl ViewDelegate for AttributeViewRow {
                 .constraint_equal_to(&view.bottom)
                 .offset(-16.),
         ]);
-    }
-}
-
-/// An identifier for the cell(s) we dequeue.
-const ATTRIBUTE_ROW: &str = "AttributeViewRowCell";
-
-/// The list view for attributes
-pub struct AttributesListView {
-    view: Option<ListView>,
-    attributes: Vec<Attribute>,
-}
-
-impl AttributesListView {
-    fn new(attributes: Vec<Attribute>) -> Self {
-        Self {
-            view: None,
-            attributes,
-        }
-    }
-}
-
-impl ListViewDelegate for AttributesListView {
-    const NAME: &'static str = "AttributesListView";
-
-    /// Essential configuration and retaining of a `ListView` handle to do updates later on.
-    fn did_load(&mut self, view: ListView) {
-        view.register(ATTRIBUTE_ROW, AttributeViewRow::default);
-        view.set_uses_alternating_backgrounds(true);
-        view.set_row_height(64.);
-        LayoutConstraint::activate(&[
-            view.height.constraint_equal_to_constant(50.0),
-            view.width.constraint_equal_to_constant(50.0),
-        ]);
-        self.view = Some(view);
-    }
-
-    /// The number of attributes we have.
-    fn number_of_items(&self) -> usize {
-        self.attributes.len()
-    }
-
-    /// For a given row, dequeues a view from the system and passes the appropriate `Transfer` for
-    /// configuration.
-    fn item_for(&self, row: usize) -> cacao::listview::ListViewRow {
-        let mut view = self
-            .view
-            .as_ref()
-            .unwrap()
-            .dequeue::<AttributeViewRow>(ATTRIBUTE_ROW);
-
-        if let Some(view) = &mut view.delegate {
-            let attribute = &self.attributes[row];
-            view.configure_with(attribute.clone());
-        }
-
-        view.into_row()
     }
 }
 

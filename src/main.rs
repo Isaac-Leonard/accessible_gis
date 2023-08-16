@@ -1,6 +1,7 @@
 #![feature(result_option_inspect)]
 mod app;
 mod audio;
+mod list_view;
 mod views;
 use cacao::{appkit::App, view::ViewController};
 use views::MainView;
