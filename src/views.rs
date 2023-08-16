@@ -493,9 +493,12 @@ type Attribute = (String, Option<FieldValue>);
 
 impl AttributeViewRow {
     /// Called when this view is being presented, and configures itself     pub
-    fn configure_with(&mut self, (key, val): &Attribute) {
+    fn configure_with(&mut self, (key, val): Attribute) {
         self.key.set_text(key);
-        self.value.set_text(format!("{:?}", val));
+        self.value.set_text(format!(
+            "{}",
+            val.map(custom_field_value_to_string).unwrap_or_default()
+        ));
     }
 }
 
@@ -561,7 +564,6 @@ impl ListViewDelegate for AttributesListView {
 
     /// Essential configuration and retaining of a `ListView` handle to do updates later on.
     fn did_load(&mut self, view: ListView) {
-        eprintln!("called");
         view.register(ATTRIBUTE_ROW, AttributeViewRow::default);
         view.set_uses_alternating_backgrounds(true);
         view.set_row_height(64.);
@@ -580,11 +582,6 @@ impl ListViewDelegate for AttributesListView {
     /// For a given row, dequeues a view from the system and passes the appropriate `Transfer` for
     /// configuration.
     fn item_for(&self, row: usize) -> cacao::listview::ListViewRow {
-        eprintln!(
-            "item ffor called with {:?} and len of {}",
-            row,
-            self.attributes.len()
-        );
         let mut view = self
             .view
             .as_ref()
@@ -593,9 +590,43 @@ impl ListViewDelegate for AttributesListView {
 
         if let Some(view) = &mut view.delegate {
             let attribute = &self.attributes[row];
-            view.configure_with(attribute);
+            view.configure_with(attribute.clone());
         }
 
         view.into_row()
+    }
+}
+
+fn custom_field_value_to_string(val: FieldValue) -> String {
+    match val {
+        FieldValue::StringValue(str) => str,
+        FieldValue::IntegerValue(int) => int.to_string(),
+        FieldValue::RealValue(float) => float.to_string(),
+        FieldValue::DateValue(date) => date.to_string(),
+        FieldValue::DateTimeValue(date_time) => date_time.to_string(),
+        FieldValue::Integer64Value(int) => int.to_string(),
+        FieldValue::StringListValue(strings) => format!("[{}]", strings.join(", ")),
+        FieldValue::RealListValue(floats) => format!(
+            "[{}]",
+            floats
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
+        FieldValue::IntegerListValue(ints) => format!(
+            "[{}]",
+            ints.iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
+        FieldValue::Integer64ListValue(ints) => format!(
+            "[{}]",
+            ints.iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
     }
 }
