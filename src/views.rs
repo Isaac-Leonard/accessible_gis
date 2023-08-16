@@ -1,3 +1,5 @@
+use crate::app::dispatch_ui;
+use crate::audio::{get_audio, AudioMessage};
 use cacao::filesystem::FileSelectPanel;
 use cacao::foundation::NSURL;
 use cacao::layout::{Layout, LayoutConstraint};
@@ -6,17 +8,13 @@ use cacao::notification_center::Dispatcher;
 use cacao::text::Label;
 use cacao::view::{View, ViewDelegate};
 use cacao::{button::Button, view};
-
-use gdal::raster::{RasterBand, StatisticsAll};
+use gdal::raster::{reproject, RasterBand, StatisticsAll};
 use gdal::vector::{Feature, FieldValue, Geometry, LayerAccess};
 use gdal::Dataset;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::mpsc::Sender;
-
-use crate::app::dispatch_ui;
-use crate::audio::{get_audio, AudioMessage};
 
 pub struct MainView {
     content: view::View,
@@ -44,7 +42,7 @@ impl Dispatcher for MainView {
                 dataset_view
                     .as_ref()
                     .and_then(|x| x.delegate.as_ref())
-                    .map(|x| x.on_ui_message(message));
+                    .inspect(|x| x.on_ui_message(message));
             }
             Message::ClickedSelectFile => FileSelectPanel::new().show(file_selection_handler),
             Message::GotFile(path) => {
@@ -64,7 +62,7 @@ pub struct DatasetView {
     sub_views: Rc<RefCell<Vec<View<LayerView>>>>,
     audio: Sender<AudioMessage>,
     dataset: Dataset,
-    projection_label: Label,
+    spatial_reference_label: Label,
 }
 
 impl DatasetView {
@@ -76,7 +74,7 @@ impl DatasetView {
             dataset,
             audio,
             sub_views: Rc::new(RefCell::new(Vec::new())),
-            projection_label: Label::new(),
+            spatial_reference_label: Label::new(),
         };
         let mut sub_views = Vec::new();
         let layers = view.dataset.layers();
@@ -168,12 +166,18 @@ impl ViewDelegate for DatasetView {
         for sub_view in self.sub_views.borrow().iter() {
             self.content.add_subview(sub_view)
         }
-        self.projection_label.set_text(self.dataset.projection());
-        self.content.add_subview(&self.projection_label);
+        self.spatial_reference_label.set_text(
+            self.dataset
+                .spatial_ref()
+                .unwrap_or_else(|_| self.dataset.layer(0).unwrap().spatial_ref().unwrap())
+                .to_pretty_wkt()
+                .unwrap(),
+        );
+        self.content.add_subview(&self.spatial_reference_label);
         view.add_subview(&self.content);
         // Add layout constraints to be 100% excluding the safe area
         // Do last because it will crash because the view needs to be inside the hierarchy
-        cacao::layout::LayoutConstraint::activate(&[
+        LayoutConstraint::activate(&[
             self.content
                 .top
                 .constraint_equal_to(&view.safe_layout_guide.top),
@@ -186,6 +190,18 @@ impl ViewDelegate for DatasetView {
             self.content
                 .bottom
                 .constraint_equal_to(&view.safe_layout_guide.bottom),
+            self.spatial_reference_label
+                .top
+                .constraint_equal_to(&self.content.top),
+            self.spatial_reference_label
+                .leading
+                .constraint_equal_to(&self.content.leading),
+            self.spatial_reference_label
+                .height
+                .constraint_equal_to_constant(40.0),
+            self.spatial_reference_label
+                .width
+                .constraint_equal_to_constant(80.0),
         ])
     }
 }
