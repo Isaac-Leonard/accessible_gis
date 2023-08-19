@@ -2,7 +2,9 @@
 mod app;
 mod audio;
 mod list_view;
+mod raster;
 mod views;
+
 use cacao::{appkit::App, view::ViewController};
 use views::MainView;
 

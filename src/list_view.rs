@@ -7,7 +7,7 @@ pub trait ConfigurableRow {
     fn configure_with(&mut self, data: &Self::Data);
 }
 
-/// The list view for attributes
+/// A generic list view
 pub struct MyListView<R: ViewDelegate + ConfigurableRow + Default + 'static> {
     view: Option<ListView>,
     data: Vec<R::Data>,
