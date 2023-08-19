@@ -23,7 +23,7 @@ pub fn dispatch_ui(message: Message) {
 pub trait GetMessagible<Message> {
     /// Returns a list of references to all the sub components of this component with MessageHendler implemented for them
     /// Use dyn instead of a sized generic type as its almost certain there will need to be different types of subcomponents in the list
-    fn get_messagable(&self) -> Vec<&dyn MessageHandler<Message = Message>>;
+    fn get_messagable(&mut self) -> Vec<&mut dyn MessageHandler<Message = Message>>;
 
     /// Called by the default MessageHandler impl for this trait
     fn on_message(&self, message: &Message) {}
@@ -31,15 +31,15 @@ pub trait GetMessagible<Message> {
 
 pub trait MessageHandler {
     type Message: Send + Sync;
-    fn on_message_mut(&mut self, message: Self::Message);
+    fn on_message(&mut self, message: &Self::Message);
 }
 
 impl<T: GetMessagible<Message> + Sized> MessageHandler for T {
     type Message = Message;
 
-    fn on_message_mut(&mut self, message: Self::Message) {
-        for component in self.get_messagable_mut() {
-            component.on_message_mut(message)
+    fn on_message(&mut self, message: &Self::Message) {
+        for component in self.get_messagable() {
+            component.on_message(message)
         }
     }
 }
