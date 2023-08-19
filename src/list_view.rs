@@ -20,6 +20,11 @@ where
     pub fn new(data: Vec<R::Data>) -> Self {
         Self { view: None, data }
     }
+
+    /// Not a good name
+    pub fn with(data: Vec<R::Data>) -> ListView<Self> {
+        ListView::with(Self::new(data))
+    }
 }
 
 impl<R> ListViewDelegate for MyListView<R>
