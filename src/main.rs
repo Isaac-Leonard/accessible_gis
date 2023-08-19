@@ -1,6 +1,7 @@
 #![feature(result_option_inspect)]
 mod app;
 mod audio;
+mod events;
 mod list_view;
 mod raster;
 mod views;

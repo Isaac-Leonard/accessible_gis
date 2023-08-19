@@ -1,9 +1,9 @@
+use crate::events::Message;
+use crate::views::MainView;
 use cacao::appkit::window::Window;
 use cacao::appkit::{App, AppDelegate};
 use cacao::notification_center::Dispatcher;
 use cacao::view::ViewController;
-
-use crate::views::{MainView, Message};
 
 pub struct BasicApp {
     pub window: Window,
@@ -35,10 +35,4 @@ impl AppDelegate for BasicApp {
     fn should_terminate_after_last_window_closed(&self) -> bool {
         true
     }
-}
-
-/// Dispatch a message on a background thread.
-pub fn dispatch_ui(message: Message) {
-    println!("Dispatching UI message: {:?}", message);
-    App::<BasicApp, Message>::dispatch_main(message);
 }

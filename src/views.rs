@@ -1,5 +1,5 @@
-use crate::app::dispatch_ui;
 use crate::audio::{get_audio, AudioMessage};
+use crate::events::{dispatch_ui, Message};
 use crate::list_view::{ConfigurableRow, MyListView};
 use crate::raster::*;
 use cacao::filesystem::FileSelectPanel;
@@ -13,7 +13,7 @@ use cacao::{button::Button, view};
 use gdal::vector::{Feature, FieldValue, Geometry, LayerAccess};
 use gdal::Dataset;
 use std::cell::RefCell;
-use std::path::PathBuf;
+
 use std::rc::Rc;
 use std::sync::mpsc::Sender;
 
@@ -294,15 +294,6 @@ impl ViewDelegate for FeatureView {
                 .constraint_equal_to(&view.safe_layout_guide.bottom),
         ])
     }
-}
-
-#[derive(Clone, Debug)]
-pub enum Message {
-    ClickedSelectFile,
-    GotFile(PathBuf),
-    InvalidFile(PathBuf),
-    ToggleAudio,
-    RasterViewerAction(RasterViewerrMessage),
 }
 
 #[derive(Default, Debug)]
