@@ -1,10 +1,13 @@
 use cacao::layout::LayoutConstraint;
-use cacao::listview::{ListView, ListViewDelegate};
+use cacao::listview::{ListView, ListViewDelegate, RowAction, RowEdge};
 use cacao::view::ViewDelegate;
 
 pub trait ConfigurableRow {
     type Data;
     fn configure_with(&mut self, data: &Self::Data);
+    fn actions(row: usize, data: &Self::Data, edge: RowEdge) -> Vec<RowAction> {
+        Vec::new()
+    }
 }
 
 /// A generic list view
@@ -31,8 +34,10 @@ impl<R> ListViewDelegate for MyListView<R>
 where
     R: ViewDelegate + ConfigurableRow + Default + 'static,
 {
-    const NAME: &'static str = "MyListView";
-
+    const NAME: &'static str = "ThisIsIgnored";
+    fn subclass_name(&self) -> &'static str {
+        R::NAME
+    }
     /// Essential configuration and retaining of a `ListView` handle to do updates later on.
     fn did_load(&mut self, view: ListView) {
         view.register(R::NAME, R::default);
@@ -61,5 +66,9 @@ where
         }
 
         view.into_row()
+    }
+
+    fn actions_for(&self, row: usize, edge: RowEdge) -> Vec<RowAction> {
+        R::actions(row, &self.data[row], edge)
     }
 }

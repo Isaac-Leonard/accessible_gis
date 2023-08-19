@@ -1,20 +1,23 @@
+use crate::events::{dispatch_ui, Message, MessageHandler};
 use crate::list_view::{ConfigurableRow, MyListView};
 use gdal::vector::{Layer, LayerAccess};
 
 use cacao::layout::{Layout, LayoutConstraint};
-use cacao::listview::ListView;
+use cacao::listview::{ListView, RowAction, RowActionStyle, RowEdge};
 
 use cacao::text::Label;
 use cacao::view;
 use cacao::view::{View, ViewDelegate};
 use gdal::vector::{Feature, FieldValue, Geometry};
+
 pub struct VectorLayerView {
     content: View,
     common_fields: ListView<MyListView<CommonFieldsRow>>,
     feature_views: Vec<View<FeatureView>>,
 }
+
 impl VectorLayerView {
-    pub fn new(layer: Layer) -> Self {
+    pub fn new(layer: Layer, labeled_by: Option<String>) -> Self {
         let mut layer = layer;
         let mut fields: Vec<(String, Vec<&'static str>)> = Vec::new();
         for feature in layer.features() {
@@ -22,6 +25,7 @@ impl VectorLayerView {
                 let field_type: &'static str =
                     val.map(custom_field_type_to_string).unwrap_or("Empty");
                 if let Some((_, ref mut types)) = fields.iter_mut().find(|x| x.0 == name) {
+                    // Make sure we don't add the same type twice
                     if !types.contains(&field_type) {
                         types.push(field_type)
                     }
@@ -36,7 +40,7 @@ impl VectorLayerView {
             feature_views: layer
                 .features()
                 .enumerate()
-                .map(|x| View::with(FeatureView::new(x.1, x.0)))
+                .map(|x| View::with(FeatureView::new(x.1, labeled_by.clone(), x.0)))
                 .collect(),
         }
     }
@@ -78,10 +82,11 @@ struct FeatureView {
     position: usize,
     projection_label: Label,
     geometry: Geometry,
+    labeled_by: Option<String>,
 }
 
 impl FeatureView {
-    pub fn new(feature: Feature, position: usize) -> Self {
+    pub fn new(feature: Feature, labeled_by: Option<String>, position: usize) -> Self {
         FeatureView {
             content: View::new(),
             label: Label::default(),
@@ -89,6 +94,15 @@ impl FeatureView {
             position,
             projection_label: Label::new(),
             geometry: feature.geometry().unwrap().clone(),
+            labeled_by: labeled_by.map(|labeled_by| {
+                feature
+                    .fields()
+                    .find(|x| x.0 == labeled_by)
+                    .and_then(|x| x.1)
+                    .as_ref()
+                    .map(custom_field_value_to_string)
+                    .unwrap_or("Unlabeled".to_owned())
+            }),
         }
     }
 }
@@ -98,7 +112,22 @@ impl ViewDelegate for FeatureView {
 
     fn did_load(&mut self, view: View) {
         self.content.add_subview(&self.attribute_table);
-        self.label.set_text(self.geometry.geometry_name());
+        eprintln!(
+            "{}{}",
+            self.labeled_by
+                .as_ref()
+                .map(|x| format!("{x}: "))
+                .unwrap_or_default(),
+            self.geometry.geometry_name(),
+        );
+        self.label.set_text(format!(
+            "{}{}",
+            self.labeled_by
+                .as_ref()
+                .map(|x| format!("{x}: "))
+                .unwrap_or_default(),
+            self.geometry.geometry_name(),
+        ));
         self.label
             .set_text_color(cacao::color::Color::rgb(255, 255, 255));
         self.content.add_subview(&self.label);
@@ -246,6 +275,18 @@ impl ConfigurableRow for CommonFieldsRow {
     fn configure_with(&mut self, (name, field_type): &Self::Data) {
         self.name.set_text(name);
         self.field_type.set_text(field_type.join(", "))
+    }
+    fn actions(row: usize, data: &Self::Data, edge: RowEdge) -> Vec<RowAction> {
+        eprintln!("actions called");
+        if let RowEdge::Leading = edge {
+            return vec![];
+        }
+        let name = data.0.clone();
+        vec![RowAction::new(
+            "Use as label",
+            RowActionStyle::Regular,
+            move |_, _| dispatch_ui(Message::SetFeatureLabel(name.clone())),
+        )]
     }
 }
 

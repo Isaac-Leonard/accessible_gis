@@ -16,7 +16,7 @@ impl Dispatcher for BasicApp {
     /// Handles a message that came over on the main (UI) thread.
     fn on_ui_message(&self, message: Self::Message) {
         if let Some(delegate) = &self.content.view.delegate {
-            delegate.on_ui_message(message);
+            delegate.on_message(&message);
         }
     }
 }

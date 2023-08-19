@@ -43,7 +43,7 @@ pub struct RasterLayerView {
 }
 
 impl RasterLayerView {
-    pub fn on_message(&self, message: Message) {
+    pub fn on_message(&self, message: &Message) {
         match message {
             Message::RasterViewerAction(action) => {
                 // Must keep the mutable borrow of data in its own block so its released before calling update_value
@@ -87,7 +87,7 @@ impl RasterLayerView {
 }
 
 impl RasterLayerView {
-    pub fn new(band: RasterBand, position: usize) -> Self {
+    pub fn new(band: &RasterBand, position: usize) -> Self {
         RasterLayerView {
             content: View::new(),
             label: Label::default(),

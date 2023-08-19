@@ -1,5 +1,5 @@
 use crate::audio::{get_audio, AudioMessage};
-use crate::events::{dispatch_ui, Message};
+use crate::events::{dispatch_ui, Message, MessageHandler};
 
 use crate::raster::*;
 use crate::vector::VectorLayerView;
@@ -33,18 +33,15 @@ impl MainView {
     }
 }
 
-impl Dispatcher for MainView {
-    type Message = Message;
-
-    /// Handles a message that came over on the main (UI) thread.
-    fn on_ui_message(&self, message: Self::Message) {
+impl MainView {
+    pub fn on_message(&self, message: &Message) {
         match message {
-            Message::ToggleAudio | Message::RasterViewerAction(_) => {
+            Message::SetFeatureLabel(_) | Message::ToggleAudio | Message::RasterViewerAction(_) => {
                 let dataset_view = self.dataset_view.borrow_mut();
                 dataset_view
                     .as_ref()
                     .and_then(|x| x.delegate.as_ref())
-                    .inspect(|x| x.on_ui_message(message));
+                    .inspect(|x| x.on_message(message));
             }
             Message::ClickedSelectFile => FileSelectPanel::new().show(file_selection_handler),
             Message::GotFile(path) => {
@@ -63,39 +60,69 @@ pub struct DatasetView {
     content: view::View,
     sub_views: Rc<RefCell<Vec<View<LayerView>>>>,
     audio: Sender<AudioMessage>,
-    dataset: Dataset,
+    dataset: Rc<RefCell<Dataset>>,
     spatial_reference_label: Label,
 }
 
 impl DatasetView {
     fn new(dataset: Dataset) -> Self {
-        eprintln!("Here");
         let audio = get_audio();
         let view = Self {
             content: View::new(),
-            dataset,
+            dataset: Rc::new(RefCell::new(dataset)),
             audio,
             sub_views: Rc::new(RefCell::new(Vec::new())),
             spatial_reference_label: Label::new(),
         };
+        {
+            let dataset = view.dataset.borrow_mut();
+            let mut sub_views = Vec::new();
+            let layers = dataset.layers();
+            let mut last_position = 0;
+            for layer in layers {
+                let vector_view = View::with(VectorLayerView::new(layer, None));
+                vector_view.set_background_color(cacao::color::Color::SystemRed);
+                sub_views.push(View::with(LayerView::Vector(vector_view)));
+                last_position += 1;
+            }
+            // TODO: Lets try replace with a proper iterator
+            for i in 1..=dataset.raster_count() {
+                let band = dataset.rasterband(i).unwrap();
+                let raster_view =
+                    View::with(RasterLayerView::new(&band, i as usize + last_position));
+                raster_view.set_background_color(cacao::color::Color::SystemRed);
+                sub_views.push(View::with(LayerView::Raster(raster_view)));
+            }
+            view.sub_views.borrow_mut().append(&mut sub_views);
+        }
+        view
+    }
+
+    fn update_new_label(&self, labeled_by: Option<String>) {
         let mut sub_views = Vec::new();
-        let layers = view.dataset.layers();
+        let dataset = self.dataset.borrow_mut();
+        let layers = dataset.layers();
         let mut last_position = 0;
-        for mut layer in layers {
-            let vector_view = View::with(VectorLayerView::new(layer));
+        for layer in layers {
+            let vector_view = View::with(VectorLayerView::new(layer, labeled_by.clone()));
             vector_view.set_background_color(cacao::color::Color::SystemRed);
             sub_views.push(View::with(LayerView::Vector(vector_view)));
             last_position += 1;
         }
         // TODO: Lets try replace with a proper iterator
-        for i in 1..=view.dataset.raster_count() {
-            let band = view.dataset.rasterband(i).unwrap();
-            let raster_view = View::with(RasterLayerView::new(band, i as usize + last_position));
+        for i in 1..=dataset.raster_count() {
+            let band = dataset.rasterband(i).unwrap();
+            let raster_view = View::with(RasterLayerView::new(&band, i as usize + last_position));
             raster_view.set_background_color(cacao::color::Color::SystemRed);
-            sub_views.push(View::with(LayerView::Raster(raster_view)));
+            let view = View::with(LayerView::Raster(raster_view));
+            sub_views.push(view);
         }
-        view.sub_views.borrow_mut().append(&mut sub_views);
-        view
+        let mut old_sub_views = self.sub_views.borrow_mut();
+        old_sub_views.clear();
+        old_sub_views.append(&mut sub_views);
+        for view in old_sub_views.iter() {
+            self.content.add_subview(view);
+        }
     }
 }
 
@@ -119,7 +146,7 @@ impl ViewDelegate for LayerView {
 }
 
 impl LayerView {
-    fn on_message(&self, message: Message) {
+    fn on_message(&self, message: &Message) {
         match self {
             Self::Vector(_vector_view) => {}
             Self::Raster(raster_view) => {
@@ -168,8 +195,16 @@ impl ViewDelegate for DatasetView {
         }
         self.spatial_reference_label.set_text(
             self.dataset
+                .borrow()
                 .spatial_ref()
-                .unwrap_or_else(|_| self.dataset.layer(0).unwrap().spatial_ref().unwrap())
+                .unwrap_or_else(|_| {
+                    self.dataset
+                        .borrow()
+                        .layer(0)
+                        .unwrap()
+                        .spatial_ref()
+                        .unwrap()
+                })
                 .to_pretty_wkt()
                 .unwrap(),
         );
@@ -220,23 +255,25 @@ fn file_selection_handler(paths: Vec<NSURL>) {
     dispatch_ui(Message::GotFile(path))
 }
 
-impl Dispatcher for DatasetView {
-    type Message = Message;
-
-    /// Handles a message that came over on the main (UI) thread.
-    fn on_ui_message(&self, message: Self::Message) {
+impl DatasetView {
+    fn on_message(&self, message: &Message) {
         match message {
             Message::ToggleAudio => self.audio.send(AudioMessage::PlayPause).unwrap(),
-            Message::RasterViewerAction(action) => {
+            Message::SetFeatureLabel(name) => self.update_new_label(Some(name.clone())),
+            Message::RasterViewerAction(_) => {
                 let views = self.sub_views.borrow();
                 views
                     .iter()
                     .filter_map(|v| v.delegate.as_ref())
-                    .for_each(|view| view.on_message(Message::RasterViewerAction(action)));
+                    .for_each(|view| view.on_message(message));
             }
             Message::InvalidFile(_) => {}
             Message::GotFile(_) => {}
             Message::ClickedSelectFile => {}
         }
     }
+}
+
+pub struct DatasetContainer {
+    dataset: Dataset,
 }

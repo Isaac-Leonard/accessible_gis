@@ -12,6 +12,7 @@ pub enum Message {
     InvalidFile(PathBuf),
     ToggleAudio,
     RasterViewerAction(RasterViewerrMessage),
+    SetFeatureLabel(String),
 }
 
 /// Dispatch a message on a background thread.
