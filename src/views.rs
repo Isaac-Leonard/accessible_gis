@@ -11,7 +11,7 @@ use cacao::notification_center::Dispatcher;
 use cacao::text::Label;
 use cacao::view::{View, ViewDelegate};
 use cacao::{button::Button, view};
-use gdal::vector::{LayerAccess};
+use gdal::vector::LayerAccess;
 use gdal::Dataset;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -22,6 +22,7 @@ pub struct MainView {
     button: Button,
     dataset_view: Rc<RefCell<Option<View<DatasetView>>>>,
 }
+
 impl MainView {
     pub fn new() -> Self {
         Self {
