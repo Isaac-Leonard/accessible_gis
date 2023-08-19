@@ -16,15 +16,23 @@ pub struct VectorLayerView {
 impl VectorLayerView {
     pub fn new(layer: Layer) -> Self {
         let mut layer = layer;
-        let mut names = Vec::new();
+        let mut fields: Vec<(String, Vec<&'static str>)> = Vec::new();
         for feature in layer.features() {
-            for field in feature.fields() {
-                names.push(field.0.clone())
+            for (name, val) in feature.fields() {
+                let field_type: &'static str =
+                    val.map(custom_field_type_to_string).unwrap_or("Empty");
+                if let Some((_, ref mut types)) = fields.iter_mut().find(|x| x.0 == name) {
+                    if !types.contains(&field_type) {
+                        types.push(field_type)
+                    }
+                } else {
+                    fields.push((name.clone(), vec![field_type]))
+                }
             }
         }
         Self {
             content: View::new(),
-            common_fields: ListView::with(MyListView::new(names)),
+            common_fields: ListView::with(MyListView::new(fields)),
             feature_views: layer
                 .features()
                 .enumerate()
@@ -130,12 +138,11 @@ impl ConfigurableRow for AttributeViewRow {
     /// Called when this view is being presented, and configures itself     pub
     fn configure_with(&mut self, (key, val): &Attribute) {
         self.key.set_text(key);
-        self.value.set_text(format!(
-            "{}",
-            val.clone()
+        self.value.set_text(
+            val.as_ref()
                 .map(custom_field_value_to_string)
-                .unwrap_or_default()
-        ));
+                .unwrap_or_default(),
+        );
     }
 }
 
@@ -178,9 +185,9 @@ impl ViewDelegate for AttributeViewRow {
     }
 }
 
-fn custom_field_value_to_string(val: FieldValue) -> String {
+fn custom_field_value_to_string(val: &FieldValue) -> String {
     match val {
-        FieldValue::StringValue(str) => str,
+        FieldValue::StringValue(str) => str.clone(),
         FieldValue::IntegerValue(int) => int.to_string(),
         FieldValue::RealValue(float) => float.to_string(),
         FieldValue::DateValue(date) => date.to_string(),
@@ -212,16 +219,33 @@ fn custom_field_value_to_string(val: FieldValue) -> String {
     }
 }
 
+fn custom_field_type_to_string(val: FieldValue) -> &'static str {
+    match val {
+        FieldValue::StringValue(_) => "String",
+        FieldValue::IntegerValue(_) => "Integer",
+        FieldValue::RealValue(_) => "Float",
+        FieldValue::DateValue(_) => "Date",
+        FieldValue::DateTimeValue(_) => "DateTime",
+        FieldValue::Integer64Value(_) => "Integer64",
+        FieldValue::StringListValue(_) => "StringList",
+        FieldValue::RealListValue(_) => "FloatList",
+        FieldValue::IntegerListValue(_) => "IntegerList",
+        FieldValue::Integer64ListValue(_) => "Integer64List",
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct CommonFieldsRow {
     name: Label,
+    field_type: Label,
 }
 
 impl ConfigurableRow for CommonFieldsRow {
-    type Data = String;
+    type Data = (String, Vec<&'static str>);
     /// Called when this view is being presented, and configures itself     pub
-    fn configure_with(&mut self, name: &String) {
+    fn configure_with(&mut self, (name, field_type): &Self::Data) {
         self.name.set_text(name);
+        self.field_type.set_text(field_type.join(", "))
     }
 }
 
@@ -232,6 +256,7 @@ impl ViewDelegate for CommonFieldsRow {
     /// doesn't change.
     fn did_load(&mut self, view: View) {
         view.add_subview(&self.name);
+        view.add_subview(&self.field_type);
 
         LayoutConstraint::activate(&[
             self.name.top.constraint_equal_to(&view.top).offset(16.),
@@ -241,7 +266,23 @@ impl ViewDelegate for CommonFieldsRow {
                 .offset(16.),
             self.name
                 .trailing
+                .constraint_equal_to(&self.field_type.leading)
+                .offset(-16.),
+            self.name
+                .bottom
+                .constraint_equal_to(&view.bottom)
+                .offset(-16.),
+            self.field_type
+                .top
+                .constraint_equal_to(&view.top)
+                .offset(16.),
+            self.field_type
+                .trailing
                 .constraint_equal_to(&view.trailing)
+                .offset(-16.),
+            self.field_type
+                .bottom
+                .constraint_equal_to(&view.bottom)
                 .offset(-16.),
         ]);
     }
