@@ -10,6 +10,10 @@ use std::cell::RefCell;
 
 use std::rc::Rc;
 
+pub struct RasterView {
+    layers: RasterLayerView,
+}
+
 pub struct RasterViewerData {
     x: usize,
     y: usize,
@@ -18,7 +22,7 @@ pub struct RasterViewerData {
     stats: StatisticsAll,
 }
 
-pub struct RasterView {
+pub struct RasterLayerView {
     pub content: view::View,
     label: Label,
     position: usize,
@@ -38,7 +42,7 @@ pub struct RasterView {
     data: Rc<RefCell<RasterViewerData>>,
 }
 
-impl RasterView {
+impl RasterLayerView {
     pub fn on_message(&self, message: Message) {
         match message {
             Message::RasterViewerAction(action) => {
@@ -82,9 +86,9 @@ impl RasterView {
     }
 }
 
-impl RasterView {
+impl RasterLayerView {
     pub fn new(band: RasterBand, position: usize) -> Self {
-        RasterView {
+        RasterLayerView {
             content: View::new(),
             label: Label::default(),
             position,
@@ -112,7 +116,7 @@ impl RasterView {
     }
 }
 
-impl ViewDelegate for RasterView {
+impl ViewDelegate for RasterLayerView {
     const NAME: &'static str = "RasterView";
 
     fn did_load(&mut self, view: View) {
@@ -164,7 +168,7 @@ impl ViewDelegate for RasterView {
     }
 }
 
-impl RasterView {
+impl RasterLayerView {
     fn update_value(&self) {
         let data = self.data.borrow();
         self.cell_value_label.set_text(data.stats.mean.to_string());

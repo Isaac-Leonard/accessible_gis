@@ -92,7 +92,7 @@ impl DatasetView {
         // TODO: Lets try replace with a proper iterator
         for i in 1..=view.dataset.raster_count() {
             let band = view.dataset.rasterband(i).unwrap();
-            let raster_view = View::with(RasterView::new(band, i as usize + last_position));
+            let raster_view = View::with(RasterLayerView::new(band, i as usize + last_position));
             raster_view.set_background_color(cacao::color::Color::SystemRed);
             sub_views.push(View::with(LayerView::Raster(raster_view)));
         }
@@ -103,7 +103,7 @@ impl DatasetView {
 
 pub enum LayerView {
     Vector(View<FeatureView>),
-    Raster(View<RasterView>),
+    Raster(View<RasterLayerView>),
 }
 
 impl ViewDelegate for LayerView {
