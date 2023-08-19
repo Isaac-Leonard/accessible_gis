@@ -4,6 +4,7 @@ mod audio;
 mod events;
 mod list_view;
 mod raster;
+mod vector;
 mod views;
 
 use cacao::{appkit::App, view::ViewController};
