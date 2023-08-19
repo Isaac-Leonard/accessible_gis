@@ -2,7 +2,7 @@ use crate::audio::{get_audio, AudioMessage};
 use crate::events::{dispatch_ui, Message};
 
 use crate::raster::*;
-use crate::vector::FeatureView;
+use crate::vector::VectorLayerView;
 use cacao::filesystem::FileSelectPanel;
 use cacao::foundation::NSURL;
 use cacao::layout::{Layout, LayoutConstraint};
@@ -82,12 +82,10 @@ impl DatasetView {
         let layers = view.dataset.layers();
         let mut last_position = 0;
         for mut layer in layers {
-            for feature in layer.features() {
-                let vector_view = View::with(FeatureView::new(feature, last_position));
-                vector_view.set_background_color(cacao::color::Color::SystemRed);
-                sub_views.push(View::with(LayerView::Vector(vector_view)));
-                last_position += 1;
-            }
+            let vector_view = View::with(VectorLayerView::new(layer));
+            vector_view.set_background_color(cacao::color::Color::SystemRed);
+            sub_views.push(View::with(LayerView::Vector(vector_view)));
+            last_position += 1;
         }
         // TODO: Lets try replace with a proper iterator
         for i in 1..=view.dataset.raster_count() {
@@ -102,7 +100,7 @@ impl DatasetView {
 }
 
 pub enum LayerView {
-    Vector(View<FeatureView>),
+    Vector(View<VectorLayerView>),
     Raster(View<RasterLayerView>),
 }
 
