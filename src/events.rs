@@ -10,7 +10,7 @@ pub enum Message {
     ClickedSelectFile,
     GotFile(PathBuf),
     InvalidFile(PathBuf),
-    ToggleAudio,
+    PlayAudioGraph(Vec<f64>),
     RasterViewerAction(RasterViewerrMessage),
     SetFeatureLabel(String),
 }

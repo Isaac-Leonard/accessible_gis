@@ -1,4 +1,6 @@
+#![feature(sort_floats)]
 #![feature(result_option_inspect)]
+mod graph;
 mod app;
 mod audio;
 mod events;

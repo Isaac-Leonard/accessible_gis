@@ -9,41 +9,43 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{FromSample, SizedSample, Stream};
 use fundsp::hacker::*;
 
+use crate::graph::play;
+
 #[cfg(debug_assertions)] // required when disable_release is set (default)
 #[global_allocator]
 static A: AllocDisabler = AllocDisabler;
 
 #[derive(Clone, Debug)]
 pub enum AudioMessage {
-    PlayPause,
+    PlayGraph(Vec<f64>),
 }
 pub fn get_audio() -> mpsc::Sender<AudioMessage> {
     let (tx, rx) = mpsc::channel();
     thread::spawn(move || {
-        let stream = play();
+        let stream = get_player();
         stream.pause();
         let mut playing = false;
         loop {
-            let _message = rx.recv().unwrap();
-            if playing {
-                stream.pause();
-            } else {
-                stream.play();
-            }
+            let AudioMessage::PlayGraph(graph) = rx.recv().unwrap();
+            /*            if playing {
+                    stream.pause();
+                } else {
+                    stream.play();
+            }*/
+            play(graph);
             playing = !playing;
         }
     });
     tx
 }
 
-fn play() -> Stream {
+fn get_player() -> Stream {
     let host = cpal::default_host();
 
     let device = host
         .default_output_device()
         .expect("Failed to find a default output device");
     let config = device.default_output_config().unwrap();
-
     match config.sample_format() {
         cpal::SampleFormat::F32 => run::<f32>(&device, &config.into()).unwrap(),
         cpal::SampleFormat::I16 => run::<i16>(&device, &config.into()).unwrap(),
@@ -134,7 +136,6 @@ where
     c.allocate();
 
     let mut next_value = move || assert_no_alloc(|| c.get_stereo());
-
     let err_fn = |err| eprintln!("an error occurred on stream: {}", err);
 
     let stream = device.build_output_stream(

@@ -36,7 +36,9 @@ impl MainView {
 impl MainView {
     pub fn on_message(&self, message: &Message) {
         match message {
-            Message::SetFeatureLabel(_) | Message::ToggleAudio | Message::RasterViewerAction(_) => {
+            Message::SetFeatureLabel(_)
+            | Message::PlayAudioGraph(_)
+            | Message::RasterViewerAction(_) => {
                 let dataset_view = self.dataset_view.borrow_mut();
                 dataset_view
                     .as_ref()
@@ -86,7 +88,7 @@ impl DatasetView {
                 last_position += 1;
             }
             // TODO: Lets try replace with a proper iterator
-            for i in 1..=dataset.raster_count() {
+            for i in 1..=dbg!(dataset.raster_count()) {
                 let band = dataset.rasterband(i).unwrap();
                 let raster_view =
                     View::with(RasterLayerView::new(&band, i as usize + last_position));
@@ -258,7 +260,10 @@ fn file_selection_handler(paths: Vec<NSURL>) {
 impl DatasetView {
     fn on_message(&self, message: &Message) {
         match message {
-            Message::ToggleAudio => self.audio.send(AudioMessage::PlayPause).unwrap(),
+            Message::PlayAudioGraph(graph) => self
+                .audio
+                .send(AudioMessage::PlayGraph(graph.clone()))
+                .unwrap(),
             Message::SetFeatureLabel(name) => self.update_new_label(Some(name.clone())),
             Message::RasterViewerAction(_) => {
                 let views = self.sub_views.borrow();
