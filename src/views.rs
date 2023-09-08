@@ -165,7 +165,7 @@ impl ViewDelegate for MainView {
 
     fn did_load(&mut self, view: View) {
         self.button
-            .set_action(|| dispatch_ui(Message::ClickedSelectFile));
+            .set_action(|_| dispatch_ui(Message::ClickedSelectFile));
         self.button.set_key_equivalent("c");
         self.content.add_subview(&self.button);
         view.add_subview(&self.content);

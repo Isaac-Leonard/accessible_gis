@@ -1,6 +1,8 @@
 use crate::events::{dispatch_ui, Message};
 use crate::graph::generate_image_histogram;
+use crate::list_view::{ConfigurableRow, MyListView};
 use cacao::layout::{Layout, LayoutConstraint};
+use cacao::listview::ListView;
 use gdal::raster::GdalDataType;
 
 use cacao::text::Label;
@@ -43,6 +45,7 @@ pub struct RasterLayerView {
     stats_label: Label,
     data: Rc<RefCell<RasterViewerData>>,
     hist: Option<Vec<f64>>,
+    hist_table: Option<ListView<MyListView<HistogramViewRow>>>,
     data_type_name: String,
 }
 
@@ -93,6 +96,12 @@ impl RasterLayerView {
 impl RasterLayerView {
     pub fn new(band: &RasterBand, position: usize) -> Self {
         let band_type = band.band_type();
+        let hist = match band_type {
+            GdalDataType::UInt8 => Some(generate_image_histogram(
+                band.read_band_as::<u8>().unwrap().data,
+            )),
+            _ => None,
+        };
         RasterLayerView {
             data_type_name: band_type.name(),
             content: View::new(),
@@ -118,12 +127,8 @@ impl RasterLayerView {
             positional_information_label: Label::new(),
             cell_value_label: Label::new(),
             stats_label: Label::new(),
-            hist: match band_type {
-                GdalDataType::UInt8 => Some(generate_image_histogram(
-                    band.read_band_as::<u8>().unwrap().data,
-                )),
-                _ => None,
-            },
+            hist: hist.clone(),
+            hist_table: hist.map(|hist| ListView::with(MyListView::new(hist))),
         }
     }
 }
@@ -134,7 +139,7 @@ impl ViewDelegate for RasterLayerView {
     fn did_load(&mut self, view: View) {
         macro_rules! connect_button {
             ($btn:expr, $action:expr) => {{
-                $btn.set_action(|| dispatch_ui(Message::RasterViewerAction($action)));
+                $btn.set_action(|_| dispatch_ui(Message::RasterViewerAction($action)));
                 self.content.add_subview(&$btn);
             }};
         }
@@ -145,12 +150,15 @@ impl ViewDelegate for RasterLayerView {
             .set_text_color(cacao::color::Color::rgb(255, 255, 255));
         self.content.add_subview(&self.label);
         let hist = self.hist.clone();
-        self.play_pause_btn.set_action(move || {
+        self.play_pause_btn.set_action(move |_| {
             if let Some(hist) = &hist {
                 dispatch_ui(Message::PlayAudioGraph(hist.clone()));
             }
         });
         self.content.add_subview(&self.play_pause_btn);
+        if let Some(hist_table) = &self.hist_table {
+            self.content.add_subview(hist_table);
+        }
         connect_button!(self.move_north_btn, RasterViewerrMessage::MoveNorth);
         connect_button!(self.move_east_btn, RasterViewerrMessage::MoveEast);
         connect_button!(self.move_south_btn, RasterViewerrMessage::MoveSouth);
@@ -208,4 +216,38 @@ pub enum RasterViewerrMessage {
     DoubleWidth,
     HalveHeight,
     HalveWidth,
+}
+
+#[derive(Default)]
+pub struct HistogramViewRow {
+    value: Label,
+}
+
+impl ConfigurableRow for HistogramViewRow {
+    type Data = f64;
+    fn configure_with(&mut self, data: &Self::Data) {
+        self.value.set_text(data.to_string());
+    }
+}
+
+impl ViewDelegate for HistogramViewRow {
+    const NAME: &'static str = "HistogramViewRow";
+    fn did_load(&mut self, view: View) {
+        view.add_subview(&self.value);
+        LayoutConstraint::activate(&[
+            self.value.top.constraint_equal_to(&view.top).offset(8.),
+            self.value
+                .leading
+                .constraint_equal_to(&view.leading)
+                .offset(16.),
+            self.value
+                .trailing
+                .constraint_equal_to(&view.trailing)
+                .offset(-16.),
+            self.value
+                .bottom
+                .constraint_equal_to(&view.bottom)
+                .offset(-8.),
+        ]);
+    }
 }
