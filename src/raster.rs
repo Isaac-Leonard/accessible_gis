@@ -1,5 +1,5 @@
 use crate::events::{dispatch_ui, Message};
-use crate::graph::freq_counts;
+use crate::graph::generate_image_histogram;
 use cacao::layout::{Layout, LayoutConstraint};
 use gdal::raster::GdalDataType;
 
@@ -42,7 +42,8 @@ pub struct RasterLayerView {
     positional_information_label: Label,
     stats_label: Label,
     data: Rc<RefCell<RasterViewerData>>,
-    hist: Vec<f64>,
+    hist: Option<Vec<f64>>,
+    data_type_name: String,
 }
 
 impl RasterLayerView {
@@ -93,6 +94,7 @@ impl RasterLayerView {
     pub fn new(band: &RasterBand, position: usize) -> Self {
         let band_type = band.band_type();
         RasterLayerView {
+            data_type_name: band_type.name(),
             content: View::new(),
             label: Label::default(),
             position,
@@ -117,17 +119,10 @@ impl RasterLayerView {
             cell_value_label: Label::new(),
             stats_label: Label::new(),
             hist: match band_type {
-                GdalDataType::Int8 => freq_counts(band.read_band_as::<i8>().unwrap().data),
-                GdalDataType::UInt8 => freq_counts(band.read_band_as::<u8>().unwrap().data),
-                GdalDataType::Int16 => freq_counts(band.read_band_as::<i16>().unwrap().data),
-                GdalDataType::UInt16 => freq_counts(band.read_band_as::<u16>().unwrap().data),
-                GdalDataType::Int32 => freq_counts(band.read_band_as::<i32>().unwrap().data),
-                GdalDataType::UInt32 => freq_counts(band.read_band_as::<u32>().unwrap().data),
-                GdalDataType::Int64 => freq_counts(band.read_band_as::<i64>().unwrap().data),
-                GdalDataType::UInt64 => freq_counts(band.read_band_as::<u64>().unwrap().data),
-                GdalDataType::Float32 => freq_counts(band.read_band_as::<f32>().unwrap().data),
-                GdalDataType::Float64 => freq_counts(band.read_band_as::<f64>().unwrap().data),
-                GdalDataType::Unknown => panic!("Unknown datatype for rasta"),
+                GdalDataType::UInt8 => Some(generate_image_histogram(
+                    band.read_band_as::<u8>().unwrap().data,
+                )),
+                _ => None,
             },
         }
     }
@@ -144,13 +139,17 @@ impl ViewDelegate for RasterLayerView {
             }};
         }
 
-        self.label.set_text("Raster file");
+        self.label
+            .set_text(format!("Rasta file with {} data", self.data_type_name));
         self.label
             .set_text_color(cacao::color::Color::rgb(255, 255, 255));
         self.content.add_subview(&self.label);
         let hist = self.hist.clone();
-        self.play_pause_btn
-            .set_action(move || dispatch_ui(Message::PlayAudioGraph(hist.clone())));
+        self.play_pause_btn.set_action(move || {
+            if let Some(hist) = &hist {
+                dispatch_ui(Message::PlayAudioGraph(hist.clone()));
+            }
+        });
         self.content.add_subview(&self.play_pause_btn);
         connect_button!(self.move_north_btn, RasterViewerrMessage::MoveNorth);
         connect_button!(self.move_east_btn, RasterViewerrMessage::MoveEast);

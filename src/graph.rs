@@ -1,5 +1,3 @@
-use std::{f64::consts::PI, ops::Range, thread::sleep_ms};
-
 use assert_no_alloc::assert_no_alloc;
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
@@ -9,6 +7,7 @@ use fundsp::{
     hacker::{constant, panner, shared, var},
     prelude::{sine, AudioNode, Panner},
 };
+use std::{collections::BTreeMap, f64::consts::PI, ops::Range, thread::sleep_ms};
 
 /// Generate a sine wave audio signal for a given frequency.
 ///
@@ -124,16 +123,11 @@ impl Sonify {
         }
     }
 }
-pub fn freq_counts<T: PartialOrd>(mut data: Vec<T>) -> Vec<f64> {
-    data.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let mut counts = vec![1.0];
-    data.windows(2).for_each(|x| {
-        if x[0] == x[1] {
-            *counts.last_mut().unwrap() += 1.0;
-        } else {
-            counts.push(1.0);
-        }
-    });
+pub fn generate_image_histogram(mut data: Vec<u8>) -> Vec<f64> {
+    let mut counts: Vec<f64> = vec![0.0; 255];
+    for x in data {
+        counts[x as usize] += 1.0;
+    }
     counts
 }
 
