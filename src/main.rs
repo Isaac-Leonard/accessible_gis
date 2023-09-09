@@ -5,6 +5,7 @@ mod app;
 mod audio;
 mod events;
 mod graph;
+mod layout;
 mod list_view;
 mod raster;
 mod vector;
