@@ -2,6 +2,7 @@ use crate::events::{dispatch_ui, Message};
 use crate::graph::generate_image_histogram;
 use crate::list_view::{ConfigurableRow, MyListView};
 use cacao::appkit::window::{Window, WindowDelegate};
+use cacao::input::TextField;
 use cacao::layout::{Layout, LayoutConstraint};
 use cacao::listview::ListView;
 use cacao::view::ViewController;
@@ -50,6 +51,7 @@ pub struct RasterLayerView {
     hist: Option<Vec<f64>>,
     hist_table: Option<ListView<MyListView<HistogramViewRow>>>,
     data_type_name: String,
+    hist_settings: Rc<HistogramSettings>,
 }
 
 impl RasterLayerView {
@@ -133,6 +135,7 @@ impl RasterLayerView {
             stats_label: Label::new(),
             hist: hist.clone(),
             hist_table: hist.map(|hist| ListView::with(MyListView::new(hist))),
+            hist_settings: Rc::new(HistogramSettings::default()),
         }
     }
 }
@@ -266,10 +269,44 @@ struct HistogramSettings {
     max_freq: f64,
 }
 
-#[derive(Default)]
-pub struct UpdateHistogramSettingsView;
+impl Default for HistogramSettings {
+    fn default() -> Self {
+        Self {
+            duration: 50000,
+            min_freq: 440.0,
+            max_freq: 880.0,
+        }
+    }
+}
+
+pub struct UpdateHistogramSettingsView {
+    duration_label: Label,
+    duration_value: TextField,
+    done_btn: Button,
+}
+
+impl UpdateHistogramSettingsView {
+    fn new(settings: HistogramSettings) -> Self {
+        Self {
+            duration_label: Label::new(),
+            duration_value: TextField::default(),
+            done_btn: Button::new("Done"),
+        }
+    }
+}
+
 impl ViewDelegate for UpdateHistogramSettingsView {
     const NAME: &'static str = "UpdateHistogramSettingsView";
+    fn did_load(&mut self, view: View) {
+        view.add_subview(&self.duration_label);
+        self.duration_label
+            .set_text("Duration the graph should play for in milliseconds");
+        view.add_subview(&self.duration_value);
+        view.add_subview(&self.done_btn);
+        self.done_btn
+            .set_action(|_| dispatch_ui(Message::CloseChangeHistogramSettings));
+        LayoutConstraint::activate(&[])
+    }
 }
 impl UpdateHistogramSettingsView {
     fn on_message(&self, message: &Message) {}
@@ -281,7 +318,9 @@ pub struct ChangeHistogramSettingsWindow {
 
 impl ChangeHistogramSettingsWindow {
     pub fn new() -> Self {
-        let content = ViewController::new(UpdateHistogramSettingsView::default());
+        let content = ViewController::new(UpdateHistogramSettingsView::new(
+            HistogramSettings::default(),
+        ));
 
         Self { content: content }
     }
