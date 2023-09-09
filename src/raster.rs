@@ -160,6 +160,9 @@ impl ViewDelegate for RasterLayerView {
             }
         });
         self.content.add_subview(&self.play_pause_btn);
+        self.change_hist_settings_btn
+            .set_action(|_| dispatch_ui(Message::OpenChangeHistogramSettings));
+        self.content.add_subview(&self.change_hist_settings_btn);
         if let Some(hist_table) = &self.hist_table {
             self.content.add_subview(hist_table);
         }
