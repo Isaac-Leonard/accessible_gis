@@ -1,8 +1,10 @@
 use crate::events::{dispatch_ui, Message};
 use crate::graph::generate_image_histogram;
 use crate::list_view::{ConfigurableRow, MyListView};
+use cacao::appkit::window::{Window, WindowDelegate};
 use cacao::layout::{Layout, LayoutConstraint};
 use cacao::listview::ListView;
+use cacao::view::ViewController;
 use gdal::raster::GdalDataType;
 
 use cacao::text::Label;
@@ -31,6 +33,7 @@ pub struct RasterLayerView {
     label: Label,
     position: usize,
     play_pause_btn: Button,
+    change_hist_settings_btn: Button,
     move_west_btn: Button,
     move_east_btn: Button,
     move_north_btn: Button,
@@ -108,6 +111,7 @@ impl RasterLayerView {
             label: Label::default(),
             position,
             play_pause_btn: Button::new("play"),
+            change_hist_settings_btn: Button::new("Change settings for histogram"),
             playing: false,
             move_east_btn: Button::new("East"),
             move_west_btn: Button::new("West"),
@@ -249,5 +253,54 @@ impl ViewDelegate for HistogramViewRow {
                 .constraint_equal_to(&view.bottom)
                 .offset(-8.),
         ]);
+    }
+}
+
+struct HistogramSettings {
+    /// The length the histogram should play for in milliseconds
+    duration: u32,
+    min_freq: f64,
+    max_freq: f64,
+}
+
+#[derive(Default)]
+pub struct UpdateHistogramSettingsView;
+impl ViewDelegate for UpdateHistogramSettingsView {
+    const NAME: &'static str = "UpdateHistogramSettingsView";
+}
+impl UpdateHistogramSettingsView {
+    fn on_message(&self, message: &Message) {}
+}
+
+pub struct ChangeHistogramSettingsWindow {
+    pub content: ViewController<UpdateHistogramSettingsView>,
+}
+
+impl ChangeHistogramSettingsWindow {
+    pub fn new() -> Self {
+        let content = ViewController::new(UpdateHistogramSettingsView::default());
+
+        Self { content: content }
+    }
+
+    pub fn on_message(&self, message: &Message) {
+        if let Some(delegate) = &self.content.view.delegate {
+            delegate.on_message(message);
+        }
+    }
+}
+
+impl WindowDelegate for ChangeHistogramSettingsWindow {
+    const NAME: &'static str = "ChangeHistogramSettingsWindow";
+
+    fn did_load(&mut self, window: Window) {
+        window.set_autosave_name("ChangeHistogramSettingsWindow");
+        window.set_minimum_content_size(300, 100);
+        window.set_title("Change settings for this histogram");
+        window.set_content_view_controller(&self.content);
+    }
+
+    fn cancel(&self) {
+        dispatch_ui(Message::CloseChangeHistogramSettings);
     }
 }

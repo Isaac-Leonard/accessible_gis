@@ -113,8 +113,11 @@ impl Sonify {
         let y_range = max - min;
         let y_range = if y_range == 0.0 { 1.0 } else { y_range };
         let y_len = self.y.len();
+        let min_freq = 55.0;
+        let max_freq = 1760.0 * 4.0;
+        let freq_range = max_freq - min_freq;
         for (x, y) in self.y.iter().copied().enumerate() {
-            let freq_f = (y - min) / y_range * 440.0 + 440.0;
+            let freq_f = (y - min) / y_range * freq_range + min_freq;
             let pos_f = x as f64 / (y_len - 1) as f64 * 2.0 - 1.0;
             dbg!(pos_f);
             pos.set_value(pos_f);

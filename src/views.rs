@@ -31,13 +31,15 @@ impl MainView {
             dataset_view: Rc::new(RefCell::new(None)),
         }
     }
-}
 
-impl MainView {
     pub fn on_message(&self, message: &Message) {
         match message {
             Message::SetFeatureLabel(_)
             | Message::PlayAudioGraph(_)
+            | Message::CloseChangeHistogramSettings
+            | Message::OpenChangeHistogramSettings
+            | Message::CloseSheet
+            | Message::OpenMainWindow
             | Message::RasterViewerAction(_) => {
                 let dataset_view = self.dataset_view.borrow_mut();
                 dataset_view
@@ -55,6 +57,12 @@ impl MainView {
             }
             Message::InvalidFile(_) => {}
         }
+    }
+}
+
+impl Default for MainView {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -275,6 +283,8 @@ impl DatasetView {
             Message::InvalidFile(_) => {}
             Message::GotFile(_) => {}
             Message::ClickedSelectFile => {}
+            Message::CloseChangeHistogramSettings => {}
+            _ => {}
         }
     }
 }

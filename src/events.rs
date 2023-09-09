@@ -13,6 +13,10 @@ pub enum Message {
     PlayAudioGraph(Vec<f64>),
     RasterViewerAction(RasterViewerrMessage),
     SetFeatureLabel(String),
+    CloseChangeHistogramSettings,
+    OpenChangeHistogramSettings,
+    CloseSheet,
+    OpenMainWindow,
 }
 
 /// Dispatch a message on a background thread.
