@@ -3,7 +3,7 @@ use crate::graph::generate_image_histogram;
 use crate::list_view::{ConfigurableRow, MyListView};
 use cacao::appkit::window::{Window, WindowDelegate};
 use cacao::input::TextField;
-use cacao::layout::{Layout, LayoutAnchorX, LayoutAnchorY, LayoutConstraint};
+use cacao::layout::{Layout, LayoutAnchorX, LayoutAnchorY, LayoutConstraint, SafeAreaLayoutGuide};
 use cacao::listview::ListView;
 use cacao::view::ViewController;
 use gdal::raster::GdalDataType;
@@ -217,28 +217,14 @@ impl ViewDelegate for RasterLayerView {
                 &self.halve_width_btn,
             ]
         };
-        let inner_constraints = top_to_bottem(references, &self.content, 16.0);
+        let inner_constraints = top_to_bottom(references, &self.content, 16.0);
         // Add layout constraints to be 100% excluding the safe area
         // Do last because it will crash because the view needs to be inside the hierarchy
         LayoutConstraint::activate(
-            &[
-                self.content
-                    .top
-                    .constraint_equal_to(&view.safe_layout_guide.top)
-                    .offset(self.position as f64 * 50.),
-                self.content
-                    .leading
-                    .constraint_equal_to(&view.safe_layout_guide.leading),
-                self.content
-                    .trailing
-                    .constraint_equal_to(&view.safe_layout_guide.trailing),
-                self.content
-                    .bottom
-                    .constraint_equal_to(&view.safe_layout_guide.bottom),
-            ]
-            .into_iter()
-            .chain(inner_constraints)
-            .collect::<Vec<_>>(),
+            &fill_safe_area(&self.content, &view.safe_layout_guide)
+                .into_iter()
+                .chain(inner_constraints)
+                .collect::<Vec<_>>(),
         )
     }
 }
@@ -345,7 +331,7 @@ impl ViewDelegate for UpdateHistogramSettingsView {
         view.add_subview(&self.done_btn);
         self.done_btn
             .set_action(|_| dispatch_ui(Message::CloseChangeHistogramSettings));
-        LayoutConstraint::activate(&top_to_bottem(
+        LayoutConstraint::activate(&top_to_bottom(
             vec![&self.duration_label, &self.duration_value, &self.done_btn],
             &view,
             16.0,
@@ -391,19 +377,19 @@ impl WindowDelegate for ChangeHistogramSettingsWindow {
     }
 }
 
-fn top_to_bottem(
+fn top_to_bottom(
     views: Vec<&dyn HasLayout>,
     parent: &impl HasLayout,
     padding: f32,
 ) -> Vec<LayoutConstraint> {
-    let (top, bottem) = if let (Some(first), Some(last)) = (views.first(), views.last()) {
+    let (top, bottom) = if let (Some(first), Some(last)) = (views.first(), views.last()) {
         (
             first
                 .get_top()
                 .constraint_equal_to(parent.get_top())
                 .offset(padding),
-            last.get_bottem()
-                .constraint_equal_to(parent.get_bottem())
+            last.get_bottom()
+                .constraint_equal_to(parent.get_bottom())
                 .offset(padding),
         )
     } else {
@@ -412,7 +398,7 @@ fn top_to_bottem(
     };
     let adjoining_constraints = views
         .array_windows::<2>()
-        .map(|[a, b]| a.get_bottem().constraint_equal_to(b.get_top()));
+        .map(|[a, b]| a.get_bottom().constraint_equal_to(b.get_top()));
     let side_constraints = views
         .iter()
         .map(|view| {
@@ -422,16 +408,25 @@ fn top_to_bottem(
                 .offset(padding)]
         })
         .flatten();
-    vec![top, bottem]
+    vec![top, bottom]
         .into_iter()
         .chain(adjoining_constraints)
         .chain(side_constraints)
         .collect()
 }
 
+fn fill_safe_area(view: &impl HasLayout, safe_area: &SafeAreaLayoutGuide) -> Vec<LayoutConstraint> {
+    vec![
+        view.get_top().constraint_equal_to(&safe_area.top),
+        view.get_bottom().constraint_equal_to(&safe_area.bottom),
+        view.get_leading().constraint_equal_to(&safe_area.leading),
+        view.get_trailing().constraint_equal_to(&safe_area.trailing),
+    ]
+}
+
 pub trait HasLayout {
     fn get_top(&self) -> &LayoutAnchorY;
-    fn get_bottem(&self) -> &LayoutAnchorY;
+    fn get_bottom(&self) -> &LayoutAnchorY;
     fn get_leading(&self) -> &LayoutAnchorX;
     fn get_trailing(&self) -> &LayoutAnchorX;
 }
@@ -439,7 +434,7 @@ impl HasLayout for Label {
     fn get_top(&self) -> &LayoutAnchorY {
         &self.top
     }
-    fn get_bottem(&self) -> &LayoutAnchorY {
+    fn get_bottom(&self) -> &LayoutAnchorY {
         &self.bottom
     }
     fn get_leading(&self) -> &LayoutAnchorX {
@@ -453,7 +448,7 @@ impl HasLayout for TextField {
     fn get_top(&self) -> &LayoutAnchorY {
         &self.top
     }
-    fn get_bottem(&self) -> &LayoutAnchorY {
+    fn get_bottom(&self) -> &LayoutAnchorY {
         &self.bottom
     }
     fn get_leading(&self) -> &LayoutAnchorX {
@@ -467,7 +462,7 @@ impl HasLayout for Button {
     fn get_top(&self) -> &LayoutAnchorY {
         &self.top
     }
-    fn get_bottem(&self) -> &LayoutAnchorY {
+    fn get_bottom(&self) -> &LayoutAnchorY {
         &self.bottom
     }
     fn get_leading(&self) -> &LayoutAnchorX {
@@ -481,7 +476,7 @@ impl<T> HasLayout for View<T> {
     fn get_top(&self) -> &LayoutAnchorY {
         &self.top
     }
-    fn get_bottem(&self) -> &LayoutAnchorY {
+    fn get_bottom(&self) -> &LayoutAnchorY {
         &self.bottom
     }
     fn get_leading(&self) -> &LayoutAnchorX {
@@ -495,7 +490,7 @@ impl<T> HasLayout for ListView<T> {
     fn get_top(&self) -> &LayoutAnchorY {
         &self.top
     }
-    fn get_bottem(&self) -> &LayoutAnchorY {
+    fn get_bottom(&self) -> &LayoutAnchorY {
         &self.bottom
     }
     fn get_leading(&self) -> &LayoutAnchorX {
