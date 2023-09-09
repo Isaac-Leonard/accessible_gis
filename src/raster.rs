@@ -3,7 +3,7 @@ use crate::graph::generate_image_histogram;
 use crate::list_view::{ConfigurableRow, MyListView};
 use cacao::appkit::window::{Window, WindowDelegate};
 use cacao::input::TextField;
-use cacao::layout::{Layout, LayoutConstraint};
+use cacao::layout::{Layout, LayoutAnchorX, LayoutAnchorY, LayoutConstraint};
 use cacao::listview::ListView;
 use cacao::view::ViewController;
 use gdal::raster::GdalDataType;
@@ -30,7 +30,7 @@ pub struct RasterViewerData {
 }
 
 pub struct RasterLayerView {
-    pub content: view::View,
+    pub content: View,
     label: Label,
     position: usize,
     play_pause_btn: Button,
@@ -96,9 +96,7 @@ impl RasterLayerView {
             _ => {}
         }
     }
-}
 
-impl RasterLayerView {
     pub fn new(band: &RasterBand, position: usize) -> Self {
         let band_type = band.band_type();
         let hist = match band_type {
@@ -183,23 +181,65 @@ impl ViewDelegate for RasterLayerView {
         self.content.add_subview(&self.stats_label);
         self.update_value();
         view.add_subview(&self.content);
+        let references: Vec<&dyn HasLayout> = if let Some(hist_table) = &self.hist_table {
+            vec![
+                &self.label,
+                &self.play_pause_btn,
+                &self.change_hist_settings_btn,
+                hist_table,
+                &self.stats_label,
+                &self.positional_information_label,
+                &self.cell_value_label,
+                &self.move_north_btn,
+                &self.move_south_btn,
+                &self.move_west_btn,
+                &self.move_east_btn,
+                &self.double_height_btn,
+                &self.halve_height_btn,
+                &self.double_width_btn,
+                &self.halve_width_btn,
+            ]
+        } else {
+            vec![
+                &self.label,
+                &self.play_pause_btn,
+                &self.change_hist_settings_btn,
+                &self.stats_label,
+                &self.positional_information_label,
+                &self.cell_value_label,
+                &self.move_north_btn,
+                &self.move_south_btn,
+                &self.move_west_btn,
+                &self.move_east_btn,
+                &self.double_height_btn,
+                &self.halve_height_btn,
+                &self.double_width_btn,
+                &self.halve_width_btn,
+            ]
+        };
+        let inner_constraints = top_to_bottem(references, &self.content, 16.0);
         // Add layout constraints to be 100% excluding the safe area
         // Do last because it will crash because the view needs to be inside the hierarchy
-        LayoutConstraint::activate(&[
-            self.content
-                .top
-                .constraint_equal_to(&view.safe_layout_guide.top)
-                .offset(self.position as f64 * 50.),
-            self.content
-                .leading
-                .constraint_equal_to(&view.safe_layout_guide.leading),
-            self.content
-                .trailing
-                .constraint_equal_to(&view.safe_layout_guide.trailing),
-            self.content
-                .bottom
-                .constraint_equal_to(&view.safe_layout_guide.bottom),
-        ])
+        LayoutConstraint::activate(
+            &[
+                self.content
+                    .top
+                    .constraint_equal_to(&view.safe_layout_guide.top)
+                    .offset(self.position as f64 * 50.),
+                self.content
+                    .leading
+                    .constraint_equal_to(&view.safe_layout_guide.leading),
+                self.content
+                    .trailing
+                    .constraint_equal_to(&view.safe_layout_guide.trailing),
+                self.content
+                    .bottom
+                    .constraint_equal_to(&view.safe_layout_guide.bottom),
+            ]
+            .into_iter()
+            .chain(inner_constraints)
+            .collect::<Vec<_>>(),
+        )
     }
 }
 
@@ -305,7 +345,11 @@ impl ViewDelegate for UpdateHistogramSettingsView {
         view.add_subview(&self.done_btn);
         self.done_btn
             .set_action(|_| dispatch_ui(Message::CloseChangeHistogramSettings));
-        LayoutConstraint::activate(&[])
+        LayoutConstraint::activate(&top_to_bottem(
+            vec![&self.duration_label, &self.duration_value, &self.done_btn],
+            &view,
+            16.0,
+        ))
     }
 }
 impl UpdateHistogramSettingsView {
@@ -322,7 +366,7 @@ impl ChangeHistogramSettingsWindow {
             HistogramSettings::default(),
         ));
 
-        Self { content: content }
+        Self { content }
     }
 
     pub fn on_message(&self, message: &Message) {
@@ -344,5 +388,120 @@ impl WindowDelegate for ChangeHistogramSettingsWindow {
 
     fn cancel(&self) {
         dispatch_ui(Message::CloseChangeHistogramSettings);
+    }
+}
+
+fn top_to_bottem(
+    views: Vec<&dyn HasLayout>,
+    parent: &impl HasLayout,
+    padding: f32,
+) -> Vec<LayoutConstraint> {
+    let (top, bottem) = if let (Some(first), Some(last)) = (views.first(), views.last()) {
+        (
+            first
+                .get_top()
+                .constraint_equal_to(parent.get_top())
+                .offset(padding),
+            last.get_bottem()
+                .constraint_equal_to(parent.get_bottem())
+                .offset(padding),
+        )
+    } else {
+        // No views were passed
+        return Vec::new();
+    };
+    let adjoining_constraints = views
+        .array_windows::<2>()
+        .map(|[a, b]| a.get_bottem().constraint_equal_to(b.get_top()));
+    let side_constraints = views
+        .iter()
+        .map(|view| {
+            [view
+                .get_leading()
+                .constraint_equal_to(parent.get_leading())
+                .offset(padding)]
+        })
+        .flatten();
+    vec![top, bottem]
+        .into_iter()
+        .chain(adjoining_constraints)
+        .chain(side_constraints)
+        .collect()
+}
+
+pub trait HasLayout {
+    fn get_top(&self) -> &LayoutAnchorY;
+    fn get_bottem(&self) -> &LayoutAnchorY;
+    fn get_leading(&self) -> &LayoutAnchorX;
+    fn get_trailing(&self) -> &LayoutAnchorX;
+}
+impl HasLayout for Label {
+    fn get_top(&self) -> &LayoutAnchorY {
+        &self.top
+    }
+    fn get_bottem(&self) -> &LayoutAnchorY {
+        &self.bottom
+    }
+    fn get_leading(&self) -> &LayoutAnchorX {
+        &self.leading
+    }
+    fn get_trailing(&self) -> &LayoutAnchorX {
+        &self.trailing
+    }
+}
+impl HasLayout for TextField {
+    fn get_top(&self) -> &LayoutAnchorY {
+        &self.top
+    }
+    fn get_bottem(&self) -> &LayoutAnchorY {
+        &self.bottom
+    }
+    fn get_leading(&self) -> &LayoutAnchorX {
+        &self.leading
+    }
+    fn get_trailing(&self) -> &LayoutAnchorX {
+        &self.trailing
+    }
+}
+impl HasLayout for Button {
+    fn get_top(&self) -> &LayoutAnchorY {
+        &self.top
+    }
+    fn get_bottem(&self) -> &LayoutAnchorY {
+        &self.bottom
+    }
+    fn get_leading(&self) -> &LayoutAnchorX {
+        &self.leading
+    }
+    fn get_trailing(&self) -> &LayoutAnchorX {
+        &self.trailing
+    }
+}
+impl<T> HasLayout for View<T> {
+    fn get_top(&self) -> &LayoutAnchorY {
+        &self.top
+    }
+    fn get_bottem(&self) -> &LayoutAnchorY {
+        &self.bottom
+    }
+    fn get_leading(&self) -> &LayoutAnchorX {
+        &self.leading
+    }
+    fn get_trailing(&self) -> &LayoutAnchorX {
+        &self.trailing
+    }
+}
+impl<T> HasLayout for ListView<T> {
+    fn get_top(&self) -> &LayoutAnchorY {
+        &self.top
+    }
+    fn get_bottem(&self) -> &LayoutAnchorY {
+        &self.bottom
+    }
+    fn get_leading(&self) -> &LayoutAnchorX {
+        &self.leading
+    }
+    fn get_trailing(&self) -> &LayoutAnchorX {
+        &self.trailing
     }
 }

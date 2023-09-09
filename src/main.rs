@@ -1,3 +1,4 @@
+#![feature(array_windows)]
 #![feature(sort_floats)]
 #![feature(result_option_inspect)]
 mod app;
