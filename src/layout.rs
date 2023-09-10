@@ -67,6 +67,7 @@ pub trait HasLayout {
     fn get_leading(&self) -> &LayoutAnchorX;
     fn get_trailing(&self) -> &LayoutAnchorX;
 }
+
 impl HasLayout for Label {
     fn get_top(&self) -> &LayoutAnchorY {
         &self.top

@@ -14,9 +14,11 @@ pub enum Message {
     RasterViewerAction(RasterViewerrMessage),
     SetFeatureLabel(String),
     CloseChangeHistogramSettings,
-    OpenChangeHistogramSettings,
+    OpenChangeHistogramSettings(usize),
     CloseSheet,
     OpenMainWindow,
+    ProcessHistogramSettings,
+    UpdateHistogramSettings(usize, HistogramSettings),
 }
 
 /// Dispatch a message on a background thread.

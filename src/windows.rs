@@ -54,7 +54,7 @@ impl WindowManager {
     /// Opens a "add file" window, which asks for a code and optional server to
     /// check against. This should, probably, be a sheet - but for now it's fine as a
     /// separate window until I can find time to port that API.
-    pub fn open_histogram_settings(&self) {
+    pub fn open_histogram_settings(&self, position: usize) {
         let callback = || {};
 
         let mut lock = self.change_hist_settings.write().unwrap();
@@ -64,7 +64,7 @@ impl WindowManager {
         } else {
             let window = Window::with(
                 WindowConfig::default(),
-                ChangeHistogramSettingsWindow::new(),
+                ChangeHistogramSettingsWindow::new(position),
             );
             self.begin_sheet(&window, callback);
             *lock = Some(window);
@@ -100,8 +100,8 @@ impl Dispatcher for WindowManager {
                 self.close_sheet();
             }
 
-            Message::OpenChangeHistogramSettings => {
-                self.open_histogram_settings();
+            Message::OpenChangeHistogramSettings(position) => {
+                self.open_histogram_settings(position);
             }
 
             Message::CloseChangeHistogramSettings => {

@@ -35,9 +35,11 @@ impl MainView {
     pub fn on_message(&self, message: &Message) {
         match message {
             Message::SetFeatureLabel(_)
+            | Message::UpdateHistogramSettings(_, _)
+            | Message::ProcessHistogramSettings
             | Message::PlayAudioGraph(_)
             | Message::CloseChangeHistogramSettings
-            | Message::OpenChangeHistogramSettings
+            | Message::OpenChangeHistogramSettings(_)
             | Message::CloseSheet
             | Message::OpenMainWindow
             | Message::RasterViewerAction(_) => {
