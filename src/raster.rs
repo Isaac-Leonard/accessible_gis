@@ -4,23 +4,19 @@ use crate::layout::{fill_safe_area, top_to_bottom, HasLayout};
 use crate::list_view::{ConfigurableRow, MyListView};
 use cacao::appkit::window::{Window, WindowDelegate};
 use cacao::input::TextField;
-use cacao::layout::{Layout, LayoutAnchorX, LayoutAnchorY, LayoutConstraint, SafeAreaLayoutGuide};
+use cacao::layout::{Layout, LayoutConstraint};
 use cacao::listview::ListView;
 use cacao::view::ViewController;
 use gdal::raster::GdalDataType;
 
+use cacao::button::Button;
 use cacao::text::Label;
 use cacao::view::{View, ViewDelegate};
-use cacao::{button::Button, view};
 use gdal::raster::{RasterBand, StatisticsAll};
 
 use std::cell::RefCell;
 
 use std::rc::Rc;
-
-pub struct RasterView {
-    layers: RasterLayerView,
-}
 
 pub struct RasterViewerData {
     x: usize,
