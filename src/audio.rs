@@ -9,8 +9,7 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{FromSample, SizedSample, Stream};
 use fundsp::hacker::*;
 
-use crate::graph::play;
-use crate::raster::HistogramSettings;
+use crate::graph::{play, HistogramSettings};
 
 #[cfg(debug_assertions)] // required when disable_release is set (default)
 #[global_allocator]

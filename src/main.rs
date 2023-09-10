@@ -6,6 +6,7 @@ mod app;
 mod audio;
 mod events;
 mod graph;
+mod histogram_settings_window;
 mod layout;
 mod list_view;
 mod raster;

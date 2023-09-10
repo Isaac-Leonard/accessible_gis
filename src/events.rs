@@ -1,5 +1,6 @@
 use crate::app::BasicApp;
 
+use crate::graph::HistogramSettings;
 use crate::raster::*;
 use cacao::appkit::App;
 

@@ -9,8 +9,6 @@ use fundsp::{
 };
 use std::{collections::BTreeMap, f64::consts::PI, ops::Range, thread::sleep_ms};
 
-use crate::raster::HistogramSettings;
-
 /// Generate a sine wave audio signal for a given frequency.
 ///
 /// # Arguments
@@ -154,6 +152,23 @@ where
             } else {
                 *sample = right;
             }
+        }
+    }
+}
+#[derive(Debug, Clone)]
+pub struct HistogramSettings {
+    /// The length the histogram should play for in milliseconds
+    pub duration: usize,
+    pub min_freq: f64,
+    pub max_freq: f64,
+}
+
+impl Default for HistogramSettings {
+    fn default() -> Self {
+        Self {
+            duration: 5000,
+            min_freq: 440.0,
+            max_freq: 880.0,
         }
     }
 }
