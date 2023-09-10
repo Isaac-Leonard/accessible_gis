@@ -94,6 +94,7 @@ impl RasterLayerView {
                 }
                 self.update_value();
             }
+			Message::OpenChangeHistogramSettings(position)=>if *position==self.position{dispatch_ui(Message::SendChangeHistogramSettings(self.position,self.hist_settings.borrow().clone() ))}
             Message::UpdateHistogramSettings(position, settings) => {
                 if self.position == *position {
                     let mut settings_ptr = self.hist_settings.borrow_mut();
@@ -171,11 +172,12 @@ impl ViewDelegate for RasterLayerView {
             .set_text_color(cacao::color::Color::rgb(255, 255, 255));
         self.content.add_subview(&self.label);
         let hist = self.hist.clone();
-        self.play_pause_btn.set_action(move |_| {
-            if let Some(hist) = &hist {
+        if let Some(hist) = &hist {
+            self.play_pause_btn.set_action(move |_| {
                 dispatch_ui(Message::PlayAudioGraph(position));
-            }
-        });
+            });
+        }
+
         self.content.add_subview(&self.play_pause_btn);
         self.change_hist_settings_btn
             .set_action(move |_| dispatch_ui(Message::OpenChangeHistogramSettings(position)));
@@ -415,12 +417,10 @@ pub struct ChangeHistogramSettingsWindow {
 }
 
 impl ChangeHistogramSettingsWindow {
-    pub fn new(position: usize) -> Self {
-        let content =
-            ViewController::new(UpdateHistogramSettingsView::new(HistogramSettingsWrapper {
-                position,
-                settings: HistogramSettings::default(),
-            }));
+    pub fn new(position: usize, settings: HistogramSettings) -> Self {
+        let content = ViewController::new(UpdateHistogramSettingsView::new(
+            HistogramSettingsWrapper::new(position, settings),
+        ));
 
         Self { content }
     }

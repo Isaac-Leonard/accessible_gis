@@ -40,6 +40,7 @@ impl MainView {
             | Message::PlayAudioGraph(_)
             | Message::CloseChangeHistogramSettings
             | Message::OpenChangeHistogramSettings(_)
+            | Message::SendChangeHistogramSettings(_, _)
             | Message::CloseSheet
             | Message::OpenMainWindow
             | Message::SendAudioGraph(_, _)
@@ -279,6 +280,7 @@ impl DatasetView {
             Message::RasterViewerAction(_)
             | Message::SendAudioGraph(_, _)
             | Message::PlayAudioGraph(_)
+            | Message::OpenChangeHistogramSettings(_)
             | Message::UpdateHistogramSettings(_, _) => {
                 let views = self.sub_views.borrow();
                 views

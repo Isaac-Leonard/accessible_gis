@@ -16,6 +16,7 @@ pub enum Message {
     SetFeatureLabel(String),
     CloseChangeHistogramSettings,
     OpenChangeHistogramSettings(usize),
+    SendChangeHistogramSettings(usize, HistogramSettings),
     CloseSheet,
     OpenMainWindow,
     ProcessHistogramSettings,

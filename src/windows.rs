@@ -5,7 +5,11 @@ use cacao::{
 };
 use std::sync::RwLock;
 
-use crate::{events::Message, raster::ChangeHistogramSettingsWindow, views::MainView};
+use crate::{
+    events::Message,
+    raster::{ChangeHistogramSettingsWindow, HistogramSettings},
+    views::MainView,
+};
 
 #[derive(Default)]
 pub struct WindowManager {
@@ -54,7 +58,7 @@ impl WindowManager {
     /// Opens a "add file" window, which asks for a code and optional server to
     /// check against. This should, probably, be a sheet - but for now it's fine as a
     /// separate window until I can find time to port that API.
-    pub fn open_histogram_settings(&self, position: usize) {
+    pub fn open_histogram_settings(&self, position: usize, settings: HistogramSettings) {
         let callback = || {};
 
         let mut lock = self.change_hist_settings.write().unwrap();
@@ -64,7 +68,7 @@ impl WindowManager {
         } else {
             let window = Window::with(
                 WindowConfig::default(),
-                ChangeHistogramSettingsWindow::new(position),
+                ChangeHistogramSettingsWindow::new(position, settings),
             );
             self.begin_sheet(&window, callback);
             *lock = Some(window);
@@ -91,7 +95,7 @@ impl Dispatcher for WindowManager {
 
     /// Some jank message passing, it's fine for now.
     fn on_ui_message(&self, message: Message) {
-        match message {
+        match &message {
             Message::OpenMainWindow => {
                 self.open_main();
             }
@@ -100,8 +104,8 @@ impl Dispatcher for WindowManager {
                 self.close_sheet();
             }
 
-            Message::OpenChangeHistogramSettings(position) => {
-                self.open_histogram_settings(position);
+            Message::SendChangeHistogramSettings(position, settings) => {
+                self.open_histogram_settings(*position, settings.clone());
             }
 
             Message::UpdateHistogramSettings(_, _) => {
