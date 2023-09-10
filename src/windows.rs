@@ -104,7 +104,7 @@ impl Dispatcher for WindowManager {
                 self.open_histogram_settings(position);
             }
 
-            Message::CloseChangeHistogramSettings => {
+            Message::UpdateHistogramSettings(_, _) => {
                 self.close_sheet();
             }
 

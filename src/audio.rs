@@ -10,6 +10,7 @@ use cpal::{FromSample, SizedSample, Stream};
 use fundsp::hacker::*;
 
 use crate::graph::play;
+use crate::raster::HistogramSettings;
 
 #[cfg(debug_assertions)] // required when disable_release is set (default)
 #[global_allocator]
@@ -17,7 +18,7 @@ static A: AllocDisabler = AllocDisabler;
 
 #[derive(Clone, Debug)]
 pub enum AudioMessage {
-    PlayGraph(Vec<f64>),
+    PlayGraph(Vec<f64>, HistogramSettings),
 }
 pub fn get_audio() -> mpsc::Sender<AudioMessage> {
     let (tx, rx) = mpsc::channel();
@@ -26,13 +27,13 @@ pub fn get_audio() -> mpsc::Sender<AudioMessage> {
         stream.pause();
         let mut playing = false;
         loop {
-            let AudioMessage::PlayGraph(graph) = rx.recv().unwrap();
+            let AudioMessage::PlayGraph(graph, settings) = rx.recv().unwrap();
             /*            if playing {
                     stream.pause();
                 } else {
                     stream.play();
             }*/
-            play(graph);
+            play(graph, settings);
             playing = !playing;
         }
     });

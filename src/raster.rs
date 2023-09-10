@@ -52,7 +52,7 @@ pub struct RasterLayerView {
     hist: Option<Vec<f64>>,
     hist_table: Option<ListView<MyListView<HistogramViewRow>>>,
     data_type_name: String,
-    hist_settings: Rc<HistogramSettings>,
+    hist_settings: Rc<RefCell<HistogramSettings>>,
 }
 
 impl RasterLayerView {
@@ -94,6 +94,20 @@ impl RasterLayerView {
                 }
                 self.update_value();
             }
+            Message::UpdateHistogramSettings(position, settings) => {
+                if self.position == *position {
+                    let mut settings_ptr = self.hist_settings.borrow_mut();
+                    *settings_ptr = settings.clone();
+                }
+            }
+            Message::PlayAudioGraph(position) => {
+                if let Some(hist)=&self.hist && *position == self.position {
+                    dispatch_ui(Message::SendAudioGraph(
+                        hist.clone(),
+                        self.hist_settings.borrow().clone(),
+                    ))
+                }
+            }
             _ => {}
         }
     }
@@ -134,7 +148,7 @@ impl RasterLayerView {
             stats_label: Label::new(),
             hist: hist.clone(),
             hist_table: hist.map(|hist| ListView::with(MyListView::new(hist))),
-            hist_settings: Rc::new(HistogramSettings::default()),
+            hist_settings: Rc::new(RefCell::new(HistogramSettings::default())),
         }
     }
 }
@@ -159,7 +173,7 @@ impl ViewDelegate for RasterLayerView {
         let hist = self.hist.clone();
         self.play_pause_btn.set_action(move |_| {
             if let Some(hist) = &hist {
-                dispatch_ui(Message::PlayAudioGraph(hist.clone()));
+                dispatch_ui(Message::PlayAudioGraph(position));
             }
         });
         self.content.add_subview(&self.play_pause_btn);
@@ -293,9 +307,9 @@ impl ViewDelegate for HistogramViewRow {
 #[derive(Debug, Clone)]
 pub struct HistogramSettings {
     /// The length the histogram should play for in milliseconds
-    duration: u32,
-    min_freq: f64,
-    max_freq: f64,
+    pub duration: usize,
+    pub min_freq: f64,
+    pub max_freq: f64,
 }
 
 impl Default for HistogramSettings {
@@ -361,21 +375,21 @@ impl ViewDelegate for UpdateHistogramSettingsView {
             .set_text("Duration the graph should play for in milliseconds");
         view.add_subview(&self.duration_value);
         self.duration_value
-            .set_placeholder_text(&self.initial_data.settings.duration.to_string());
+            .set_text(&self.initial_data.settings.duration.to_string());
 
         view.add_subview(&self.min_freq_label);
         self.min_freq_label
             .set_text("The minimum frequency the of the graph in Hz");
         view.add_subview(&self.min_freq_value);
         self.min_freq_value
-            .set_placeholder_text(&self.initial_data.settings.min_freq.to_string());
+            .set_text(&self.initial_data.settings.min_freq.to_string());
 
         view.add_subview(&self.max_freq_label);
         self.max_freq_label
             .set_text("The maximum frequency the of the graph in Hz");
         view.add_subview(&self.max_freq_value);
         self.max_freq_value
-            .set_placeholder_text(&self.initial_data.settings.max_freq.to_string());
+            .set_text(&self.initial_data.settings.max_freq.to_string());
 
         view.add_subview(&self.done_btn);
         let position = self.initial_data.position;

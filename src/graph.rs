@@ -9,6 +9,8 @@ use fundsp::{
 };
 use std::{collections::BTreeMap, f64::consts::PI, ops::Range, thread::sleep_ms};
 
+use crate::raster::HistogramSettings;
+
 /// Generate a sine wave audio signal for a given frequency.
 ///
 /// # Arguments
@@ -24,6 +26,7 @@ pub struct Sonify {
     y: Vec<f64>,
     waveform: Waveform,
     // ... other parameters
+    settings: HistogramSettings,
 }
 
 enum Waveform {
@@ -34,13 +37,13 @@ enum Waveform {
 }
 
 impl Sonify {
-    pub fn new(y: Vec<f64>) -> Self {
+    pub fn new(y: Vec<f64>, settings: HistogramSettings) -> Self {
         let x = vec![0.0; y.len()];
         Sonify {
             x,
             y,
             waveform: Waveform::Sine,
-            // ... initialize other parameters with default values
+            settings,
         }
     }
 
@@ -65,11 +68,11 @@ impl Sonify {
 
         let sample_rate = config.sample_rate.0 as f64;
         let channels = config.channels as usize;
-
-        // We would need to generate the signal from the provided data
-        // Constants based on the requirements
-        let duration: f64 = 0.5; // 0.5 seconds
-        let amplitude: f64 = 50.0; // Full amplitude
+        let HistogramSettings {
+            duration,
+            min_freq,
+            max_freq,
+        } = self.settings.clone();
         let mut freq = shared(440.0);
         let c = var(&freq) >> sine();
         let mut pos = shared(-1.0);
@@ -107,14 +110,11 @@ impl Sonify {
             .cloned()
             .max_by(|x, y| x.partial_cmp(y).unwrap())
             .unwrap();
-        let duration = 5000;
         let duration_per_sample_ms = duration / self.y.len();
         let duration_per_sample_ms = duration_per_sample_ms as u32;
         let y_range = max - min;
         let y_range = if y_range == 0.0 { 1.0 } else { y_range };
         let y_len = self.y.len();
-        let min_freq = 55.0;
-        let max_freq = 1760.0 * 4.0;
         let freq_range = max_freq - min_freq;
         for (x, y) in self.y.iter().copied().enumerate() {
             let freq_f = (y - min) / y_range * freq_range + min_freq;
@@ -134,8 +134,8 @@ pub fn generate_image_histogram(mut data: Vec<u8>) -> Vec<f64> {
     counts
 }
 
-pub fn play(counts: Vec<f64>) {
-    let sonifier = Sonify::new(counts);
+pub fn play(counts: Vec<f64>, settings: HistogramSettings) {
+    let sonifier = Sonify::new(counts, settings);
     sonifier.play();
 }
 

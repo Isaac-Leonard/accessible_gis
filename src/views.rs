@@ -42,6 +42,7 @@ impl MainView {
             | Message::OpenChangeHistogramSettings(_)
             | Message::CloseSheet
             | Message::OpenMainWindow
+            | Message::SendAudioGraph(_, _)
             | Message::RasterViewerAction(_) => {
                 let dataset_view = self.dataset_view.borrow_mut();
                 dataset_view
@@ -270,12 +271,15 @@ fn file_selection_handler(paths: Vec<NSURL>) {
 impl DatasetView {
     fn on_message(&self, message: &Message) {
         match message {
-            Message::PlayAudioGraph(graph) => self
+            Message::SendAudioGraph(graph, settings) => self
                 .audio
-                .send(AudioMessage::PlayGraph(graph.clone()))
+                .send(AudioMessage::PlayGraph(graph.clone(), settings.clone()))
                 .unwrap(),
             Message::SetFeatureLabel(name) => self.update_new_label(Some(name.clone())),
-            Message::RasterViewerAction(_) => {
+            Message::RasterViewerAction(_)
+            | Message::SendAudioGraph(_, _)
+            | Message::PlayAudioGraph(_)
+            | Message::UpdateHistogramSettings(_, _) => {
                 let views = self.sub_views.borrow();
                 views
                     .iter()
