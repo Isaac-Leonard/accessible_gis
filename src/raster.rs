@@ -315,7 +315,7 @@ pub struct HistogramSettings {
 impl Default for HistogramSettings {
     fn default() -> Self {
         Self {
-            duration: 50000,
+            duration: 5000,
             min_freq: 440.0,
             max_freq: 880.0,
         }
@@ -392,11 +392,18 @@ impl ViewDelegate for UpdateHistogramSettingsView {
             .set_text(&self.initial_data.settings.max_freq.to_string());
 
         view.add_subview(&self.done_btn);
-        let position = self.initial_data.position;
         self.done_btn
             .set_action(|_| dispatch_ui(Message::ProcessHistogramSettings));
         LayoutConstraint::activate(&top_to_bottom(
-            vec![&self.duration_label, &self.duration_value, &self.done_btn],
+            vec![
+                &self.duration_label,
+                &self.duration_value,
+                &self.min_freq_label,
+                &self.min_freq_value,
+                &self.max_freq_label,
+                &self.max_freq_value,
+                &self.done_btn,
+            ],
             &view,
             16.0,
         ))
@@ -446,10 +453,7 @@ pub struct HistogramSettingsWrapper {
     position: usize,
 }
 impl HistogramSettingsWrapper {
-    fn new(position: usize) -> Self {
-        Self {
-            position,
-            settings: HistogramSettings::default(),
-        }
+    fn new(position: usize, settings: HistogramSettings) -> Self {
+        Self { position, settings }
     }
 }
