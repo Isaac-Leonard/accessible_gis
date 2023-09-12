@@ -256,18 +256,32 @@ impl RastaGraph {
             .max()
             .unwrap() as f64;
         let y_scale = 100;
-        let x_scale = 5;
+        let x_scale = 100;
         let y_len = self.data[0].len() / x_scale;
         let duration_per_sample_ms = duration / y_len as f64;
         let duration_per_sample_ms = duration_per_sample_ms as u32;
         let y_range = max - min;
         let y_range = if y_range == 0.0 { 1.0 } else { y_range };
         let freq_range = max_freq - min_freq;
-        for row in self.data.clone().into_iter().step_by(y_scale) {
-            for (i, pixel) in row.iter().copied().into_iter().step_by(x_scale).enumerate() {
+        for row in self.data.chunks(y_scale).map(|x| {
+            let mut averages = vec![0u64; x[0].len()];
+            for row in x {
+                for (i, val) in row.iter().enumerate() {
+                    averages[i] += *val as u64;
+                }
+            }
+            averages
+                .into_iter()
+                .map(|x| (x / y_scale as u64) as u32)
+                .collect::<Vec<u32>>()
+        }) {
+            for (i, pixel) in row
+                .chunks(x_scale)
+                .map(|x| x.iter().copied().sum::<u32>() / x_scale as u32)
+                .enumerate()
+            {
                 let freq_f = (pixel as f64 - min) / y_range * freq_range + min_freq;
                 let pos_f = i as f64 / (y_len - 1) as f64 * 2.0 - 1.0;
-                dbg!(pos_f);
                 pos.set_value(pos_f);
                 freq.set_value(freq_f);
                 sleep_ms(duration_per_sample_ms);
