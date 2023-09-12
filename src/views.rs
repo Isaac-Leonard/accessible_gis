@@ -37,13 +37,14 @@ impl MainView {
             Message::SetFeatureLabel(_)
             | Message::UpdateHistogramSettings(_, _)
             | Message::ProcessHistogramSettings
-            | Message::PlayAudioGraph(_)
+            | Message::PlayHistogramGraph(_)
             | Message::CloseChangeHistogramSettings
             | Message::OpenChangeHistogramSettings(_)
             | Message::SendChangeHistogramSettings(_, _)
             | Message::CloseSheet
             | Message::OpenMainWindow
             | Message::SendAudioGraph(_, _)
+            | Message::PlayRastaGraph(_, _)
             | Message::RasterViewerAction(_) => {
                 let dataset_view = self.dataset_view.borrow_mut();
                 dataset_view
@@ -274,12 +275,16 @@ impl DatasetView {
         match message {
             Message::SendAudioGraph(graph, settings) => self
                 .audio
-                .send(AudioMessage::PlayGraph(graph.clone(), settings.clone()))
+                .send(AudioMessage::PlayHistogram(graph.clone(), settings.clone()))
+                .unwrap(),
+            Message::PlayRastaGraph(size, data) => self
+                .audio
+                .send(AudioMessage::PlayRasta(size.clone(), data.clone()))
                 .unwrap(),
             Message::SetFeatureLabel(name) => self.update_new_label(Some(name.clone())),
             Message::RasterViewerAction(_)
             | Message::SendAudioGraph(_, _)
-            | Message::PlayAudioGraph(_)
+            | Message::PlayHistogramGraph(_)
             | Message::OpenChangeHistogramSettings(_)
             | Message::UpdateHistogramSettings(_, _) => {
                 let views = self.sub_views.borrow();

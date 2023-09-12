@@ -11,7 +11,7 @@ pub enum Message {
     ClickedSelectFile,
     GotFile(PathBuf),
     InvalidFile(PathBuf),
-    PlayAudioGraph(usize),
+    PlayHistogramGraph(usize),
     SendAudioGraph(Vec<f64>, HistogramSettings),
     RasterViewerAction(RasterViewerrMessage),
     SetFeatureLabel(String),
@@ -22,11 +22,12 @@ pub enum Message {
     OpenMainWindow,
     ProcessHistogramSettings,
     UpdateHistogramSettings(usize, HistogramSettings),
+    PlayRastaGraph((usize, usize), Vec<u32>),
 }
 
 /// Dispatch a message on a background thread.
 pub fn dispatch_ui(message: Message) {
-    println!("Dispatching UI message: {:?}", message);
+    // println!("Dispatching UI message: {:?}", message);
     App::<BasicApp, Message>::dispatch_main(message);
 }
 

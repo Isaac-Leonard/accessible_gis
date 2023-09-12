@@ -9,7 +9,7 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{FromSample, SizedSample, Stream};
 use fundsp::hacker::*;
 
-use crate::graph::{play, HistogramSettings};
+use crate::graph::{play_histogram, play_rasta, HistogramSettings};
 
 #[cfg(debug_assertions)] // required when disable_release is set (default)
 #[global_allocator]
@@ -17,8 +17,10 @@ static A: AllocDisabler = AllocDisabler;
 
 #[derive(Clone, Debug)]
 pub enum AudioMessage {
-    PlayGraph(Vec<f64>, HistogramSettings),
+    PlayHistogram(Vec<f64>, HistogramSettings),
+    PlayRasta((usize, usize), Vec<u32>),
 }
+
 pub fn get_audio() -> mpsc::Sender<AudioMessage> {
     let (tx, rx) = mpsc::channel();
     thread::spawn(move || {
@@ -26,14 +28,18 @@ pub fn get_audio() -> mpsc::Sender<AudioMessage> {
         stream.pause();
         let mut playing = false;
         loop {
-            let AudioMessage::PlayGraph(graph, settings) = rx.recv().unwrap();
-            /*            if playing {
-                    stream.pause();
-                } else {
-                    stream.play();
-            }*/
-            play(graph, settings);
-            playing = !playing;
+            let msg = rx.recv().unwrap();
+            if let AudioMessage::PlayHistogram(graph, settings) = msg {
+                /*            if playing {
+                        stream.pause();
+                    } else {
+                        stream.play();
+                }*/
+                play_histogram(graph, settings);
+                playing = !playing;
+            } else if let AudioMessage::PlayRasta(size, data) = msg {
+                play_rasta(size, data);
+            };
         }
     });
     tx

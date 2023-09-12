@@ -147,6 +147,7 @@ impl MainWindow {
         }
     }
 }
+
 impl WindowDelegate for MainWindow {
     const NAME: &'static str = "MainWindow";
 

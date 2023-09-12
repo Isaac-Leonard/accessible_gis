@@ -46,6 +46,9 @@ pub struct RasterLayerView {
     hist_table: Option<ListView<MyListView<HistogramViewRow>>>,
     data_type_name: String,
     hist_settings: Rc<RefCell<HistogramSettings>>,
+    size: (usize, usize),
+    raw_data: Option<Vec<u32>>,
+    play_rasta_graph_btn: Button,
 }
 
 impl RasterLayerView {
@@ -94,7 +97,7 @@ impl RasterLayerView {
                     *settings_ptr = settings.clone();
                 }
             }
-            Message::PlayAudioGraph(position) => {
+            Message::PlayHistogramGraph(position) => {
                 if let Some(hist)=&self.hist && *position == self.position {
                     dispatch_ui(Message::SendAudioGraph(
                         hist.clone(),
@@ -112,6 +115,26 @@ impl RasterLayerView {
             GdalDataType::UInt8 => Some(generate_image_histogram(
                 band.read_band_as::<u8>().unwrap().data,
             )),
+            _ => None,
+        };
+        let data = match band_type {
+            GdalDataType::UInt8 => Some(
+                band.read_band_as::<u8>()
+                    .unwrap()
+                    .data
+                    .into_iter()
+                    .map(|x| x as u32)
+                    .collect(),
+            ),
+            GdalDataType::UInt16 => Some(
+                band.read_band_as::<u16>()
+                    .unwrap()
+                    .data
+                    .into_iter()
+                    .map(|x| x as u32)
+                    .collect(),
+            ),
+            GdalDataType::UInt32 => Some(band.read_band_as::<u32>().unwrap().data),
             _ => None,
         };
         RasterLayerView {
@@ -143,6 +166,9 @@ impl RasterLayerView {
             hist: hist.clone(),
             hist_table: hist.map(|hist| ListView::with(MyListView::new(hist))),
             hist_settings: Rc::new(RefCell::new(HistogramSettings::default())),
+            size: band.size().clone(),
+            raw_data: data,
+            play_rasta_graph_btn: Button::new("Play rasta graph"),
         }
     }
 }
@@ -167,7 +193,7 @@ impl ViewDelegate for RasterLayerView {
         let hist = self.hist.clone();
         if let Some(hist) = &hist {
             self.play_pause_btn.set_action(move |_| {
-                dispatch_ui(Message::PlayAudioGraph(position));
+                dispatch_ui(Message::PlayHistogramGraph(position));
             });
         }
 
@@ -178,6 +204,14 @@ impl ViewDelegate for RasterLayerView {
         if let Some(hist_table) = &self.hist_table {
             self.content.add_subview(hist_table);
         }
+        let size = self.size.clone();
+        if let Some(data) = self.raw_data.clone() {
+            self.play_rasta_graph_btn.set_action(move |_| {
+                dispatch_ui(Message::PlayRastaGraph(size, data.clone()));
+            });
+        }
+        self.content.add_subview(&self.play_rasta_graph_btn);
+
         connect_button!(self.move_north_btn, RasterViewerrMessage::MoveNorth);
         connect_button!(self.move_east_btn, RasterViewerrMessage::MoveEast);
         connect_button!(self.move_south_btn, RasterViewerrMessage::MoveSouth);
@@ -215,6 +249,7 @@ impl ViewDelegate for RasterLayerView {
                 &self.label,
                 &self.play_pause_btn,
                 &self.change_hist_settings_btn,
+                &self.play_rasta_graph_btn,
                 &self.stats_label,
                 &self.positional_information_label,
                 &self.cell_value_label,
