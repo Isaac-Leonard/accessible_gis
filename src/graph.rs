@@ -211,14 +211,47 @@ impl RastaGraph {
     where
         T: cpal::Sample + cpal::SizedSample + cpal::FromSample<f64>,
     {
+        let duration = 1000.0;
+        let min_freq = 55.0;
+        let max_freq = 880.0;
+        let min = *self
+            .data
+            .iter()
+            .map(|x| x.iter().min().unwrap())
+            .min()
+            .unwrap() as f64;
+        let max = *self
+            .data
+            .iter()
+            .map(|x| x.iter().max().unwrap())
+            .max()
+            .unwrap() as f64;
+        let y_scale = 100;
+        let x_scale = 100;
+        let y_len = self.data[0].len() / x_scale;
+        let duration_per_sample_ms = duration / y_len as f64;
+        let duration_per_sample_ms = duration_per_sample_ms as u32;
+        let y_range = max - min;
+        let y_range = if y_range == 0.0 { 1.0 } else { y_range };
+        let freq_range = max_freq - min_freq;
+        let rows = self.data.chunks(y_scale).map(|x| {
+            let mut averages = vec![0u64; x[0].len()];
+            for row in x {
+                for (i, val) in row.iter().enumerate() {
+                    averages[i] += *val as u64;
+                }
+            }
+            averages
+                .into_iter()
+                .map(|val| (val / x.len() as u64) as u32)
+                .collect::<Vec<u32>>()
+        });
+
         // ... generate sound signal based on self.y and other parameters
 
         let sample_rate = config.sample_rate.0 as f64;
         let channels = config.channels as usize;
-        let duration = 1000.0;
-        let min_freq = 55.0;
-        let max_freq = 880.0;
-        let mut freq = shared(440.0);
+        let mut freq = shared(0.0);
         let c = var(&freq) >> sine();
         let mut pos = shared(-1.0);
         let mut c = (c | var(&pos)) >> panner();
@@ -243,38 +276,7 @@ impl RastaGraph {
         stream.play().unwrap();
         eprintln!("After playing");
         let mut pos_f = -1.0;
-        let min = *self
-            .data
-            .iter()
-            .map(|x| x.iter().min().unwrap())
-            .min()
-            .unwrap() as f64;
-        let max = *self
-            .data
-            .iter()
-            .map(|x| x.iter().max().unwrap())
-            .max()
-            .unwrap() as f64;
-        let y_scale = 100;
-        let x_scale = 100;
-        let y_len = self.data[0].len() / x_scale;
-        let duration_per_sample_ms = duration / y_len as f64;
-        let duration_per_sample_ms = duration_per_sample_ms as u32;
-        let y_range = max - min;
-        let y_range = if y_range == 0.0 { 1.0 } else { y_range };
-        let freq_range = max_freq - min_freq;
-        for row in self.data.chunks(y_scale).map(|x| {
-            let mut averages = vec![0u64; x[0].len()];
-            for row in x {
-                for (i, val) in row.iter().enumerate() {
-                    averages[i] += *val as u64;
-                }
-            }
-            averages
-                .into_iter()
-                .map(|x| (x / y_scale as u64) as u32)
-                .collect::<Vec<u32>>()
-        }) {
+        for row in rows {
             for (i, pixel) in row
                 .chunks(x_scale)
                 .map(|x| x.iter().copied().sum::<u32>() / x_scale as u32)
