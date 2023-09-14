@@ -13,6 +13,7 @@ dependencies = [
  "fundsp",
  "gdal",
  "gdal-sys",
+ "ndarray",
 ]
 
 [[package]]

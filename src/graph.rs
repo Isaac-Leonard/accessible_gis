@@ -7,6 +7,7 @@ use fundsp::{
     hacker::{constant, panner, shared, var},
     prelude::{sine, AudioNode, Panner},
 };
+use ndarray::{Array2, Zip};
 use std::{collections::BTreeMap, f64::consts::PI, ops::Range, thread::sleep_ms};
 
 /// Generate a sine wave audio signal for a given frequency.
@@ -138,8 +139,8 @@ pub fn play_histogram(counts: Vec<f64>, settings: HistogramSettings) {
     sonifier.play();
 }
 
-pub fn play_rasta(size: (usize, usize), data: Vec<u32>) {
-    let rasta_graph = RastaGraph::new(size, data);
+pub fn play_rasta(data: Array2<u32>) {
+    let rasta_graph = RastaGraph::new(data);
     rasta_graph.play();
 }
 
@@ -181,16 +182,11 @@ impl Default for HistogramSettings {
 }
 
 pub struct RastaGraph {
-    data: Vec<Vec<u32>>,
+    data: Array2<u32>,
 }
 
 impl RastaGraph {
-    pub fn new((width, height): (usize, usize), data: Vec<u32>) -> Self {
-        let data: Vec<Vec<_>> = data
-            .chunks(width)
-            .map(|r| r.iter().cloned().collect())
-            .collect();
-        assert_eq!(data.len(), height);
+    pub fn new(data: Array2<u32>) -> Self {
         Self { data }
     }
 
@@ -214,39 +210,18 @@ impl RastaGraph {
         let duration = 1000.0;
         let min_freq = 55.0;
         let max_freq = 880.0;
-        let min = *self
-            .data
-            .iter()
-            .map(|x| x.iter().min().unwrap())
-            .min()
-            .unwrap() as f64;
-        let max = *self
-            .data
-            .iter()
-            .map(|x| x.iter().max().unwrap())
-            .max()
-            .unwrap() as f64;
+        let min = *self.data.iter().min().unwrap() as f64;
+        let max = *self.data.iter().max().unwrap() as f64;
         let y_scale = 100;
         let x_scale = 100;
-        let y_len = self.data[0].len() / x_scale;
-        let duration_per_sample_ms = duration / y_len as f64;
+        let data = Zip::from(self.data.exact_chunks((x_scale, y_scale)))
+            .map_collect(|chunk| chunk.mean().unwrap());
+        let row_len = data.ncols();
+        let duration_per_sample_ms = duration / row_len as f64;
         let duration_per_sample_ms = duration_per_sample_ms as u32;
         let y_range = max - min;
         let y_range = if y_range == 0.0 { 1.0 } else { y_range };
         let freq_range = max_freq - min_freq;
-        let rows = self.data.chunks(y_scale).map(|x| {
-            let mut averages = vec![0u64; x[0].len()];
-            for row in x {
-                for (i, val) in row.iter().enumerate() {
-                    averages[i] += *val as u64;
-                }
-            }
-            averages
-                .into_iter()
-                .map(|val| (val / x.len() as u64) as u32)
-                .collect::<Vec<u32>>()
-        });
-
         // ... generate sound signal based on self.y and other parameters
 
         let sample_rate = config.sample_rate.0 as f64;
@@ -276,14 +251,10 @@ impl RastaGraph {
         stream.play().unwrap();
         eprintln!("After playing");
         let mut pos_f = -1.0;
-        for row in rows {
-            for (i, pixel) in row
-                .chunks(x_scale)
-                .map(|x| x.iter().copied().sum::<u32>() / x_scale as u32)
-                .enumerate()
-            {
-                let freq_f = (pixel as f64 - min) / y_range * freq_range + min_freq;
-                let pos_f = i as f64 / (y_len - 1) as f64 * 2.0 - 1.0;
+        for row in data.rows() {
+            for (i, pixel) in row.into_iter().enumerate() {
+                let freq_f = (*pixel as f64 - min) / y_range * freq_range + min_freq;
+                let pos_f = i as f64 / (row_len - 1) as f64 * 2.0 - 1.0;
                 pos.set_value(pos_f);
                 freq.set_value(freq_f);
                 sleep_ms(duration_per_sample_ms);

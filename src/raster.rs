@@ -10,6 +10,7 @@ use cacao::button::Button;
 use cacao::text::Label;
 use cacao::view::{View, ViewDelegate};
 use gdal::raster::{RasterBand, StatisticsAll};
+use ndarray::Array2;
 
 use std::cell::RefCell;
 
@@ -47,7 +48,7 @@ pub struct RasterLayerView {
     data_type_name: String,
     hist_settings: Rc<RefCell<HistogramSettings>>,
     size: (usize, usize),
-    raw_data: Option<Vec<u32>>,
+    raw_data: Option<Array2<u32>>,
     play_rasta_graph_btn: Button,
 }
 
@@ -117,24 +118,21 @@ impl RasterLayerView {
             )),
             _ => None,
         };
-        let data = match band_type {
+        let data: Option<Array2<u32>> = match band_type {
             GdalDataType::UInt8 => Some(
-                band.read_band_as::<u8>()
+                band.read_as_array::<u8>((0, 0), band.size(), band.size(), None)
                     .unwrap()
-                    .data
-                    .into_iter()
-                    .map(|x| x as u32)
-                    .collect(),
+                    .mapv_into_any(|x| x as u32),
             ),
             GdalDataType::UInt16 => Some(
-                band.read_band_as::<u16>()
+                band.read_as_array::<u16>((0, 0), band.size(), band.size(), None)
                     .unwrap()
-                    .data
-                    .into_iter()
-                    .map(|x| x as u32)
-                    .collect(),
+                    .mapv_into_any(|x| x as u32),
             ),
-            GdalDataType::UInt32 => Some(band.read_band_as::<u32>().unwrap().data),
+            GdalDataType::UInt32 => Some(
+                band.read_as_array::<u32>((0, 0), band.size(), band.size(), None)
+                    .unwrap(),
+            ),
             _ => None,
         };
         RasterLayerView {

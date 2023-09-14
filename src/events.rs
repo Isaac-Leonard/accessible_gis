@@ -3,6 +3,7 @@ use crate::app::BasicApp;
 use crate::graph::HistogramSettings;
 use crate::raster::*;
 use cacao::appkit::App;
+use ndarray::Array2;
 
 use std::path::PathBuf;
 
@@ -22,7 +23,7 @@ pub enum Message {
     OpenMainWindow,
     ProcessHistogramSettings,
     UpdateHistogramSettings(usize, HistogramSettings),
-    PlayRastaGraph((usize, usize), Vec<u32>),
+    PlayRastaGraph((usize, usize), Array2<u32>),
 }
 
 /// Dispatch a message on a background thread.

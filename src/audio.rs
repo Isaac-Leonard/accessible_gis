@@ -8,6 +8,7 @@ use assert_no_alloc::*;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{FromSample, SizedSample, Stream};
 use fundsp::hacker::*;
+use ndarray::Array2;
 
 use crate::graph::{play_histogram, play_rasta, HistogramSettings};
 
@@ -18,7 +19,7 @@ static A: AllocDisabler = AllocDisabler;
 #[derive(Clone, Debug)]
 pub enum AudioMessage {
     PlayHistogram(Vec<f64>, HistogramSettings),
-    PlayRasta((usize, usize), Vec<u32>),
+    PlayRasta((usize, usize), Array2<u32>),
 }
 
 pub fn get_audio() -> mpsc::Sender<AudioMessage> {
@@ -38,7 +39,7 @@ pub fn get_audio() -> mpsc::Sender<AudioMessage> {
                 play_histogram(graph, settings);
                 playing = !playing;
             } else if let AudioMessage::PlayRasta(size, data) = msg {
-                play_rasta(size, data);
+                play_rasta(data);
             };
         }
     });
