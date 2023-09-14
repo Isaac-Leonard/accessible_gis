@@ -6,8 +6,10 @@ use cacao::{
 use std::sync::RwLock;
 
 use crate::{
-    events::Message, graph::HistogramSettings,
-    histogram_settings_window::ChangeHistogramSettingsWindow, views::MainView,
+    events::{Message, MessageHandler},
+    graph::HistogramSettings,
+    histogram_settings_window::ChangeHistogramSettingsWindow,
+    views::MainView,
 };
 
 #[derive(Default)]

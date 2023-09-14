@@ -1,5 +1,5 @@
 use crate::audio::{get_audio, AudioMessage};
-use crate::events::{dispatch_ui, Message};
+use crate::events::{dispatch_ui, Message, MessageHandler};
 
 use crate::raster::*;
 use crate::vector::VectorLayerView;
@@ -30,8 +30,11 @@ impl MainView {
             dataset_view: Rc::new(RefCell::new(None)),
         }
     }
+}
 
-    pub fn on_message(&self, message: &Message) {
+impl MessageHandler for MainView {
+    type Message = Message;
+    fn on_message(&self, message: &Self::Message) {
         match message {
             Message::SetFeatureLabel(_)
             | Message::UpdateHistogramSettings(_, _)
@@ -282,7 +285,6 @@ impl DatasetView {
                 .unwrap(),
             Message::SetFeatureLabel(name) => self.update_new_label(Some(name.clone())),
             Message::RasterViewerAction(_)
-            | Message::SendAudioGraph(_, _)
             | Message::PlayHistogramGraph(_)
             | Message::OpenChangeHistogramSettings(_)
             | Message::UpdateHistogramSettings(_, _) => {
@@ -299,8 +301,4 @@ impl DatasetView {
             _ => {}
         }
     }
-}
-
-pub struct DatasetContainer {
-    dataset: Dataset,
 }
