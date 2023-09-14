@@ -5,7 +5,7 @@ use cacao::view::ViewDelegate;
 pub trait ConfigurableRow {
     type Data;
     fn configure_with(&mut self, data: &Self::Data);
-    fn actions(row: usize, data: &Self::Data, edge: RowEdge) -> Vec<RowAction> {
+    fn actions(_row: usize, _data: &Self::Data, _edge: RowEdge) -> Vec<RowAction> {
         Vec::new()
     }
 }

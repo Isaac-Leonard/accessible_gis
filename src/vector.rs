@@ -1,4 +1,4 @@
-use crate::events::{dispatch_ui, Message, MessageHandler};
+use crate::events::{dispatch_ui, Message};
 use crate::list_view::{ConfigurableRow, MyListView};
 use gdal::vector::{Layer, LayerAccess};
 
@@ -276,7 +276,7 @@ impl ConfigurableRow for CommonFieldsRow {
         self.name.set_text(name);
         self.field_type.set_text(field_type.join(", "))
     }
-    fn actions(row: usize, data: &Self::Data, edge: RowEdge) -> Vec<RowAction> {
+    fn actions(_row: usize, data: &Self::Data, edge: RowEdge) -> Vec<RowAction> {
         eprintln!("actions called");
         if let RowEdge::Leading = edge {
             return vec![];

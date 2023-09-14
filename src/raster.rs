@@ -63,23 +63,23 @@ impl RasterLayerView {
                         RasterViewerrMessage::MoveNorth => data.y += data.height,
                         RasterViewerrMessage::MoveEast => data.x += data.width,
                         RasterViewerrMessage::MoveSouth => {
-                            data.y = data.y.checked_sub(data.height).unwrap_or(0)
+                            data.y = data.y.saturating_sub(data.height)
                         }
                         RasterViewerrMessage::MoveWest => {
-                            data.x = data.x.checked_sub(data.width).unwrap_or(0)
+                            data.x = data.x.saturating_sub(data.width)
                         }
 
                         RasterViewerrMessage::HalveWidth => {
-                            data.width = data.width / 2;
+                            data.width /= 2;
                         }
                         RasterViewerrMessage::DoubleWidth => {
-                            data.width = data.width * 2;
+                            data.width *= 2;
                         }
                         RasterViewerrMessage::HalveHeight => {
-                            data.height = data.height / 2;
+                            data.height /= 2;
                         }
                         RasterViewerrMessage::DoubleHeight => {
-                            data.height = data.height * 2;
+                            data.height *= 2;
                         }
                     };
                     if data.width == 0 {
@@ -164,7 +164,7 @@ impl RasterLayerView {
             hist: hist.clone(),
             hist_table: hist.map(|hist| ListView::with(MyListView::new(hist))),
             hist_settings: Rc::new(RefCell::new(HistogramSettings::default())),
-            size: band.size().clone(),
+            size: band.size(),
             raw_data: data,
             play_rasta_graph_btn: Button::new("Play rasta graph"),
         }
@@ -189,7 +189,7 @@ impl ViewDelegate for RasterLayerView {
             .set_text_color(cacao::color::Color::rgb(255, 255, 255));
         self.content.add_subview(&self.label);
         let hist = self.hist.clone();
-        if let Some(hist) = &hist {
+        if let Some(_hist) = &hist {
             self.play_pause_btn.set_action(move |_| {
                 dispatch_ui(Message::PlayHistogramGraph(position));
             });
@@ -202,7 +202,7 @@ impl ViewDelegate for RasterLayerView {
         if let Some(hist_table) = &self.hist_table {
             self.content.add_subview(hist_table);
         }
-        let size = self.size.clone();
+        let size = self.size;
         if let Some(data) = self.raw_data.clone() {
             self.play_rasta_graph_btn.set_action(move |_| {
                 dispatch_ui(Message::PlayRastaGraph(size, data.clone()));

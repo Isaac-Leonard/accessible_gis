@@ -38,7 +38,7 @@ pub fn get_audio() -> mpsc::Sender<AudioMessage> {
                 }*/
                 play_histogram(graph, settings);
                 playing = !playing;
-            } else if let AudioMessage::PlayRasta(size, data) = msg {
+            } else if let AudioMessage::PlayRasta(_size, data) = msg {
                 play_rasta(data);
             };
         }

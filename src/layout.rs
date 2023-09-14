@@ -33,13 +33,12 @@ pub fn top_to_bottom(
         .map(|[a, b]| a.get_bottom().constraint_equal_to(b.get_top()));
     let side_constraints = views
         .iter()
-        .map(|view| {
+        .flat_map(|view| {
             [view
                 .get_leading()
                 .constraint_equal_to(parent.get_leading())
                 .offset(padding)]
-        })
-        .flatten();
+        });
     vec![top, bottom]
         .into_iter()
         .chain(adjoining_constraints)

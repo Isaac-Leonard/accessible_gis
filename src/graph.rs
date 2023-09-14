@@ -4,11 +4,11 @@ use cpal::{
     FromSample, SizedSample,
 };
 use fundsp::{
-    hacker::{constant, panner, shared, var},
-    prelude::{sine, AudioNode, Panner},
+    hacker::{panner, shared, var},
+    prelude::{sine, AudioNode},
 };
 use ndarray::{Array2, Zip};
-use std::{collections::BTreeMap, f64::consts::PI, ops::Range, thread::sleep_ms};
+use std::{thread::sleep_ms};
 
 /// Generate a sine wave audio signal for a given frequency.
 ///
@@ -72,11 +72,11 @@ impl AudioHistogram {
             min_freq,
             max_freq,
         } = self.settings.clone();
-        let mut freq = shared(440.0);
+        let freq = shared(440.0);
         let c = var(&freq) >> sine();
-        let mut pos = shared(-1.0);
+        let pos = shared(-1.0);
         let mut c = (c | var(&pos)) >> panner();
-        c.set_sample_rate(sample_rate as f64);
+        c.set_sample_rate(sample_rate);
         c.allocate();
 
         let mut next_value = move || assert_no_alloc(|| c.get_stereo());
@@ -87,7 +87,7 @@ impl AudioHistogram {
             .build_output_stream(
                 config,
                 move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
-                    write_data(data, channels, &mut || next_value());
+                    write_data(data, channels, &mut &mut next_value);
                 },
                 err_fn,
                 None,
@@ -96,7 +96,7 @@ impl AudioHistogram {
         eprintln!("before playing");
         stream.play().unwrap();
         eprintln!("After playing");
-        let mut pos_f = -1.0;
+        let _pos_f = -1.0;
         let min = self
             .y
             .iter()
@@ -126,7 +126,7 @@ impl AudioHistogram {
     }
 }
 
-pub fn generate_image_histogram(mut data: Vec<u8>) -> Vec<f64> {
+pub fn generate_image_histogram(data: Vec<u8>) -> Vec<f64> {
     let mut counts: Vec<f64> = vec![0.0; 255];
     for x in data {
         counts[x as usize] += 1.0;
@@ -226,11 +226,11 @@ impl RastaGraph {
 
         let sample_rate = config.sample_rate.0 as f64;
         let channels = config.channels as usize;
-        let mut freq = shared(0.0);
+        let freq = shared(0.0);
         let c = var(&freq) >> sine();
-        let mut pos = shared(-1.0);
+        let pos = shared(-1.0);
         let mut c = (c | var(&pos)) >> panner();
-        c.set_sample_rate(sample_rate as f64);
+        c.set_sample_rate(sample_rate);
         c.allocate();
 
         let mut next_value = move || assert_no_alloc(|| c.get_stereo());
@@ -241,7 +241,7 @@ impl RastaGraph {
             .build_output_stream(
                 config,
                 move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
-                    write_data(data, channels, &mut || next_value());
+                    write_data(data, channels, &mut &mut next_value);
                 },
                 err_fn,
                 None,
@@ -250,7 +250,7 @@ impl RastaGraph {
         eprintln!("before playing");
         stream.play().unwrap();
         eprintln!("After playing");
-        let mut pos_f = -1.0;
+        let _pos_f = -1.0;
         for row in data.rows() {
             for (i, pixel) in row.into_iter().enumerate() {
                 let freq_f = (*pixel as f64 - min) / y_range * freq_range + min_freq;

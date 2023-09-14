@@ -7,7 +7,7 @@ use cacao::filesystem::FileSelectPanel;
 use cacao::foundation::NSURL;
 use cacao::layout::{Layout, LayoutConstraint};
 
-use cacao::notification_center::Dispatcher;
+
 use cacao::text::Label;
 use cacao::view::{View, ViewDelegate};
 use cacao::{button::Button, view};
@@ -279,7 +279,7 @@ impl DatasetView {
                 .unwrap(),
             Message::PlayRastaGraph(size, data) => self
                 .audio
-                .send(AudioMessage::PlayRasta(size.clone(), data.clone()))
+                .send(AudioMessage::PlayRasta(*size, data.clone()))
                 .unwrap(),
             Message::SetFeatureLabel(name) => self.update_new_label(Some(name.clone())),
             Message::RasterViewerAction(_)

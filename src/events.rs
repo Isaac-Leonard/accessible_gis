@@ -38,7 +38,7 @@ pub trait GetMessagible<Message> {
     fn get_messagable(&mut self) -> Vec<&mut dyn MessageHandler<Message = Message>>;
 
     /// Called by the default MessageHandler impl for this trait
-    fn on_message(&self, message: &Message) {}
+    fn on_message(&self, _message: &Message) {}
 }
 
 pub trait MessageHandler {

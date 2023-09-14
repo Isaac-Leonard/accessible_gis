@@ -1,5 +1,5 @@
 use cacao::{
-    appkit::window::{Window, WindowConfig, WindowDelegate, WindowStyle},
+    appkit::window::{Window, WindowConfig, WindowDelegate},
     notification_center::Dispatcher,
     view::ViewController,
 };
@@ -63,7 +63,7 @@ impl WindowManager {
         let mut lock = self.change_hist_settings.write().unwrap();
 
         if let Some(win) = &*lock {
-            self.begin_sheet(&win, callback);
+            self.begin_sheet(win, callback);
         } else {
             let window = Window::with(
                 WindowConfig::default(),
@@ -81,7 +81,7 @@ impl WindowManager {
             let main = self.main.write().unwrap();
 
             if let Some(main_window) = &*main {
-                main_window.end_sheet(&add_window);
+                main_window.end_sheet(add_window);
             }
         }
 
