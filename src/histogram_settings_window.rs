@@ -8,7 +8,7 @@ use cacao::{
 };
 
 use crate::{
-    events::{dispatch_ui, Message},
+    events::{dispatch_ui, Message, MessageHandler},
     graph::HistogramSettings,
     layout::top_to_bottom,
 };
@@ -113,8 +113,10 @@ impl ChangeHistogramSettingsWindow {
 
         Self { content }
     }
-
-    pub fn on_message(&self, message: &Message) {
+}
+impl MessageHandler for ChangeHistogramSettingsWindow {
+    type Message = Message;
+    fn on_message(&self, message: &Self::Message) {
         if let Some(delegate) = &self.content.view.delegate {
             delegate.on_message(message);
         }

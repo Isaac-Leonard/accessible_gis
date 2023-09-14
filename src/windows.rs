@@ -116,17 +116,8 @@ impl Dispatcher for WindowManager {
             _ => {}
         }
 
-        if let Some(w) = &*self.main.read().unwrap() {
-            if let Some(delegate) = &w.delegate {
-                delegate.on_message(&message);
-            }
-        }
-
-        if let Some(w) = &*(self.change_hist_settings.read().unwrap()) {
-            if let Some(delegate) = &w.delegate {
-                delegate.on_message(&message);
-            }
-        }
+        self.main.on_message(&message);
+        self.change_hist_settings.on_message(&message);
     }
 }
 
@@ -142,8 +133,11 @@ impl MainWindow {
             content: ViewController::new(MainView::new()),
         }
     }
+}
 
-    pub fn on_message(&self, message: &Message) {
+impl MessageHandler for MainWindow {
+    type Message = Message;
+    fn on_message(&self, message: &Message) {
         if let Some(view) = &self.content.view.delegate {
             view.on_message(message)
         }
@@ -157,5 +151,33 @@ impl WindowDelegate for MainWindow {
         window.set_minimum_content_size(600, 400);
         window.set_title("Accessible GIS");
         window.set_content_view_controller(&self.content);
+    }
+}
+
+/// A bunch of useful MessageHandler implementations to simplify code
+impl<M: Send + Sync + Clone, T: MessageHandler<Message = M>> MessageHandler for Window<T> {
+    type Message = M;
+    fn on_message(&self, message: &Self::Message) {
+        if let Some(delegate) = &self.delegate {
+            delegate.on_message(message);
+        }
+    }
+}
+
+impl<M: Send + Sync + Clone, T: MessageHandler<Message = M>> MessageHandler for RwLock<T> {
+    type Message = M;
+    fn on_message(&self, message: &Self::Message) {
+        if let Ok(handler) = self.read() {
+            handler.on_message(message)
+        };
+    }
+}
+
+impl<M: Send + Sync + Clone, T: MessageHandler<Message = M>> MessageHandler for Option<T> {
+    type Message = M;
+    fn on_message(&self, message: &Self::Message) {
+        if let Some(handler) = self {
+            handler.on_message(message)
+        };
     }
 }
