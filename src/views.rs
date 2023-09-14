@@ -1,12 +1,11 @@
 use crate::audio::{get_audio, AudioMessage};
-use crate::events::{dispatch_ui, Message, MessageHandler};
+use crate::events::{dispatch_ui, Message};
 
 use crate::raster::*;
 use crate::vector::VectorLayerView;
 use cacao::filesystem::FileSelectPanel;
 use cacao::foundation::NSURL;
 use cacao::layout::{Layout, LayoutConstraint};
-
 
 use cacao::text::Label;
 use cacao::view::{View, ViewDelegate};

@@ -8,7 +8,7 @@ use fundsp::{
     prelude::{sine, AudioNode},
 };
 use ndarray::{Array2, Zip};
-use std::{thread::sleep_ms};
+use std::{thread::sleep, time::Duration};
 
 /// Generate a sine wave audio signal for a given frequency.
 ///
@@ -21,7 +21,6 @@ use std::{thread::sleep_ms};
 /// * A Vec<f64> containing the samples of the sine wave.
 
 pub struct AudioHistogram {
-    x: Vec<f64>,
     y: Vec<f64>,
     waveform: Waveform,
     // ... other parameters
@@ -37,9 +36,7 @@ enum Waveform {
 
 impl AudioHistogram {
     pub fn new(y: Vec<f64>, settings: HistogramSettings) -> Self {
-        let x = vec![0.0; y.len()];
         AudioHistogram {
-            x,
             y,
             waveform: Waveform::Sine,
             settings,
@@ -109,8 +106,7 @@ impl AudioHistogram {
             .cloned()
             .max_by(|x, y| x.partial_cmp(y).unwrap())
             .unwrap();
-        let duration_per_sample_ms = duration / self.y.len();
-        let duration_per_sample_ms = duration_per_sample_ms as u32;
+        let duration_per_sample_ms = Duration::from_millis((duration / self.y.len()) as u64);
         let y_range = max - min;
         let y_range = if y_range == 0.0 { 1.0 } else { y_range };
         let y_len = self.y.len();
@@ -121,7 +117,7 @@ impl AudioHistogram {
             dbg!(pos_f);
             pos.set_value(pos_f);
             freq.set_value(freq_f);
-            sleep_ms(duration_per_sample_ms);
+            sleep(duration_per_sample_ms);
         }
     }
 }
@@ -207,7 +203,7 @@ impl RastaGraph {
     where
         T: cpal::Sample + cpal::SizedSample + cpal::FromSample<f64>,
     {
-        let duration = 1000.0;
+        let duration = Duration::from_millis(1000);
         let min_freq = 55.0;
         let max_freq = 880.0;
         let min = *self.data.iter().min().unwrap() as f64;
@@ -216,9 +212,8 @@ impl RastaGraph {
         let x_scale = 100;
         let data = Zip::from(self.data.exact_chunks((x_scale, y_scale)))
             .map_collect(|chunk| chunk.mean().unwrap());
-        let row_len = data.ncols();
-        let duration_per_sample_ms = duration / row_len as f64;
-        let duration_per_sample_ms = duration_per_sample_ms as u32;
+        let row_len = data.ncols() as f64;
+        let duration_per_sample_ms = duration.div_f64(row_len);
         let y_range = max - min;
         let y_range = if y_range == 0.0 { 1.0 } else { y_range };
         let freq_range = max_freq - min_freq;
@@ -254,10 +249,10 @@ impl RastaGraph {
         for row in data.rows() {
             for (i, pixel) in row.into_iter().enumerate() {
                 let freq_f = (*pixel as f64 - min) / y_range * freq_range + min_freq;
-                let pos_f = i as f64 / (row_len - 1) as f64 * 2.0 - 1.0;
+                let pos_f = i as f64 / (row_len - 1.) * 2.0 - 1.0;
                 pos.set_value(pos_f);
                 freq.set_value(freq_f);
-                sleep_ms(duration_per_sample_ms);
+                sleep(duration_per_sample_ms);
             }
         }
     }
