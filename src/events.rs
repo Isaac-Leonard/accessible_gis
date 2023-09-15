@@ -3,9 +3,11 @@ use crate::app::BasicApp;
 use crate::graph::HistogramSettings;
 use crate::raster::*;
 use cacao::appkit::App;
+use cacao::view::View;
 use ndarray::Array2;
 
 use std::path::PathBuf;
+use std::sync::RwLock;
 
 #[derive(Clone, Debug)]
 pub enum Message {
@@ -46,12 +48,34 @@ pub trait MessageHandler {
     fn on_message(&self, message: &Self::Message);
 }
 
-impl<T: GetMessagible<Message> + Sized> MessageHandler for T {
-    type Message = Message;
-
+impl<M: Send + Sync + Clone, T: MessageHandler<Message = M>> MessageHandler for RwLock<T> {
+    type Message = M;
     fn on_message(&self, message: &Self::Message) {
-        for component in self.get_messagable() {
-            component.on_message(message)
-        }
+        if let Ok(handler) = self.read() {
+            handler.on_message(message)
+        };
+    }
+}
+
+impl<M: Send + Sync + Clone, T: MessageHandler<Message = M>> MessageHandler for Option<T> {
+    type Message = M;
+    fn on_message(&self, message: &Self::Message) {
+        if let Some(handler) = self {
+            handler.on_message(message)
+        };
+    }
+}
+
+impl<M: Send + Sync + Clone, T: MessageHandler<Message = M>> MessageHandler for Box<T> {
+    type Message = M;
+    fn on_message(&self, message: &Self::Message) {
+        self.as_ref().on_message(message)
+    }
+}
+
+impl<M: Send + Sync + Clone, T: MessageHandler<Message = M>> MessageHandler for View<T> {
+    type Message = M;
+    fn on_message(&self, message: &Self::Message) {
+        self.delegate.on_message(message)
     }
 }

@@ -45,7 +45,9 @@ impl UpdateHistogramSettingsView {
             max_freq: self.max_freq_value.get_value().parse().unwrap(),
         }
     }
-
+}
+impl MessageHandler for UpdateHistogramSettingsView {
+    type Message = Message;
     fn on_message(&self, message: &Message) {
         match message {
             Message::ProcessHistogramSettings => {
@@ -117,9 +119,7 @@ impl ChangeHistogramSettingsWindow {
 impl MessageHandler for ChangeHistogramSettingsWindow {
     type Message = Message;
     fn on_message(&self, message: &Self::Message) {
-        if let Some(delegate) = &self.content.view.delegate {
-            delegate.on_message(message);
-        }
+        self.content.view.on_message(message);
     }
 }
 

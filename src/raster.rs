@@ -1,4 +1,4 @@
-use crate::events::{dispatch_ui, Message};
+use crate::events::{dispatch_ui, Message, MessageHandler};
 use crate::graph::{generate_image_histogram, HistogramSettings};
 use crate::layout::{fill_safe_area, top_to_bottom, HasLayout};
 use crate::list_view::{ConfigurableRow, MyListView};
@@ -52,8 +52,9 @@ pub struct RasterLayerView {
     play_rasta_graph_btn: Button,
 }
 
-impl RasterLayerView {
-    pub fn on_message(&self, message: &Message) {
+impl MessageHandler for RasterLayerView {
+    type Message = Message;
+    fn on_message(&self, message: &Self::Message) {
         match message {
             Message::RasterViewerAction(action) => {
                 // Must keep the mutable borrow of data in its own block so its released before calling update_value
@@ -109,7 +110,9 @@ impl RasterLayerView {
             _ => {}
         }
     }
+}
 
+impl RasterLayerView {
     pub fn new(band: &RasterBand, position: usize) -> Self {
         let band_type = band.band_type();
         let hist = match band_type {

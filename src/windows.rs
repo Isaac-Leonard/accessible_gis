@@ -163,21 +163,3 @@ impl<M: Send + Sync + Clone, T: MessageHandler<Message = M>> MessageHandler for 
         }
     }
 }
-
-impl<M: Send + Sync + Clone, T: MessageHandler<Message = M>> MessageHandler for RwLock<T> {
-    type Message = M;
-    fn on_message(&self, message: &Self::Message) {
-        if let Ok(handler) = self.read() {
-            handler.on_message(message)
-        };
-    }
-}
-
-impl<M: Send + Sync + Clone, T: MessageHandler<Message = M>> MessageHandler for Option<T> {
-    type Message = M;
-    fn on_message(&self, message: &Self::Message) {
-        if let Some(handler) = self {
-            handler.on_message(message)
-        };
-    }
-}

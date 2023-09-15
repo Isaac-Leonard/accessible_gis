@@ -48,11 +48,7 @@ impl MessageHandler for MainView {
             | Message::SendAudioGraph(_, _)
             | Message::PlayRastaGraph(_, _)
             | Message::RasterViewerAction(_) => {
-                let dataset_view = self.dataset_view.borrow_mut();
-                dataset_view
-                    .as_ref()
-                    .and_then(|x| x.delegate.as_ref())
-                    .inspect(|x| x.on_message(message));
+                self.dataset_view.borrow().on_message(message);
             }
             Message::ClickedSelectFile => FileSelectPanel::new().show(file_selection_handler),
             Message::GotFile(path) => {
@@ -162,15 +158,12 @@ impl ViewDelegate for LayerView {
     }
 }
 
-impl LayerView {
-    fn on_message(&self, message: &Message) {
+impl MessageHandler for LayerView {
+    type Message = Message;
+    fn on_message(&self, message: &Self::Message) {
         match self {
             Self::Vector(_vector_view) => {}
-            Self::Raster(raster_view) => {
-                if let Some(ref view) = raster_view.delegate {
-                    view.as_ref().on_message(message)
-                }
-            }
+            Self::Raster(raster_view) => raster_view.on_message(message),
         }
     }
 }
@@ -272,8 +265,9 @@ fn file_selection_handler(paths: Vec<NSURL>) {
     dispatch_ui(Message::GotFile(path))
 }
 
-impl DatasetView {
-    fn on_message(&self, message: &Message) {
+impl MessageHandler for DatasetView {
+    type Message = Message;
+    fn on_message(&self, message: &Self::Message) {
         match message {
             Message::SendAudioGraph(graph, settings) => self
                 .audio
