@@ -1,4 +1,4 @@
-use crate::events::{dispatch_ui, Message};
+use crate::events::{dispatch_action, Action};
 use crate::list_view::{ConfigurableRow, MyListView};
 use gdal::vector::{Layer, LayerAccess};
 
@@ -285,7 +285,7 @@ impl ConfigurableRow for CommonFieldsRow {
         vec![RowAction::new(
             "Use as label",
             RowActionStyle::Regular,
-            move |_, _| dispatch_ui(Message::SetFeatureLabel(name.clone())),
+            move |_, _| dispatch_action(Action::SetFeatureLabel(name.clone())),
         )]
     }
 }

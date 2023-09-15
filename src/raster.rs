@@ -1,4 +1,4 @@
-use crate::events::{dispatch_ui, Message, MessageHandler};
+use crate::events::{dispatch_action, dispatch_click, Action, Click, MessageHandler};
 use crate::graph::{generate_image_histogram, HistogramSettings};
 use crate::layout::{fill_safe_area, top_to_bottom, HasLayout};
 use crate::list_view::{ConfigurableRow, MyListView};
@@ -52,11 +52,10 @@ pub struct RasterLayerView {
     play_rasta_graph_btn: Button,
 }
 
-impl MessageHandler for RasterLayerView {
-    type Message = Message;
-    fn on_message(&self, message: &Self::Message) {
+impl MessageHandler<Action> for RasterLayerView {
+    fn on_message(&self, message: &Action) {
         match message {
-            Message::RasterViewerAction(action) => {
+            Action::RasterViewer(action) => {
                 // Must keep the mutable borrow of data in its own block so its released before calling update_value
                 {
                     let mut data = self.data.borrow_mut();
@@ -92,16 +91,24 @@ impl MessageHandler for RasterLayerView {
                 }
                 self.update_value();
             }
-			Message::OpenChangeHistogramSettings(position)=>if *position==self.position{dispatch_ui(Message::SendChangeHistogramSettings(self.position,self.hist_settings.borrow().clone() ))}
-            Message::UpdateHistogramSettings(position, settings) => {
+            Action::UpdateHistogramSettings(position, settings) => {
                 if self.position == *position {
                     let mut settings_ptr = self.hist_settings.borrow_mut();
                     *settings_ptr = settings.clone();
                 }
             }
-            Message::PlayHistogramGraph(position) => {
+            _ => {}
+        }
+    }
+}
+
+impl MessageHandler<Click> for RasterLayerView {
+    fn on_message(&self, message: &Click) {
+        match message {
+			Click::OpenChangeHistogramSettings(position)=>if *position==self.position{dispatch_action(Action::SendChangeHistogramSettings(self.position,self.hist_settings.borrow().clone() ))}
+            Click::PlayHistogramGraph(position) => {
                 if let Some(hist)=&self.hist && *position == self.position {
-                    dispatch_ui(Message::SendAudioGraph(
+                    dispatch_action(Action::SendAudioGraph(
                         hist.clone(),
                         self.hist_settings.borrow().clone(),
                     ))
@@ -181,7 +188,7 @@ impl ViewDelegate for RasterLayerView {
         let position = self.position;
         macro_rules! connect_button {
             ($btn:expr, $action:expr) => {{
-                $btn.set_action(|_| dispatch_ui(Message::RasterViewerAction($action)));
+                $btn.set_action(|_| dispatch_action(Action::RasterViewer($action)));
                 self.content.add_subview(&$btn);
             }};
         }
@@ -193,14 +200,13 @@ impl ViewDelegate for RasterLayerView {
         self.content.add_subview(&self.label);
         let hist = self.hist.clone();
         if let Some(_hist) = &hist {
-            self.play_pause_btn.set_action(move |_| {
-                dispatch_ui(Message::PlayHistogramGraph(position));
-            });
+            self.play_pause_btn
+                .set_action(move |_| dispatch_click(Click::PlayHistogramGraph(position)));
         }
 
         self.content.add_subview(&self.play_pause_btn);
         self.change_hist_settings_btn
-            .set_action(move |_| dispatch_ui(Message::OpenChangeHistogramSettings(position)));
+            .set_action(move |_| dispatch_click(Click::OpenChangeHistogramSettings(position)));
         self.content.add_subview(&self.change_hist_settings_btn);
         if let Some(hist_table) = &self.hist_table {
             self.content.add_subview(hist_table);
@@ -208,7 +214,7 @@ impl ViewDelegate for RasterLayerView {
         let size = self.size;
         if let Some(data) = self.raw_data.clone() {
             self.play_rasta_graph_btn.set_action(move |_| {
-                dispatch_ui(Message::PlayRastaGraph(size, data.clone()));
+                dispatch_action(Action::PlayRastaGraph(size, data.clone()));
             });
         }
         self.content.add_subview(&self.play_rasta_graph_btn);

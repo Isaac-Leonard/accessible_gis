@@ -90,9 +90,7 @@ impl AudioHistogram {
                 None,
             )
             .unwrap();
-        eprintln!("before playing");
         stream.play().unwrap();
-        eprintln!("After playing");
         let _pos_f = -1.0;
         let min = self
             .y
@@ -114,7 +112,6 @@ impl AudioHistogram {
         for (x, y) in self.y.iter().copied().enumerate() {
             let freq_f = (y - min) / y_range * freq_range + min_freq;
             let pos_f = x as f64 / (y_len - 1) as f64 * 2.0 - 1.0;
-            dbg!(pos_f);
             pos.set_value(pos_f);
             freq.set_value(freq_f);
             sleep(duration_per_sample_ms);
@@ -205,10 +202,10 @@ impl RastaGraph {
     {
         let duration = Duration::from_millis(1000);
         let min_freq = 55.0;
-        let max_freq = 880.0;
+        let max_freq = 1760.0;
         let min = *self.data.iter().min().unwrap() as f64;
         let max = *self.data.iter().max().unwrap() as f64;
-        let y_scale = 100;
+        let y_scale = 10;
         let x_scale = 100;
         let data = Zip::from(self.data.exact_chunks((x_scale, y_scale)))
             .map_collect(|chunk| chunk.mean().unwrap());
@@ -242,9 +239,7 @@ impl RastaGraph {
                 None,
             )
             .unwrap();
-        eprintln!("before playing");
         stream.play().unwrap();
-        eprintln!("After playing");
         let _pos_f = -1.0;
         for row in data.rows() {
             for (i, pixel) in row.into_iter().enumerate() {

@@ -1,5 +1,5 @@
 use crate::audio::{get_audio, AudioMessage};
-use crate::events::{dispatch_ui, Message, MessageHandler};
+use crate::events::{dispatch_action, dispatch_click, Action, Click, MessageHandler};
 
 use crate::raster::*;
 use crate::vector::VectorLayerView;
@@ -32,33 +32,39 @@ impl MainView {
     }
 }
 
-impl MessageHandler for MainView {
-    type Message = Message;
-    fn on_message(&self, message: &Self::Message) {
+impl MessageHandler<Action> for MainView {
+    fn on_message(&self, message: &Action) {
         match message {
-            Message::SetFeatureLabel(_)
-            | Message::UpdateHistogramSettings(_, _)
-            | Message::ProcessHistogramSettings
-            | Message::PlayHistogramGraph(_)
-            | Message::CloseChangeHistogramSettings
-            | Message::OpenChangeHistogramSettings(_)
-            | Message::SendChangeHistogramSettings(_, _)
-            | Message::CloseSheet
-            | Message::OpenMainWindow
-            | Message::SendAudioGraph(_, _)
-            | Message::PlayRastaGraph(_, _)
-            | Message::RasterViewerAction(_) => {
+            Action::SetFeatureLabel(_)
+            | Action::UpdateHistogramSettings(_, _)
+            | Action::CloseChangeHistogramSettings
+            | Action::SendChangeHistogramSettings(_, _)
+            | Action::CloseSheet
+            | Action::OpenMainWindow
+            | Action::SendAudioGraph(_, _)
+            | Action::PlayRastaGraph(_, _)
+            | Action::RasterViewer(_) => {
                 self.dataset_view.borrow().on_message(message);
             }
-            Message::ClickedSelectFile => FileSelectPanel::new().show(file_selection_handler),
-            Message::GotFile(path) => {
+            Action::GotFile(path) => {
                 let dataset = Dataset::open(path).expect("Could'nt read file");
                 let mut dataset_view = self.dataset_view.borrow_mut();
                 let sub_view = View::with(DatasetView::new(dataset));
                 self.content.add_subview(&sub_view);
                 *dataset_view = Some(sub_view);
             }
-            Message::InvalidFile(_) => {}
+            Action::InvalidFile(_) => {}
+        }
+    }
+}
+
+impl MessageHandler<Click> for MainView {
+    fn on_message(&self, message: &Click) {
+        match message {
+            Click::SelectFile => FileSelectPanel::new().show(file_selection_handler),
+            message => {
+                self.dataset_view.borrow().on_message(message);
+            }
         }
     }
 }
@@ -158,9 +164,17 @@ impl ViewDelegate for LayerView {
     }
 }
 
-impl MessageHandler for LayerView {
-    type Message = Message;
-    fn on_message(&self, message: &Self::Message) {
+impl MessageHandler<Action> for LayerView {
+    fn on_message(&self, message: &Action) {
+        match self {
+            Self::Vector(_vector_view) => {}
+            Self::Raster(raster_view) => raster_view.on_message(message),
+        }
+    }
+}
+
+impl MessageHandler<Click> for LayerView {
+    fn on_message(&self, message: &Click) {
         match self {
             Self::Vector(_vector_view) => {}
             Self::Raster(raster_view) => raster_view.on_message(message),
@@ -173,7 +187,7 @@ impl ViewDelegate for MainView {
 
     fn did_load(&mut self, view: View) {
         self.button
-            .set_action(|_| dispatch_ui(Message::ClickedSelectFile));
+            .set_action(|_| dispatch_click(Click::SelectFile));
         self.button.set_key_equivalent("c");
         self.content.add_subview(&self.button);
         view.add_subview(&self.content);
@@ -259,40 +273,40 @@ fn file_selection_handler(paths: Vec<NSURL>) {
     let path = paths[0].pathbuf();
     // Simplistic check for vector file
     if path.is_dir() {
-        dispatch_ui(Message::InvalidFile(path));
+        dispatch_action(Action::InvalidFile(path));
         return;
     }
-    dispatch_ui(Message::GotFile(path))
+    dispatch_action(Action::GotFile(path))
 }
 
-impl MessageHandler for DatasetView {
-    type Message = Message;
-    fn on_message(&self, message: &Self::Message) {
+impl MessageHandler<Action> for DatasetView {
+    fn on_message(&self, message: &Action) {
         match message {
-            Message::SendAudioGraph(graph, settings) => self
+            Action::SendAudioGraph(graph, settings) => self
                 .audio
                 .send(AudioMessage::PlayHistogram(graph.clone(), settings.clone()))
                 .unwrap(),
-            Message::PlayRastaGraph(size, data) => self
+            Action::PlayRastaGraph(size, data) => self
                 .audio
                 .send(AudioMessage::PlayRasta(*size, data.clone()))
                 .unwrap(),
-            Message::SetFeatureLabel(name) => self.update_new_label(Some(name.clone())),
-            Message::RasterViewerAction(_)
-            | Message::PlayHistogramGraph(_)
-            | Message::OpenChangeHistogramSettings(_)
-            | Message::UpdateHistogramSettings(_, _) => {
-                let views = self.sub_views.borrow();
-                views
-                    .iter()
-                    .filter_map(|v| v.delegate.as_ref())
-                    .for_each(|view| view.on_message(message));
+            Action::SetFeatureLabel(name) => self.update_new_label(Some(name.clone())),
+            Action::RasterViewer(_) | Action::UpdateHistogramSettings(_, _) => {
+                for view in self.sub_views.borrow().iter() {
+                    view.on_message(message)
+                }
             }
-            Message::InvalidFile(_) => {}
-            Message::GotFile(_) => {}
-            Message::ClickedSelectFile => {}
-            Message::CloseChangeHistogramSettings => {}
+            Action::InvalidFile(_) => {}
+            Action::GotFile(_) => {}
             _ => {}
+        }
+    }
+}
+
+impl MessageHandler<Click> for DatasetView {
+    fn on_message(&self, message: &Click) {
+        for view in self.sub_views.borrow().iter() {
+            view.on_message(message);
         }
     }
 }

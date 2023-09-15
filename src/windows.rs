@@ -1,12 +1,11 @@
 use cacao::{
     appkit::window::{Window, WindowConfig, WindowDelegate},
-    notification_center::Dispatcher,
     view::ViewController,
 };
 use std::sync::RwLock;
 
 use crate::{
-    events::{Message, MessageHandler},
+    events::{Action, Click, MessageHandler},
     graph::HistogramSettings,
     histogram_settings_window::ChangeHistogramSettingsWindow,
     views::MainView,
@@ -91,33 +90,38 @@ impl WindowManager {
     }
 }
 
-impl Dispatcher for WindowManager {
-    type Message = Message;
-
-    /// Some jank message passing, it's fine for now.
-    fn on_ui_message(&self, message: Message) {
-        match &message {
-            Message::OpenMainWindow => {
+impl MessageHandler<Action> for WindowManager {
+    fn on_message(&self, message: &Action) {
+        match message {
+            Action::OpenMainWindow => {
                 self.open_main();
             }
 
-            Message::CloseSheet => {
+            Action::CloseSheet => {
                 self.close_sheet();
             }
 
-            Message::SendChangeHistogramSettings(position, settings) => {
+            Action::SendChangeHistogramSettings(position, settings) => {
                 self.open_histogram_settings(*position, settings.clone());
             }
 
-            Message::UpdateHistogramSettings(_, _) => {
+            Action::UpdateHistogramSettings(_, _) => {
                 self.close_sheet();
             }
 
-            _ => {}
+            message => {
+                self.main.on_message(message);
+                self.change_hist_settings.on_message(message);
+            }
         }
+    }
+}
 
-        self.main.on_message(&message);
-        self.change_hist_settings.on_message(&message);
+impl MessageHandler<Click> for WindowManager {
+    fn on_message(&self, message: &Click) {
+        dbg!(message);
+        self.main.on_message(message);
+        self.change_hist_settings.on_message(message);
     }
 }
 
@@ -135,12 +139,16 @@ impl MainWindow {
     }
 }
 
-impl MessageHandler for MainWindow {
-    type Message = Message;
-    fn on_message(&self, message: &Message) {
-        if let Some(view) = &self.content.view.delegate {
-            view.on_message(message)
-        }
+impl MessageHandler<Action> for MainWindow {
+    fn on_message(&self, message: &Action) {
+        self.content.view.on_message(message);
+    }
+}
+
+impl MessageHandler<Click> for MainWindow {
+    fn on_message(&self, message: &Click) {
+        dbg!(message);
+        self.content.view.on_message(message);
     }
 }
 
@@ -155,9 +163,9 @@ impl WindowDelegate for MainWindow {
 }
 
 /// A bunch of useful MessageHandler implementations to simplify code
-impl<M: Send + Sync + Clone, T: MessageHandler<Message = M>> MessageHandler for Window<T> {
-    type Message = M;
-    fn on_message(&self, message: &Self::Message) {
+
+impl<M: Send + Sync + Clone, T: MessageHandler<M>> MessageHandler<M> for Window<T> {
+    fn on_message(&self, message: &M) {
         if let Some(delegate) = &self.delegate {
             delegate.on_message(message);
         }

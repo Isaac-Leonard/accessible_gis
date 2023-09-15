@@ -8,7 +8,7 @@ use cacao::{
 };
 
 use crate::{
-    events::{dispatch_ui, Message, MessageHandler},
+    events::{dispatch_action, dispatch_click, Action, Click, MessageHandler},
     graph::HistogramSettings,
     layout::top_to_bottom,
 };
@@ -46,14 +46,18 @@ impl UpdateHistogramSettingsView {
         }
     }
 }
-impl MessageHandler for UpdateHistogramSettingsView {
-    type Message = Message;
-    fn on_message(&self, message: &Message) {
+
+impl MessageHandler<Action> for UpdateHistogramSettingsView {
+    fn on_message(&self, _message: &Action) {}
+}
+
+impl MessageHandler<Click> for UpdateHistogramSettingsView {
+    fn on_message(&self, message: &Click) {
         match message {
-            Message::ProcessHistogramSettings => {
+            Click::DoneChangeHistogramSettings => {
                 let position = self.initial_data.position;
                 let settings = self.get_settings_value();
-                dispatch_ui(Message::UpdateHistogramSettings(position, settings));
+                dispatch_action(Action::UpdateHistogramSettings(position, settings));
             }
             _ => {}
         }
@@ -86,7 +90,7 @@ impl ViewDelegate for UpdateHistogramSettingsView {
 
         view.add_subview(&self.done_btn);
         self.done_btn
-            .set_action(|_| dispatch_ui(Message::ProcessHistogramSettings));
+            .set_action(|_| dispatch_click(Click::DoneChangeHistogramSettings));
         LayoutConstraint::activate(&top_to_bottom(
             vec![
                 &self.duration_label,
@@ -116,9 +120,15 @@ impl ChangeHistogramSettingsWindow {
         Self { content }
     }
 }
-impl MessageHandler for ChangeHistogramSettingsWindow {
-    type Message = Message;
-    fn on_message(&self, message: &Self::Message) {
+
+impl MessageHandler<Action> for ChangeHistogramSettingsWindow {
+    fn on_message(&self, message: &Action) {
+        self.content.view.on_message(message);
+    }
+}
+
+impl MessageHandler<Click> for ChangeHistogramSettingsWindow {
+    fn on_message(&self, message: &Click) {
         self.content.view.on_message(message);
     }
 }
@@ -134,7 +144,7 @@ impl WindowDelegate for ChangeHistogramSettingsWindow {
     }
 
     fn cancel(&self) {
-        dispatch_ui(Message::CloseChangeHistogramSettings);
+        dispatch_action(Action::CloseChangeHistogramSettings);
     }
 }
 
