@@ -13,13 +13,12 @@ use cacao::{button::Button, view};
 use gdal::vector::LayerAccess;
 use gdal::Dataset;
 use std::cell::RefCell;
-use std::rc::Rc;
 use std::sync::mpsc::Sender;
 
 pub struct MainView {
     content: view::View,
     button: Button,
-    dataset_view: Rc<RefCell<Option<View<DatasetView>>>>,
+    dataset_view: RefCell<Option<View<DatasetView>>>,
 }
 
 impl MainView {
@@ -27,7 +26,7 @@ impl MainView {
         Self {
             content: View::new(),
             button: Button::new("Select file"),
-            dataset_view: Rc::new(RefCell::new(None)),
+            dataset_view: RefCell::new(None),
         }
     }
 }
@@ -77,9 +76,9 @@ impl Default for MainView {
 
 pub struct DatasetView {
     content: view::View,
-    sub_views: Rc<RefCell<Vec<View<LayerView>>>>,
+    sub_views: RefCell<Vec<View<LayerView>>>,
     audio: Sender<AudioMessage>,
-    dataset: Rc<RefCell<Dataset>>,
+    dataset: RefCell<Dataset>,
     spatial_reference_label: Label,
 }
 
@@ -88,9 +87,9 @@ impl DatasetView {
         let audio = get_audio();
         let view = Self {
             content: View::new(),
-            dataset: Rc::new(RefCell::new(dataset)),
+            dataset: RefCell::new(dataset),
             audio,
-            sub_views: Rc::new(RefCell::new(Vec::new())),
+            sub_views: RefCell::new(Vec::new()),
             spatial_reference_label: Label::new(),
         };
         {

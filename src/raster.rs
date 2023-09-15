@@ -14,8 +14,6 @@ use ndarray::Array2;
 
 use std::cell::RefCell;
 
-use std::rc::Rc;
-
 pub struct RasterViewerData {
     x: usize,
     y: usize,
@@ -42,11 +40,11 @@ pub struct RasterLayerView {
     cell_value_label: Label,
     positional_information_label: Label,
     stats_label: Label,
-    data: Rc<RefCell<RasterViewerData>>,
+    data: RefCell<RasterViewerData>,
     hist: Option<Vec<f64>>,
     hist_table: Option<ListView<MyListView<HistogramViewRow>>>,
     data_type_name: String,
-    hist_settings: Rc<RefCell<HistogramSettings>>,
+    hist_settings: RefCell<HistogramSettings>,
     size: (usize, usize),
     raw_data: Option<Array2<u32>>,
     play_rasta_graph_btn: Button,
@@ -161,19 +159,19 @@ impl RasterLayerView {
             halve_width_btn: Button::new("Half width"),
             double_height_btn: Button::new("Double height"),
             halve_height_btn: Button::new("Halve height"),
-            data: Rc::new(RefCell::new(RasterViewerData {
+            data: RefCell::new(RasterViewerData {
                 stats: band.get_statistics(true, true).unwrap().unwrap(),
                 x: 0,
                 y: 0,
                 width: band.size().0,
                 height: band.size().1,
-            })),
+            }),
             positional_information_label: Label::new(),
             cell_value_label: Label::new(),
             stats_label: Label::new(),
             hist: hist.clone(),
             hist_table: hist.map(|hist| ListView::with(MyListView::new(hist))),
-            hist_settings: Rc::new(RefCell::new(HistogramSettings::default())),
+            hist_settings: RefCell::new(HistogramSettings::default()),
             size: band.size(),
             raw_data: data,
             play_rasta_graph_btn: Button::new("Play rasta graph"),
