@@ -1,9 +1,11 @@
+use crate::app::BasicApp;
 use crate::events::{dispatch_action, dispatch_click, Action, Click, MessageHandler};
 use crate::graph::{generate_image_histogram, HistogramSettings};
-use crate::layout::{fill_safe_area, top_to_bottom, HasLayout};
+use crate::layout::{fill_safe_area, top_to_bottom};
 use crate::list_view::{ConfigurableRow, MyListView};
 use cacao::layout::{Layout, LayoutConstraint};
 use cacao::listview::ListView;
+use cacao_framework::{Component, ComponentType, Discripter, Renderable};
 use gdal::raster::GdalDataType;
 
 use cacao::button::Button;
@@ -14,12 +16,26 @@ use ndarray::Array2;
 
 use std::cell::RefCell;
 
+#[derive(PartialEq)]
 pub struct RasterViewerData {
-    x: usize,
-    y: usize,
     width: usize,
     height: usize,
     stats: StatisticsAll,
+}
+
+impl Clone for RasterViewerData {
+    fn clone(&self) -> Self {
+        Self {
+            width: self.width,
+            height: self.height,
+            stats: StatisticsAll {
+                min: self.stats.min,
+                max: self.stats.max,
+                mean: self.stats.mean,
+                std_dev: self.stats.std_dev,
+            },
+        }
+    }
 }
 
 pub struct RasterLayerView {
@@ -28,19 +44,7 @@ pub struct RasterLayerView {
     position: usize,
     play_pause_btn: Button,
     change_hist_settings_btn: Button,
-    move_west_btn: Button,
-    move_east_btn: Button,
-    move_north_btn: Button,
-    move_south_btn: Button,
-    double_width_btn: Button,
-    double_height_btn: Button,
-    halve_width_btn: Button,
-    halve_height_btn: Button,
     playing: bool,
-    cell_value_label: Label,
-    positional_information_label: Label,
-    stats_label: Label,
-    data: RefCell<RasterViewerData>,
     hist: Option<Vec<f64>>,
     hist_table: Option<ListView<MyListView<HistogramViewRow>>>,
     data_type_name: String,
@@ -48,47 +52,12 @@ pub struct RasterLayerView {
     size: (usize, usize),
     raw_data: Option<Array2<u32>>,
     play_rasta_graph_btn: Button,
+    stats: View<Component<RasterViewerData, ImagePoint, StatsComponent, BasicApp>>,
 }
 
 impl MessageHandler<Action> for RasterLayerView {
     fn on_message(&self, message: &Action) {
         match message {
-            Action::RasterViewer(action) => {
-                // Must keep the mutable borrow of data in its own block so its released before calling update_value
-                {
-                    let mut data = self.data.borrow_mut();
-                    match action {
-                        RasterViewerrMessage::MoveNorth => data.y += data.height,
-                        RasterViewerrMessage::MoveEast => data.x += data.width,
-                        RasterViewerrMessage::MoveSouth => {
-                            data.y = data.y.saturating_sub(data.height)
-                        }
-                        RasterViewerrMessage::MoveWest => {
-                            data.x = data.x.saturating_sub(data.width)
-                        }
-
-                        RasterViewerrMessage::HalveWidth => {
-                            data.width /= 2;
-                        }
-                        RasterViewerrMessage::DoubleWidth => {
-                            data.width *= 2;
-                        }
-                        RasterViewerrMessage::HalveHeight => {
-                            data.height /= 2;
-                        }
-                        RasterViewerrMessage::DoubleHeight => {
-                            data.height *= 2;
-                        }
-                    };
-                    if data.width == 0 {
-                        data.width = 1
-                    }
-                    if data.height == 0 {
-                        data.height = 1
-                    }
-                }
-                self.update_value();
-            }
             Action::UpdateHistogramSettings(position, settings) => {
                 if self.position == *position {
                     let mut settings_ptr = self.hist_settings.borrow_mut();
@@ -100,6 +69,13 @@ impl MessageHandler<Action> for RasterLayerView {
     }
 }
 
+impl MessageHandler<usize> for RasterLayerView {
+    fn on_message(&self, message: &usize) {
+        if let Some(delegate) = &self.stats.delegate {
+            delegate.on_message(message);
+        }
+    }
+}
 impl MessageHandler<Click> for RasterLayerView {
     fn on_message(&self, message: &Click) {
         match message {
@@ -151,30 +127,18 @@ impl RasterLayerView {
             play_pause_btn: Button::new("play"),
             change_hist_settings_btn: Button::new("Change settings for histogram"),
             playing: false,
-            move_east_btn: Button::new("East"),
-            move_west_btn: Button::new("West"),
-            move_north_btn: Button::new("North"),
-            move_south_btn: Button::new("South"),
-            double_width_btn: Button::new("Double width"),
-            halve_width_btn: Button::new("Half width"),
-            double_height_btn: Button::new("Double height"),
-            halve_height_btn: Button::new("Halve height"),
-            data: RefCell::new(RasterViewerData {
-                stats: band.get_statistics(true, true).unwrap().unwrap(),
-                x: 0,
-                y: 0,
-                width: band.size().0,
-                height: band.size().1,
-            }),
-            positional_information_label: Label::new(),
-            cell_value_label: Label::new(),
-            stats_label: Label::new(),
+
             hist: hist.clone(),
             hist_table: hist.map(|hist| ListView::with(MyListView::new(hist))),
             hist_settings: RefCell::new(HistogramSettings::default()),
             size: band.size(),
             raw_data: data,
             play_rasta_graph_btn: Button::new("Play rasta graph"),
+            stats: View::with(Component::new(RasterViewerData {
+                stats: band.get_statistics(true, true).unwrap().unwrap(),
+                width: band.size().0,
+                height: band.size().1,
+            })),
         }
     }
 }
@@ -184,12 +148,6 @@ impl ViewDelegate for RasterLayerView {
 
     fn did_load(&mut self, view: View) {
         let position = self.position;
-        macro_rules! connect_button {
-            ($btn:expr, $action:expr) => {{
-                $btn.set_action(|_| dispatch_action(Action::RasterViewer($action)));
-                self.content.add_subview(&$btn);
-            }};
-        }
 
         self.label
             .set_text(format!("Rasta file with {} data", self.data_type_name));
@@ -217,37 +175,15 @@ impl ViewDelegate for RasterLayerView {
         }
         self.content.add_subview(&self.play_rasta_graph_btn);
 
-        connect_button!(self.move_north_btn, RasterViewerrMessage::MoveNorth);
-        connect_button!(self.move_east_btn, RasterViewerrMessage::MoveEast);
-        connect_button!(self.move_south_btn, RasterViewerrMessage::MoveSouth);
-        connect_button!(self.move_west_btn, RasterViewerrMessage::MoveWest);
-        connect_button!(self.double_height_btn, RasterViewerrMessage::DoubleHeight);
-        connect_button!(self.halve_height_btn, RasterViewerrMessage::HalveHeight);
-        connect_button!(self.double_width_btn, RasterViewerrMessage::DoubleWidth);
-        connect_button!(self.halve_width_btn, RasterViewerrMessage::HalveWidth);
-
-        self.content.add_subview(&self.cell_value_label);
-        self.content.add_subview(&self.positional_information_label);
-        self.content.add_subview(&self.stats_label);
-        self.update_value();
+        self.content.add_subview(&self.stats);
         view.add_subview(&self.content);
-        let references: Vec<&dyn HasLayout> = if let Some(hist_table) = &self.hist_table {
+        let references: Vec<&dyn Layout> = if let Some(hist_table) = &self.hist_table {
             vec![
                 &self.label,
                 &self.play_pause_btn,
                 &self.change_hist_settings_btn,
                 hist_table,
-                &self.stats_label,
-                &self.positional_information_label,
-                &self.cell_value_label,
-                &self.move_north_btn,
-                &self.move_south_btn,
-                &self.move_west_btn,
-                &self.move_east_btn,
-                &self.double_height_btn,
-                &self.halve_height_btn,
-                &self.double_width_btn,
-                &self.halve_width_btn,
+                &self.stats,
             ]
         } else {
             vec![
@@ -255,17 +191,7 @@ impl ViewDelegate for RasterLayerView {
                 &self.play_pause_btn,
                 &self.change_hist_settings_btn,
                 &self.play_rasta_graph_btn,
-                &self.stats_label,
-                &self.positional_information_label,
-                &self.cell_value_label,
-                &self.move_north_btn,
-                &self.move_south_btn,
-                &self.move_west_btn,
-                &self.move_east_btn,
-                &self.double_height_btn,
-                &self.halve_height_btn,
-                &self.double_width_btn,
-                &self.halve_width_btn,
+                &self.stats,
             ]
         };
         let inner_constraints = top_to_bottom(references, &self.content, 16.0);
@@ -280,16 +206,49 @@ impl ViewDelegate for RasterLayerView {
     }
 }
 
-impl RasterLayerView {
-    fn update_value(&self) {
-        let data = self.data.borrow();
-        self.cell_value_label.set_text(data.stats.mean.to_string());
-        self.positional_information_label.set_text(format!(
-            "x: {}, y: {}, width: {}, height: {}",
-            data.x, data.y, data.width, data.height
-        ));
-        self.stats_label
-            .set_text(format!("min: {}, max: {}", data.stats.min, data.stats.max));
+#[derive(Clone, PartialEq, Default)]
+pub struct ImagePoint {
+    x: usize,
+    y: usize,
+}
+
+pub struct StatsComponent;
+
+impl Renderable for StatsComponent {
+    type Props = RasterViewerData;
+    type State = ImagePoint;
+    fn render(
+        RasterViewerData {
+            width,
+            height,
+            stats,
+        }: &Self::Props,
+        ImagePoint { x, y }: &Self::State,
+    ) -> Vec<Discripter<Self::Props, Self::State>> {
+        vec![
+            Discripter {
+                kind: ComponentType::Label,
+                text: stats.mean.to_string(),
+            },
+            Discripter {
+                kind: ComponentType::Label,
+                text: format!("x: {x}, y: {y}, width: {width}, height: {height}",),
+            },
+            Discripter {
+                kind: ComponentType::Label,
+                text: format!("min: {}, max: {}", stats.min, stats.max),
+            },
+            Discripter {
+                kind: ComponentType::Button(Some(|data, point| point.y += data.height)),
+                text: "Move North".to_string(),
+            },
+            Discripter {
+                kind: ComponentType::Button(Some(|data, point| {
+                    point.y = point.y.saturating_sub(data.height)
+                })),
+                text: "Move south".to_string(),
+            },
+        ]
     }
 }
 

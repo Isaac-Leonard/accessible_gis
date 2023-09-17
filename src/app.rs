@@ -8,15 +8,20 @@ pub struct BasicApp {
     pub window_manager: WindowManager,
 }
 
-impl Dispatcher for BasicApp {
-    type Message = Message;
-
+impl Dispatcher<Message> for BasicApp {
     /// Handles a message that came over on the main (UI) thread.
-    fn on_ui_message(&self, message: Self::Message) {
+    fn on_ui_message(&self, message: Message) {
         match &message {
             Message::Action(action) => self.window_manager.on_message(action),
             Message::Click(click) => self.window_manager.on_message(click),
         }
+    }
+}
+
+impl Dispatcher<usize> for BasicApp {
+    /// Handles button clicks from cacao_framework components that came over on the main (UI) thread.
+    fn on_ui_message(&self, message: usize) {
+        self.window_manager.on_message(&message)
     }
 }
 

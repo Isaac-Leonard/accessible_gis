@@ -14,8 +14,7 @@ mod vector;
 mod views;
 mod windows;
 
-use cacao::{appkit::App};
-
+use cacao::appkit::App;
 
 fn main() {
     App::new("com.accessible.gis", app::BasicApp::default()).run();

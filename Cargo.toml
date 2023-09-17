@@ -8,7 +8,8 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.72"
 assert_no_alloc = "1.1.2"
-cacao = { git = "https://github.com/ryanmcgrath/cacao", rev = "4f40d62"}
+cacao = { git = "https://github.com/isaac-leonard/cacao", branch = "message_passing_changes"}
+cacao_framework = { git = "https://github.com/isaac-leonard/cacao_framework", rev = "ad5ce0b1e4c9ce9c772564567b81c2c366361970"}
 cpal = "0.15.2"
 fundsp = "0.15.0"
 gdal = {version = "0.15.0", features = ["array", "bindgen", "ndarray"]}

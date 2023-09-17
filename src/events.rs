@@ -1,7 +1,7 @@
 use crate::app::BasicApp;
 
 use crate::graph::HistogramSettings;
-use crate::raster::*;
+
 use cacao::appkit::App;
 use cacao::view::View;
 use ndarray::Array2;
@@ -14,7 +14,6 @@ pub enum Action {
     GotFile(PathBuf),
     InvalidFile(PathBuf),
     SendAudioGraph(Vec<f64>, HistogramSettings),
-    RasterViewer(RasterViewerrMessage),
     SetFeatureLabel(String),
     CloseChangeHistogramSettings,
     SendChangeHistogramSettings(usize, HistogramSettings),

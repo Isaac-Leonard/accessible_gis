@@ -64,6 +64,10 @@ impl MessageHandler<Click> for UpdateHistogramSettingsView {
     }
 }
 
+impl MessageHandler<usize> for UpdateHistogramSettingsView {
+    fn on_message(&self, _message: &usize) {}
+}
+
 impl ViewDelegate for UpdateHistogramSettingsView {
     const NAME: &'static str = "UpdateHistogramSettingsView";
     fn did_load(&mut self, view: View) {
@@ -129,6 +133,12 @@ impl MessageHandler<Action> for ChangeHistogramSettingsWindow {
 
 impl MessageHandler<Click> for ChangeHistogramSettingsWindow {
     fn on_message(&self, message: &Click) {
+        self.content.view.on_message(message);
+    }
+}
+
+impl MessageHandler<usize> for ChangeHistogramSettingsWindow {
+    fn on_message(&self, message: &usize) {
         self.content.view.on_message(message);
     }
 }

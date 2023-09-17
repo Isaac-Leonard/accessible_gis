@@ -41,8 +41,7 @@ impl MessageHandler<Action> for MainView {
             | Action::CloseSheet
             | Action::OpenMainWindow
             | Action::SendAudioGraph(_, _)
-            | Action::PlayRastaGraph(_, _)
-            | Action::RasterViewer(_) => {
+            | Action::PlayRastaGraph(_, _) => {
                 self.dataset_view.borrow().on_message(message);
             }
             Action::GotFile(path) => {
@@ -65,6 +64,12 @@ impl MessageHandler<Click> for MainView {
                 self.dataset_view.borrow().on_message(message);
             }
         }
+    }
+}
+
+impl MessageHandler<usize> for MainView {
+    fn on_message(&self, message: &usize) {
+        self.dataset_view.borrow().on_message(message);
     }
 }
 
@@ -104,7 +109,7 @@ impl DatasetView {
                 last_position += 1;
             }
             // TODO: Lets try replace with a proper iterator
-            for i in 1..=dbg!(dataset.raster_count()) {
+            for i in 1..=dataset.raster_count() {
                 let band = dataset.rasterband(i).unwrap();
                 let raster_view =
                     View::with(RasterLayerView::new(&band, i as usize + last_position));
@@ -174,6 +179,15 @@ impl MessageHandler<Action> for LayerView {
 
 impl MessageHandler<Click> for LayerView {
     fn on_message(&self, message: &Click) {
+        match self {
+            Self::Vector(_vector_view) => {}
+            Self::Raster(raster_view) => raster_view.on_message(message),
+        }
+    }
+}
+
+impl MessageHandler<usize> for LayerView {
+    fn on_message(&self, message: &usize) {
         match self {
             Self::Vector(_vector_view) => {}
             Self::Raster(raster_view) => raster_view.on_message(message),
@@ -290,7 +304,7 @@ impl MessageHandler<Action> for DatasetView {
                 .send(AudioMessage::PlayRasta(*size, data.clone()))
                 .unwrap(),
             Action::SetFeatureLabel(name) => self.update_new_label(Some(name.clone())),
-            Action::RasterViewer(_) | Action::UpdateHistogramSettings(_, _) => {
+            Action::UpdateHistogramSettings(_, _) => {
                 for view in self.sub_views.borrow().iter() {
                     view.on_message(message)
                 }
@@ -304,6 +318,14 @@ impl MessageHandler<Action> for DatasetView {
 
 impl MessageHandler<Click> for DatasetView {
     fn on_message(&self, message: &Click) {
+        for view in self.sub_views.borrow().iter() {
+            view.on_message(message);
+        }
+    }
+}
+
+impl MessageHandler<usize> for DatasetView {
+    fn on_message(&self, message: &usize) {
         for view in self.sub_views.borrow().iter() {
             view.on_message(message);
         }

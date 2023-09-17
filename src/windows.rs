@@ -125,6 +125,13 @@ impl MessageHandler<Click> for WindowManager {
     }
 }
 
+impl MessageHandler<usize> for WindowManager {
+    fn on_message(&self, message: &usize) {
+        self.main.on_message(message);
+        self.change_hist_settings.on_message(message);
+    }
+}
+
 pub struct MainWindow {
     pub window: Window,
     pub content: ViewController<MainView>,
@@ -148,6 +155,12 @@ impl MessageHandler<Action> for MainWindow {
 impl MessageHandler<Click> for MainWindow {
     fn on_message(&self, message: &Click) {
         dbg!(message);
+        self.content.view.on_message(message);
+    }
+}
+
+impl MessageHandler<usize> for MainWindow {
+    fn on_message(&self, message: &usize) {
         self.content.view.on_message(message);
     }
 }
