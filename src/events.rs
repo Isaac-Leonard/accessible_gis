@@ -20,7 +20,7 @@ pub enum Action {
     CloseSheet,
     OpenMainWindow,
     UpdateHistogramSettings(usize, HistogramSettings),
-    PlayRastaGraph((usize, usize), Array2<u32>),
+    PlayRastaGraph((usize, usize), Array2<u64>),
 }
 
 #[derive(Clone, Debug)]

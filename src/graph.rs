@@ -132,7 +132,7 @@ pub fn play_histogram(counts: Vec<f64>, settings: HistogramSettings) {
     sonifier.play();
 }
 
-pub fn play_rasta(data: Array2<u32>) {
+pub fn play_rasta(data: Array2<u64>) {
     let rasta_graph = RastaGraph::new(data);
     rasta_graph.play();
 }
@@ -175,11 +175,11 @@ impl Default for HistogramSettings {
 }
 
 pub struct RastaGraph {
-    data: Array2<u32>,
+    data: Array2<u64>,
 }
 
 impl RastaGraph {
-    pub fn new(data: Array2<u32>) -> Self {
+    pub fn new(data: Array2<u64>) -> Self {
         Self { data }
     }
 
@@ -200,6 +200,7 @@ impl RastaGraph {
     where
         T: cpal::Sample + cpal::SizedSample + cpal::FromSample<f64>,
     {
+        eprintln!("running");
         let duration = Duration::from_millis(1000);
         let min_freq = 55.0;
         let max_freq = 1760.0;

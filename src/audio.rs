@@ -19,7 +19,7 @@ static A: AllocDisabler = AllocDisabler;
 #[derive(Clone, Debug)]
 pub enum AudioMessage {
     PlayHistogram(Vec<f64>, HistogramSettings),
-    PlayRasta((usize, usize), Array2<u32>),
+    PlayRasta((usize, usize), Array2<u64>),
 }
 
 pub fn get_audio() -> mpsc::Sender<AudioMessage> {

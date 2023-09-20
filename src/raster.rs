@@ -43,6 +43,7 @@ pub struct RasterLayerView {
     label: Label,
     position: usize,
     play_pause_btn: Button,
+    play_rasta_graph_btn: Button,
     change_hist_settings_btn: Button,
     playing: bool,
     hist: Option<Vec<f64>>,
@@ -50,8 +51,7 @@ pub struct RasterLayerView {
     data_type_name: String,
     hist_settings: RefCell<HistogramSettings>,
     size: (usize, usize),
-    raw_data: Option<Array2<u32>>,
-    play_rasta_graph_btn: Button,
+    raw_data: Option<Array2<u64>>,
     stats: View<Component<RasterViewerData, ImagePoint, StatsComponent, BasicApp>>,
 }
 
@@ -76,6 +76,7 @@ impl MessageHandler<usize> for RasterLayerView {
         }
     }
 }
+
 impl MessageHandler<Click> for RasterLayerView {
     fn on_message(&self, message: &Click) {
         match message {
@@ -102,21 +103,32 @@ impl RasterLayerView {
             )),
             _ => None,
         };
-        let data: Option<Array2<u32>> = match band_type {
+        let data: Option<Array2<u64>> = match band_type {
             GdalDataType::UInt8 => Some(
                 band.read_as_array::<u8>((0, 0), band.size(), band.size(), None)
                     .unwrap()
-                    .mapv_into_any(|x| x as u32),
+                    .mapv_into_any(|x| x as u64),
             ),
             GdalDataType::UInt16 => Some(
                 band.read_as_array::<u16>((0, 0), band.size(), band.size(), None)
                     .unwrap()
-                    .mapv_into_any(|x| x as u32),
+                    .mapv_into_any(|x| x as u64),
             ),
             GdalDataType::UInt32 => Some(
                 band.read_as_array::<u32>((0, 0), band.size(), band.size(), None)
-                    .unwrap(),
+                    .unwrap()
+                    .mapv_into_any(|x| x as u64),
             ),
+            GdalDataType::Float32 => Some({
+                let ints = band
+                    .read_as_array::<f32>((0, 0), band.size(), band.size(), None)
+                    .unwrap()
+                    .mapv_into_any(|x| unsafe { x.to_int_unchecked::<i32>() });
+                eprintln!("safely here");
+                let min = ints.iter().min().unwrap().saturating_abs();
+                eprintln!("safely here2");
+                ints.mapv_into_any(|x| (x.saturating_add(min)) as u64)
+            }),
             _ => None,
         };
         RasterLayerView {
@@ -169,7 +181,10 @@ impl ViewDelegate for RasterLayerView {
         }
         let size = self.size;
         if let Some(data) = self.raw_data.clone() {
+            eprintln!("data exists");
+
             self.play_rasta_graph_btn.set_action(move |_| {
+                eprintln!("dispatching");
                 dispatch_action(Action::PlayRastaGraph(size, data.clone()));
             });
         }
@@ -180,6 +195,7 @@ impl ViewDelegate for RasterLayerView {
         let references: Vec<&dyn Layout> = if let Some(hist_table) = &self.hist_table {
             vec![
                 &self.label,
+                &self.play_rasta_graph_btn,
                 &self.play_pause_btn,
                 &self.change_hist_settings_btn,
                 hist_table,
@@ -188,9 +204,9 @@ impl ViewDelegate for RasterLayerView {
         } else {
             vec![
                 &self.label,
+                &self.play_rasta_graph_btn,
                 &self.play_pause_btn,
                 &self.change_hist_settings_btn,
-                &self.play_rasta_graph_btn,
                 &self.stats,
             ]
         };
