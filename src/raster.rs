@@ -1,11 +1,12 @@
 use crate::app::BasicApp;
+use crate::audio::{get_audio, AudioMessage};
 use crate::events::{dispatch_action, dispatch_click, Action, Click, MessageHandler};
 use crate::graph::{generate_image_histogram, HistogramSettings};
 use crate::layout::{fill_safe_area, top_to_bottom};
 use crate::list_view::{ConfigurableRow, MyListView};
 use cacao::layout::{Layout, LayoutConstraint};
 use cacao::listview::ListView;
-use cacao_framework::{Component, ComponentType, Discripter, Renderable};
+use cacao_framework::{Component, ComponentWrapper, VButton, VComponent, VLabel, VNode};
 use gdal::raster::GdalDataType;
 
 use cacao::button::Button;
@@ -15,6 +16,7 @@ use gdal::raster::{RasterBand, StatisticsAll};
 use ndarray::Array2;
 
 use std::cell::RefCell;
+use std::sync::mpsc::Sender;
 
 #[derive(PartialEq)]
 pub struct RasterViewerData {
@@ -40,19 +42,14 @@ impl Clone for RasterViewerData {
 
 pub struct RasterLayerView {
     pub content: View,
-    label: Label,
     position: usize,
+    audio_controls: View<ComponentWrapper<AudioControls, BasicApp>>,
     play_pause_btn: Button,
-    play_rasta_graph_btn: Button,
     change_hist_settings_btn: Button,
-    playing: bool,
     hist: Option<Vec<f64>>,
     hist_table: Option<ListView<MyListView<HistogramViewRow>>>,
-    data_type_name: String,
     hist_settings: RefCell<HistogramSettings>,
-    size: (usize, usize),
-    raw_data: Option<Array2<u64>>,
-    stats: View<Component<RasterViewerData, ImagePoint, StatsComponent, BasicApp>>,
+    stats: View<ComponentWrapper<StatsComponent, BasicApp>>,
 }
 
 impl MessageHandler<Action> for RasterLayerView {
@@ -72,6 +69,9 @@ impl MessageHandler<Action> for RasterLayerView {
 impl MessageHandler<usize> for RasterLayerView {
     fn on_message(&self, message: &usize) {
         if let Some(delegate) = &self.stats.delegate {
+            delegate.on_message(message);
+        }
+        if let Some(delegate) = &self.audio_controls.delegate {
             delegate.on_message(message);
         }
     }
@@ -103,50 +103,65 @@ impl RasterLayerView {
             )),
             _ => None,
         };
-        let data: Option<Array2<u64>> = match band_type {
-            GdalDataType::UInt8 => Some(
-                band.read_as_array::<u8>((0, 0), band.size(), band.size(), None)
+        let data: Array2<f64> = match band_type {
+            GdalDataType::UInt8 => band
+                .read_as_array::<u8>((0, 0), band.size(), band.size(), None)
                     .unwrap()
-                    .mapv_into_any(|x| x as u64),
-            ),
-            GdalDataType::UInt16 => Some(
-                band.read_as_array::<u16>((0, 0), band.size(), band.size(), None)
+                .mapv_into_any(|x| x as f64),
+            GdalDataType::UInt16 => band
+                .read_as_array::<u16>((0, 0), band.size(), band.size(), None)
                     .unwrap()
-                    .mapv_into_any(|x| x as u64),
-            ),
-            GdalDataType::UInt32 => Some(
-                band.read_as_array::<u32>((0, 0), band.size(), band.size(), None)
+                .mapv_into_any(|x| x as f64),
+
+            GdalDataType::UInt32 => band
+                .read_as_array::<u32>((0, 0), band.size(), band.size(), None)
                     .unwrap()
-                    .mapv_into_any(|x| x as u64),
-            ),
-            GdalDataType::Float32 => Some({
-                let ints = band
+                .mapv_into_any(|x| x as f64),
+
+            GdalDataType::Int8 => band
+                .read_as_array::<i8>((0, 0), band.size(), band.size(), None)
+                .unwrap()
+                .mapv_into_any(|x| x as f64),
+
+            GdalDataType::Int16 => band
+                .read_as_array::<i16>((0, 0), band.size(), band.size(), None)
+                .unwrap()
+                .mapv_into_any(|x| x as f64),
+
+            GdalDataType::Int32 => band
+                .read_as_array::<i32>((0, 0), band.size(), band.size(), None)
+                .unwrap()
+                .mapv_into_any(|x| x as f64),
+
+            GdalDataType::Float32 => band
                     .read_as_array::<f32>((0, 0), band.size(), band.size(), None)
                     .unwrap()
-                    .mapv_into_any(|x| unsafe { x.to_int_unchecked::<i32>() });
-                eprintln!("safely here");
-                let min = ints.iter().min().unwrap().saturating_abs();
-                eprintln!("safely here2");
-                ints.mapv_into_any(|x| (x.saturating_add(min)) as u64)
-            }),
-            _ => None,
+                .mapv_into_any(|x| x as f64),
+
+            GdalDataType::Float64 => band
+                .read_as_array::<f64>((0, 0), band.size(), band.size(), None)
+                .unwrap(),
+
+            _ => panic!("Unknown datatype in rasta band"),
         };
+        let min_max = band.compute_raster_min_max(false).unwrap();
         RasterLayerView {
-            data_type_name: band_type.name(),
             content: View::new(),
-            label: Label::default(),
+            audio_controls: View::with(ComponentWrapper::new(RawRastaData {
+                data_type: band_type.name(),
+                data,
+                min: min_max.min,
+                max: min_max.max,
+                no_data_value: band.no_data_value(),
+                sender: get_audio(),
+            })),
             position,
             play_pause_btn: Button::new("play"),
             change_hist_settings_btn: Button::new("Change settings for histogram"),
-            playing: false,
-
             hist: hist.clone(),
             hist_table: hist.map(|hist| ListView::with(MyListView::new(hist))),
             hist_settings: RefCell::new(HistogramSettings::default()),
-            size: band.size(),
-            raw_data: data,
-            play_rasta_graph_btn: Button::new("Play rasta graph"),
-            stats: View::with(Component::new(RasterViewerData {
+            stats: View::with(ComponentWrapper::new(RasterViewerData {
                 stats: band.get_statistics(true, true).unwrap().unwrap(),
                 width: band.size().0,
                 height: band.size().1,
@@ -160,12 +175,8 @@ impl ViewDelegate for RasterLayerView {
 
     fn did_load(&mut self, view: View) {
         let position = self.position;
+        self.content.add_subview(&self.audio_controls);
 
-        self.label
-            .set_text(format!("Rasta file with {} data", self.data_type_name));
-        self.label
-            .set_text_color(cacao::color::Color::rgb(255, 255, 255));
-        self.content.add_subview(&self.label);
         let hist = self.hist.clone();
         if let Some(_hist) = &hist {
             self.play_pause_btn
@@ -179,23 +190,12 @@ impl ViewDelegate for RasterLayerView {
         if let Some(hist_table) = &self.hist_table {
             self.content.add_subview(hist_table);
         }
-        let size = self.size;
-        if let Some(data) = self.raw_data.clone() {
-            eprintln!("data exists");
-
-            self.play_rasta_graph_btn.set_action(move |_| {
-                eprintln!("dispatching");
-                dispatch_action(Action::PlayRastaGraph(size, data.clone()));
-            });
-        }
-        self.content.add_subview(&self.play_rasta_graph_btn);
 
         self.content.add_subview(&self.stats);
         view.add_subview(&self.content);
         let references: Vec<&dyn Layout> = if let Some(hist_table) = &self.hist_table {
             vec![
-                &self.label,
-                &self.play_rasta_graph_btn,
+                &self.audio_controls,
                 &self.play_pause_btn,
                 &self.change_hist_settings_btn,
                 hist_table,
@@ -203,8 +203,7 @@ impl ViewDelegate for RasterLayerView {
             ]
         } else {
             vec![
-                &self.label,
-                &self.play_rasta_graph_btn,
+                &self.audio_controls,
                 &self.play_pause_btn,
                 &self.change_hist_settings_btn,
                 &self.stats,
@@ -228,9 +227,10 @@ pub struct ImagePoint {
     y: usize,
 }
 
+#[derive(Clone, PartialEq)]
 pub struct StatsComponent;
 
-impl Renderable for StatsComponent {
+impl Component for StatsComponent {
     type Props = RasterViewerData;
     type State = ImagePoint;
     fn render(
@@ -240,44 +240,42 @@ impl Renderable for StatsComponent {
             stats,
         }: &Self::Props,
         ImagePoint { x, y }: &Self::State,
-    ) -> Vec<Discripter<Self::Props, Self::State>> {
+    ) -> Vec<(usize, VNode<Self>)> {
         vec![
-            Discripter {
-                kind: ComponentType::Label,
+            (
+                0,
+                VNode::Label(VLabel {
                 text: stats.mean.to_string(),
-            },
-            Discripter {
-                kind: ComponentType::Label,
+                }),
+            ),
+            (
+                1,
+                VNode::Label(VLabel {
                 text: format!("x: {x}, y: {y}, width: {width}, height: {height}",),
-            },
-            Discripter {
-                kind: ComponentType::Label,
+                }),
+            ),
+            (
+                2,
+                VNode::Label(VLabel {
                 text: format!("min: {}, max: {}", stats.min, stats.max),
-            },
-            Discripter {
-                kind: ComponentType::Button(Some(|data, point| point.y += data.height)),
+                }),
+            ),
+            (
+                3,
+                VNode::Button(VButton {
+                    click: Some(|data, point| point.y += data.height),
                 text: "Move North".to_string(),
-            },
-            Discripter {
-                kind: ComponentType::Button(Some(|data, point| {
-                    point.y = point.y.saturating_sub(data.height)
-                })),
+                }),
+            ),
+            (
+                4,
+                VNode::Button(VButton {
+                    click: Some(|data, point| point.y = point.y.saturating_sub(data.height)),
                 text: "Move south".to_string(),
-            },
+                }),
+            ),
         ]
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum RasterViewerrMessage {
-    MoveNorth,
-    MoveEast,
-    MoveSouth,
-    MoveWest,
-    DoubleHeight,
-    DoubleWidth,
-    HalveHeight,
-    HalveWidth,
 }
 
 #[derive(Default)]
@@ -311,5 +309,55 @@ impl ViewDelegate for HistogramViewRow {
                 .constraint_equal_to(&view.bottom)
                 .offset(-8.),
         ]);
+    }
+}
+
+#[derive(Clone, PartialEq)]
+pub struct AudioControls;
+impl Component for AudioControls {
+    type State = ();
+    type Props = RawRastaData;
+    fn render(props: &Self::Props, _state: &Self::State) -> Vec<(usize, VNode<Self>)> {
+        vec![
+            (
+                0,
+                VNode::Label(VLabel {
+                    text: format!("Rasta file with {} data", props.data_type),
+                }),
+            ),
+            (
+                1,
+                VNode::Button(VButton {
+                    text: "Play graph".to_string(),
+                    click: Some(|data, _| {
+                        data.sender.send(AudioMessage::PlayRasta(
+                            data.data.clone(),
+                            data.min,
+                            data.max,
+                            data.no_data_value,
+                        ));
+                    }),
+                }),
+            ),
+        ]
+    }
+}
+
+#[derive(Clone)]
+pub struct RawRastaData {
+    pub data_type: String,
+    pub data: Array2<f64>,
+    pub min: f64,
+    pub max: f64,
+    pub no_data_value: Option<f64>,
+    pub sender: Sender<AudioMessage>,
+}
+impl PartialEq for RawRastaData {
+    fn eq(&self, other: &Self) -> bool {
+        self.data_type == other.data_type
+            && self.no_data_value == other.no_data_value
+            && self.data == other.data
+            && self.min == other.min
+            && self.max == other.max
     }
 }

@@ -41,7 +41,7 @@ impl MessageHandler<Action> for MainView {
             | Action::CloseSheet
             | Action::OpenMainWindow
             | Action::SendAudioGraph(_, _)
-            | Action::PlayRastaGraph(_, _) => {
+            | Action::PlayRastaGraph(_, _, _, _) => {
                 self.dataset_view.borrow().on_message(message);
             }
             Action::GotFile(path) => {
@@ -299,9 +299,14 @@ impl MessageHandler<Action> for DatasetView {
                 .audio
                 .send(AudioMessage::PlayHistogram(graph.clone(), settings.clone()))
                 .unwrap(),
-            Action::PlayRastaGraph(size, data) => self
+            Action::PlayRastaGraph(data, min, max, no_data_value) => self
                 .audio
-                .send(AudioMessage::PlayRasta(*size, data.clone()))
+                .send(AudioMessage::PlayRasta(
+                    data.clone(),
+                    *min,
+                    *max,
+                    no_data_value.clone(),
+                ))
                 .unwrap(),
             Action::SetFeatureLabel(name) => self.update_new_label(Some(name.clone())),
             Action::UpdateHistogramSettings(_, _) => {

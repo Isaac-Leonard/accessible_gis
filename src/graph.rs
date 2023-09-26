@@ -8,6 +8,7 @@ use fundsp::{
     prelude::{sine, AudioNode},
 };
 use ndarray::{Array2, Zip};
+use ndarray_interp::interp2d::*;
 use std::{thread::sleep, time::Duration};
 
 /// Generate a sine wave audio signal for a given frequency.
@@ -132,8 +133,8 @@ pub fn play_histogram(counts: Vec<f64>, settings: HistogramSettings) {
     sonifier.play();
 }
 
-pub fn play_rasta(data: Array2<u64>) {
-    let rasta_graph = RastaGraph::new(data);
+pub fn play_rasta(data: Array2<f64>, min: f64, max: f64, no_data_value: Option<f64>) {
+    let rasta_graph = RastaGraph::new(data, min, max, no_data_value);
     rasta_graph.play();
 }
 
@@ -175,12 +176,20 @@ impl Default for HistogramSettings {
 }
 
 pub struct RastaGraph {
-    data: Array2<u64>,
+    data: Array2<f64>,
+    no_data_value: Option<f64>,
+    min: f64,
+    max: f64,
 }
 
 impl RastaGraph {
-    pub fn new(data: Array2<u64>) -> Self {
-        Self { data }
+    pub fn new(data: Array2<f64>, min: f64, max: f64, no_data_value: Option<f64>) -> Self {
+        Self {
+            data,
+            min,
+            max,
+            no_data_value,
+        }
     }
 
     pub fn play(&self) {
@@ -190,6 +199,7 @@ impl RastaGraph {
 
         match config.sample_format() {
             cpal::SampleFormat::F32 => self.run::<f32>(&device, &config.into()),
+            cpal::SampleFormat::F64 => self.run::<f64>(&device, &config.into()),
             cpal::SampleFormat::I16 => self.run::<i16>(&device, &config.into()),
             cpal::SampleFormat::U16 => self.run::<u16>(&device, &config.into()),
             _ => panic!("Unsupported format"),
@@ -204,12 +214,27 @@ impl RastaGraph {
         let duration = Duration::from_millis(1000);
         let min_freq = 55.0;
         let max_freq = 1760.0;
-        let min = *self.data.iter().min().unwrap() as f64;
-        let max = *self.data.iter().max().unwrap() as f64;
-        let y_scale = 10;
+        dbg!(self.data.iter().filter(|x| x.is_nan()).count());
+        let y_scale = 100;
         let x_scale = 100;
-        let data = Zip::from(self.data.exact_chunks((x_scale, y_scale)))
-            .map_collect(|chunk| chunk.mean().unwrap());
+        let data = if let Some(no_data_value) = &self.no_data_value {
+            Zip::from(self.data.exact_chunks((x_scale, y_scale))).map_collect(|chunk| {
+                chunk
+                    .into_iter()
+                    .filter(|x| x.is_finite() && *x != no_data_value)
+                    .sum::<f64>()
+                    / (x_scale * y_scale) as f64
+            })
+        } else {
+            Zip::from(self.data.exact_chunks((x_scale, y_scale))).map_collect(|chunk| {
+                chunk.into_iter().filter(|x| x.is_finite()).sum::<f64>()
+                    / (x_scale * y_scale) as f64
+            })
+        };
+        let min = self.min;
+        let max = self.max;
+        let min = self.min;
+        let max = self.max;
         let row_len = data.ncols() as f64;
         let duration_per_sample_ms = duration.div_f64(row_len);
         let y_range = max - min;
@@ -252,4 +277,32 @@ impl RastaGraph {
             }
         }
     }
+}
+
+fn interpolate_nans(mut arr: &Array2<f64>) -> Array2<f64> {
+    let mut result = arr.clone();
+    for ((x, y), el) in arr.indexed_iter() {
+        if el.is_nan() {
+            let mut sum = 0.0;
+            let mut count = 0;
+            let neighbours = [
+                arr.get((x - 1, y + 1)),
+                arr.get((x - 1, y)),
+                arr.get((x - 1, y - 1)),
+                arr.get((x, y - 1)),
+                arr.get((x + 1, y - 1)),
+                arr.get((x + 1, y)),
+                arr.get((x + 1, y + 1)),
+                arr.get((x, y + 1)),
+            ];
+            for neighbour in neighbours {
+                if neighbour.copied().is_some_and(f64::is_finite) {
+                    count + 1;
+                    sum += *neighbour.unwrap();
+                }
+            }
+            *result.get_mut((x, y)).unwrap() = sum / count as f64;
+        }
+    }
+    result
 }

@@ -19,7 +19,7 @@ static A: AllocDisabler = AllocDisabler;
 #[derive(Clone, Debug)]
 pub enum AudioMessage {
     PlayHistogram(Vec<f64>, HistogramSettings),
-    PlayRasta((usize, usize), Array2<u64>),
+    PlayRasta(Array2<f64>, f64, f64, Option<f64>),
 }
 
 pub fn get_audio() -> mpsc::Sender<AudioMessage> {
@@ -38,8 +38,8 @@ pub fn get_audio() -> mpsc::Sender<AudioMessage> {
                 }*/
                 play_histogram(graph, settings);
                 playing = !playing;
-            } else if let AudioMessage::PlayRasta(_size, data) = msg {
-                play_rasta(data);
+            } else if let AudioMessage::PlayRasta(data, min, max, no_data_value) = msg {
+                play_rasta(data, min, max, no_data_value);
             };
         }
     });
