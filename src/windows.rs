@@ -2,6 +2,7 @@ use cacao::{
     appkit::window::{Window, WindowConfig, WindowDelegate},
     view::ViewController,
 };
+use cacao_framework::Message;
 use std::sync::RwLock;
 
 use crate::{
@@ -125,8 +126,8 @@ impl MessageHandler<Click> for WindowManager {
     }
 }
 
-impl MessageHandler<usize> for WindowManager {
-    fn on_message(&self, message: &usize) {
+impl MessageHandler<Message> for WindowManager {
+    fn on_message(&self, message: &Message) {
         self.main.on_message(message);
         self.change_hist_settings.on_message(message);
     }
@@ -159,8 +160,8 @@ impl MessageHandler<Click> for MainWindow {
     }
 }
 
-impl MessageHandler<usize> for MainWindow {
-    fn on_message(&self, message: &usize) {
+impl MessageHandler<Message> for MainWindow {
+    fn on_message(&self, message: &Message) {
         self.content.view.on_message(message);
     }
 }

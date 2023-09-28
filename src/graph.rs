@@ -8,7 +8,7 @@ use fundsp::{
     prelude::{sine, AudioNode},
 };
 use ndarray::{Array2, Zip};
-use ndarray_interp::interp2d::*;
+
 use std::{thread::sleep, time::Duration};
 
 /// Generate a sine wave audio signal for a given frequency.
@@ -157,7 +157,7 @@ where
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct HistogramSettings {
     /// The length the histogram should play for in milliseconds
     pub duration: usize,

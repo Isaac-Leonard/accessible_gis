@@ -6,6 +6,7 @@ use cacao::{
     text::Label,
     view::{View, ViewController, ViewDelegate},
 };
+use cacao_framework::Message;
 
 use crate::{
     events::{dispatch_action, dispatch_click, Action, Click, MessageHandler},
@@ -64,8 +65,8 @@ impl MessageHandler<Click> for UpdateHistogramSettingsView {
     }
 }
 
-impl MessageHandler<usize> for UpdateHistogramSettingsView {
-    fn on_message(&self, _message: &usize) {}
+impl MessageHandler<Message> for UpdateHistogramSettingsView {
+    fn on_message(&self, _message: &Message) {}
 }
 
 impl ViewDelegate for UpdateHistogramSettingsView {
@@ -137,8 +138,8 @@ impl MessageHandler<Click> for ChangeHistogramSettingsWindow {
     }
 }
 
-impl MessageHandler<usize> for ChangeHistogramSettingsWindow {
-    fn on_message(&self, message: &usize) {
+impl MessageHandler<Message> for ChangeHistogramSettingsWindow {
+    fn on_message(&self, message: &Message) {
         self.content.view.on_message(message);
     }
 }

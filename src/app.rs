@@ -2,6 +2,7 @@ use crate::events::{Message, MessageHandler};
 use crate::windows::WindowManager;
 use cacao::appkit::{App, AppDelegate};
 use cacao::notification_center::Dispatcher;
+use cacao_framework::Message as FrameworkMessage;
 
 #[derive(Default)]
 pub struct BasicApp {
@@ -18,9 +19,9 @@ impl Dispatcher<Message> for BasicApp {
     }
 }
 
-impl Dispatcher<usize> for BasicApp {
+impl Dispatcher<FrameworkMessage> for BasicApp {
     /// Handles button clicks from cacao_framework components that came over on the main (UI) thread.
-    fn on_ui_message(&self, message: usize) {
+    fn on_ui_message(&self, message: FrameworkMessage) {
         self.window_manager.on_message(&message)
     }
 }

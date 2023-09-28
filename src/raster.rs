@@ -3,14 +3,13 @@ use crate::audio::{get_audio, AudioMessage};
 use crate::events::{dispatch_action, dispatch_click, Action, Click, MessageHandler};
 use crate::graph::{generate_image_histogram, HistogramSettings};
 use crate::layout::{fill_safe_area, top_to_bottom};
-use crate::list_view::{ConfigurableRow, MyListView};
+
 use cacao::layout::{Layout, LayoutConstraint};
-use cacao::listview::ListView;
-use cacao_framework::{Component, ComponentWrapper, VButton, VComponent, VLabel, VNode};
+
+use cacao_framework::{Component, ComponentWrapper, Message, VButton, VLabel, VList, VNode};
 use gdal::raster::GdalDataType;
 
 use cacao::button::Button;
-use cacao::text::Label;
 use cacao::view::{View, ViewDelegate};
 use gdal::raster::{RasterBand, StatisticsAll};
 use ndarray::Array2;
@@ -44,10 +43,8 @@ pub struct RasterLayerView {
     pub content: View,
     position: usize,
     audio_controls: View<ComponentWrapper<AudioControls, BasicApp>>,
-    play_pause_btn: Button,
     change_hist_settings_btn: Button,
-    hist: Option<Vec<f64>>,
-    hist_table: Option<ListView<MyListView<HistogramViewRow>>>,
+    hist_table: Option<View<ComponentWrapper<HistComponent, BasicApp>>>,
     hist_settings: RefCell<HistogramSettings>,
     stats: View<ComponentWrapper<StatsComponent, BasicApp>>,
 }
@@ -66,13 +63,18 @@ impl MessageHandler<Action> for RasterLayerView {
     }
 }
 
-impl MessageHandler<usize> for RasterLayerView {
-    fn on_message(&self, message: &usize) {
+impl MessageHandler<Message> for RasterLayerView {
+    fn on_message(&self, message: &Message) {
         if let Some(delegate) = &self.stats.delegate {
             delegate.on_message(message);
         }
         if let Some(delegate) = &self.audio_controls.delegate {
             delegate.on_message(message);
+        }
+        if let Some(hist_table) = &self.hist_table {
+            if let Some(delegate) = &hist_table.delegate {
+                delegate.on_message(message);
+            }
         }
     }
 }
@@ -80,15 +82,15 @@ impl MessageHandler<usize> for RasterLayerView {
 impl MessageHandler<Click> for RasterLayerView {
     fn on_message(&self, message: &Click) {
         match message {
-			Click::OpenChangeHistogramSettings(position)=>if *position==self.position{dispatch_action(Action::SendChangeHistogramSettings(self.position,self.hist_settings.borrow().clone() ))}
-            Click::PlayHistogramGraph(position) => {
-                if let Some(hist)=&self.hist && *position == self.position {
-                    dispatch_action(Action::SendAudioGraph(
-                        hist.clone(),
+            Click::OpenChangeHistogramSettings(position) => {
+                if *position == self.position {
+                    dispatch_action(Action::SendChangeHistogramSettings(
+                        self.position,
                         self.hist_settings.borrow().clone(),
                     ))
                 }
             }
+            Click::PlayHistogramGraph(position) => {}
             _ => {}
         }
     }
@@ -145,6 +147,7 @@ impl RasterLayerView {
             _ => panic!("Unknown datatype in rasta band"),
         };
         let min_max = band.compute_raster_min_max(false).unwrap();
+        let settings = HistogramSettings::default();
         RasterLayerView {
             content: View::new(),
             audio_controls: View::with(ComponentWrapper::new(RawRastaData {
@@ -156,11 +159,10 @@ impl RasterLayerView {
                 sender: get_audio(),
             })),
             position,
-            play_pause_btn: Button::new("play"),
             change_hist_settings_btn: Button::new("Change settings for histogram"),
-            hist: hist.clone(),
-            hist_table: hist.map(|hist| ListView::with(MyListView::new(hist))),
-            hist_settings: RefCell::new(HistogramSettings::default()),
+            hist_table: hist
+                .map(|hist| View::with(ComponentWrapper::new((hist, settings.clone())))),
+            hist_settings: RefCell::new(settings),
             stats: View::with(ComponentWrapper::new(RasterViewerData {
                 stats: band.get_statistics(true, true).unwrap().unwrap(),
                 width: band.size().0,
@@ -177,13 +179,6 @@ impl ViewDelegate for RasterLayerView {
         let position = self.position;
         self.content.add_subview(&self.audio_controls);
 
-        let hist = self.hist.clone();
-        if let Some(_hist) = &hist {
-            self.play_pause_btn
-                .set_action(move |_| dispatch_click(Click::PlayHistogramGraph(position)));
-        }
-
-        self.content.add_subview(&self.play_pause_btn);
         self.change_hist_settings_btn
             .set_action(move |_| dispatch_click(Click::OpenChangeHistogramSettings(position)));
         self.content.add_subview(&self.change_hist_settings_btn);
@@ -196,7 +191,6 @@ impl ViewDelegate for RasterLayerView {
         let references: Vec<&dyn Layout> = if let Some(hist_table) = &self.hist_table {
             vec![
                 &self.audio_controls,
-                &self.play_pause_btn,
                 &self.change_hist_settings_btn,
                 hist_table,
                 &self.stats,
@@ -204,7 +198,6 @@ impl ViewDelegate for RasterLayerView {
         } else {
             vec![
                 &self.audio_controls,
-                &self.play_pause_btn,
                 &self.change_hist_settings_btn,
                 &self.stats,
             ]
@@ -278,40 +271,6 @@ impl Component for StatsComponent {
     }
 }
 
-#[derive(Default)]
-pub struct HistogramViewRow {
-    value: Label,
-}
-
-impl ConfigurableRow for HistogramViewRow {
-    type Data = f64;
-    fn configure_with(&mut self, data: &Self::Data) {
-        self.value.set_text(data.to_string());
-    }
-}
-
-impl ViewDelegate for HistogramViewRow {
-    const NAME: &'static str = "HistogramViewRow";
-    fn did_load(&mut self, view: View) {
-        view.add_subview(&self.value);
-        LayoutConstraint::activate(&[
-            self.value.top.constraint_equal_to(&view.top).offset(8.),
-            self.value
-                .leading
-                .constraint_equal_to(&view.leading)
-                .offset(16.),
-            self.value
-                .trailing
-                .constraint_equal_to(&view.trailing)
-                .offset(-16.),
-            self.value
-                .bottom
-                .constraint_equal_to(&view.bottom)
-                .offset(-8.),
-        ]);
-    }
-}
-
 #[derive(Clone, PartialEq)]
 pub struct AudioControls;
 impl Component for AudioControls {
@@ -352,6 +311,7 @@ pub struct RawRastaData {
     pub no_data_value: Option<f64>,
     pub sender: Sender<AudioMessage>,
 }
+
 impl PartialEq for RawRastaData {
     fn eq(&self, other: &Self) -> bool {
         self.data_type == other.data_type
@@ -359,5 +319,42 @@ impl PartialEq for RawRastaData {
             && self.data == other.data
             && self.min == other.min
             && self.max == other.max
+    }
+}
+
+fn render_histagram_row(
+    index: usize,
+    props: &(Vec<f64>, HistogramSettings),
+    _: &(),
+) -> Vec<VNode<HistComponent>> {
+    vec![VNode::Label(VLabel {
+        text: props.0[index].to_string(),
+    })]
+}
+
+#[derive(Clone, PartialEq)]
+pub struct HistComponent;
+impl Component for HistComponent {
+    type Props = (Vec<f64>, HistogramSettings);
+    type State = ();
+    fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
+        vec![
+            (
+                0,
+                VNode::Button(VButton {
+                    text: "Play histogram".to_owned(),
+                    click: Some(|props, _| {
+                        dispatch_action(Action::SendAudioGraph(props.0.clone(), props.1.clone()))
+                    }),
+                }),
+            ),
+            (
+                1,
+                VNode::List(VList {
+                    count: props.0.len(),
+                    render: render_histagram_row,
+                }),
+            ),
+        ]
     }
 }

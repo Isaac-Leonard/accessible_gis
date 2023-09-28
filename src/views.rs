@@ -10,6 +10,7 @@ use cacao::layout::{Layout, LayoutConstraint};
 use cacao::text::Label;
 use cacao::view::{View, ViewDelegate};
 use cacao::{button::Button, view};
+use cacao_framework::Message;
 use gdal::vector::LayerAccess;
 use gdal::Dataset;
 use std::cell::RefCell;
@@ -67,8 +68,8 @@ impl MessageHandler<Click> for MainView {
     }
 }
 
-impl MessageHandler<usize> for MainView {
-    fn on_message(&self, message: &usize) {
+impl MessageHandler<Message> for MainView {
+    fn on_message(&self, message: &Message) {
         self.dataset_view.borrow().on_message(message);
     }
 }
@@ -186,8 +187,8 @@ impl MessageHandler<Click> for LayerView {
     }
 }
 
-impl MessageHandler<usize> for LayerView {
-    fn on_message(&self, message: &usize) {
+impl MessageHandler<Message> for LayerView {
+    fn on_message(&self, message: &Message) {
         match self {
             Self::Vector(_vector_view) => {}
             Self::Raster(raster_view) => raster_view.on_message(message),
@@ -329,8 +330,8 @@ impl MessageHandler<Click> for DatasetView {
     }
 }
 
-impl MessageHandler<usize> for DatasetView {
-    fn on_message(&self, message: &usize) {
+impl MessageHandler<Message> for DatasetView {
+    fn on_message(&self, message: &Message) {
         for view in self.sub_views.borrow().iter() {
             view.on_message(message);
         }
