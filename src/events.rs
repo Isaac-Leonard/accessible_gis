@@ -49,11 +49,11 @@ pub trait GetMessagible<Message> {
     fn on_message(&self, _message: &Message) {}
 }
 
-pub trait MessageHandler<T: Send + Sync + Clone> {
+pub trait MessageHandler<T: Send + Sync> {
     fn on_message(&self, message: &T);
 }
 
-impl<M: Send + Sync + Clone, T: MessageHandler<M>> MessageHandler<M> for RwLock<T> {
+impl<M: Send + Sync, T: MessageHandler<M>> MessageHandler<M> for RwLock<T> {
     fn on_message(&self, message: &M) {
         if let Ok(handler) = self.read() {
             handler.on_message(message)
@@ -61,7 +61,7 @@ impl<M: Send + Sync + Clone, T: MessageHandler<M>> MessageHandler<M> for RwLock<
     }
 }
 
-impl<M: Send + Sync + Clone, T: MessageHandler<M>> MessageHandler<M> for Option<T> {
+impl<M: Send + Sync, T: MessageHandler<M>> MessageHandler<M> for Option<T> {
     fn on_message(&self, message: &M) {
         if let Some(handler) = self {
             handler.on_message(message)
@@ -69,13 +69,13 @@ impl<M: Send + Sync + Clone, T: MessageHandler<M>> MessageHandler<M> for Option<
     }
 }
 
-impl<M: Send + Sync + Clone, T: MessageHandler<M>> MessageHandler<M> for Box<T> {
+impl<M: Send + Sync, T: MessageHandler<M>> MessageHandler<M> for Box<T> {
     fn on_message(&self, message: &M) {
         self.as_ref().on_message(message)
     }
 }
 
-impl<M: Send + Sync + Clone, T: MessageHandler<M>> MessageHandler<M> for View<T> {
+impl<M: Send + Sync, T: MessageHandler<M>> MessageHandler<M> for View<T> {
     fn on_message(&self, message: &M) {
         self.delegate.on_message(message)
     }

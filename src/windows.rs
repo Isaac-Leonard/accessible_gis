@@ -178,7 +178,7 @@ impl WindowDelegate for MainWindow {
 
 /// A bunch of useful MessageHandler implementations to simplify code
 
-impl<M: Send + Sync + Clone, T: MessageHandler<M>> MessageHandler<M> for Window<T> {
+impl<M: Send + Sync, T: MessageHandler<M>> MessageHandler<M> for Window<T> {
     fn on_message(&self, message: &M) {
         if let Some(delegate) = &self.delegate {
             delegate.on_message(message);
