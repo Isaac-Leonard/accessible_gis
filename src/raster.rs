@@ -41,23 +41,15 @@ impl Clone for RasterViewerData {
 
 pub struct RasterLayerView {
     pub content: View,
-    position: usize,
     audio_controls: View<ComponentWrapper<AudioControls, BasicApp>>,
-    change_hist_settings_btn: Button,
     hist_table: Option<View<ComponentWrapper<HistComponent, BasicApp>>>,
-    hist_settings: RefCell<HistogramSettings>,
     stats: View<ComponentWrapper<StatsComponent, BasicApp>>,
 }
 
 impl MessageHandler<Action> for RasterLayerView {
     fn on_message(&self, message: &Action) {
         match message {
-            Action::UpdateHistogramSettings(position, settings) => {
-                if self.position == *position {
-                    let mut settings_ptr = self.hist_settings.borrow_mut();
-                    *settings_ptr = settings.clone();
-                }
-            }
+            Action::UpdateHistogramSettings(position, settings) => {}
             _ => {}
         }
     }
@@ -80,20 +72,7 @@ impl MessageHandler<Message> for RasterLayerView {
 }
 
 impl MessageHandler<Click> for RasterLayerView {
-    fn on_message(&self, message: &Click) {
-        match message {
-            Click::OpenChangeHistogramSettings(position) => {
-                if *position == self.position {
-                    dispatch_action(Action::SendChangeHistogramSettings(
-                        self.position,
-                        self.hist_settings.borrow().clone(),
-                    ))
-                }
-            }
-            Click::PlayHistogramGraph(position) => {}
-            _ => {}
-        }
-    }
+    fn on_message(&self, message: &Click) {}
 }
 
 impl RasterLayerView {
@@ -158,11 +137,7 @@ impl RasterLayerView {
                 no_data_value: band.no_data_value(),
                 sender: get_audio(),
             })),
-            position,
-            change_hist_settings_btn: Button::new("Change settings for histogram"),
-            hist_table: hist
-                .map(|hist| View::with(ComponentWrapper::new((hist, settings.clone())))),
-            hist_settings: RefCell::new(settings),
+            hist_table: hist.map(|hist| View::with(ComponentWrapper::new((hist, position)))),
             stats: View::with(ComponentWrapper::new(RasterViewerData {
                 stats: band.get_statistics(true, true).unwrap().unwrap(),
                 width: band.size().0,
@@ -176,12 +151,8 @@ impl ViewDelegate for RasterLayerView {
     const NAME: &'static str = "RasterView";
 
     fn did_load(&mut self, view: View) {
-        let position = self.position;
         self.content.add_subview(&self.audio_controls);
 
-        self.change_hist_settings_btn
-            .set_action(move |_| dispatch_click(Click::OpenChangeHistogramSettings(position)));
-        self.content.add_subview(&self.change_hist_settings_btn);
         if let Some(hist_table) = &self.hist_table {
             self.content.add_subview(hist_table);
         }
@@ -189,18 +160,9 @@ impl ViewDelegate for RasterLayerView {
         self.content.add_subview(&self.stats);
         view.add_subview(&self.content);
         let references: Vec<&dyn Layout> = if let Some(hist_table) = &self.hist_table {
-            vec![
-                &self.audio_controls,
-                &self.change_hist_settings_btn,
-                hist_table,
-                &self.stats,
-            ]
+            vec![&self.audio_controls, hist_table, &self.stats]
         } else {
-            vec![
-                &self.audio_controls,
-                &self.change_hist_settings_btn,
-                &self.stats,
-            ]
+            vec![&self.audio_controls, &self.stats]
         };
         let inner_constraints = top_to_bottom(references, &self.content, 16.0);
         // Add layout constraints to be 100% excluding the safe area
@@ -324,8 +286,8 @@ impl PartialEq for RawRastaData {
 
 fn render_histagram_row(
     index: usize,
-    props: &(Vec<f64>, HistogramSettings),
-    _: &(),
+    props: &(Vec<f64>, usize),
+    _: &HistogramSettings,
 ) -> Vec<VNode<HistComponent>> {
     vec![VNode::Label(VLabel {
         text: props.0[index].to_string(),
@@ -335,16 +297,17 @@ fn render_histagram_row(
 #[derive(Clone, PartialEq)]
 pub struct HistComponent;
 impl Component for HistComponent {
-    type Props = (Vec<f64>, HistogramSettings);
-    type State = ();
+    type Props = (Vec<f64>, usize);
+    type State = HistogramSettings;
+    type Message = HistogramSettings;
     fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
         vec![
             (
                 0,
                 VNode::Button(VButton {
                     text: "Play histogram".to_owned(),
-                    click: Some(|props, _| {
-                        dispatch_action(Action::SendAudioGraph(props.0.clone(), props.1.clone()))
+                    click: Some(|(hist, _), settings| {
+                        dispatch_action(Action::SendAudioGraph(hist.clone(), settings.clone()))
                     }),
                 }),
             ),
@@ -355,6 +318,24 @@ impl Component for HistComponent {
                     render: render_histagram_row,
                 }),
             ),
+            (
+                2,
+                VNode::Button(VButton {
+                    text: "Change histogram settings".to_owned(),
+                    click: Some(|(_, position), settings| {
+                        dispatch_action(Action::SendChangeHistogramSettings(
+                            *position,
+                            settings.clone(),
+                        ))
+                    }),
+                }),
+            ),
         ]
+    }
+
+    fn on_message(msg: &Self::Message, _props: &Self::Props, state: &mut Self::State) -> bool {
+        *state = msg.clone();
+        // Only changes audio stuff, the actual ui stays the same, for now
+        false
     }
 }
