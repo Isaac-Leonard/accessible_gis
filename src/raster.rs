@@ -1,20 +1,14 @@
 use crate::app::BasicApp;
 use crate::audio::{get_audio, AudioMessage};
-use crate::events::{dispatch_action, dispatch_click, Action, Click, MessageHandler};
+use crate::events::{dispatch_action, Action};
 use crate::graph::{generate_image_histogram, HistogramSettings};
-use crate::layout::{fill_safe_area, top_to_bottom};
 
-use cacao::layout::{Layout, LayoutConstraint};
-
-use cacao_framework::{Component, ComponentWrapper, Message, VButton, VLabel, VList, VNode};
+use cacao_framework::{Component, VButton, VComponent, VLabel, VList, VNode};
 use gdal::raster::GdalDataType;
 
-use cacao::button::Button;
-use cacao::view::{View, ViewDelegate};
 use gdal::raster::{RasterBand, StatisticsAll};
 use ndarray::Array2;
 
-use std::cell::RefCell;
 use std::sync::mpsc::Sender;
 
 #[derive(PartialEq)]
@@ -39,44 +33,51 @@ impl Clone for RasterViewerData {
     }
 }
 
-pub struct RasterLayerView {
-    pub content: View,
-    audio_controls: View<ComponentWrapper<AudioControls, BasicApp>>,
-    hist_table: Option<View<ComponentWrapper<HistComponent, BasicApp>>>,
-    stats: View<ComponentWrapper<StatsComponent, BasicApp>>,
+#[derive(PartialEq, Clone)]
+pub struct RastaLayerProps {
+    data: RawRastaData,
+    position: usize,
+    band_type: GdalDataType,
+    hist: Option<Vec<f64>>,
+    min: f64,
+    max: f64,
+    stats: RasterViewerData,
 }
 
-impl MessageHandler<Action> for RasterLayerView {
-    fn on_message(&self, message: &Action) {
-        match message {
-            Action::UpdateHistogramSettings(position, settings) => {}
-            _ => {}
+#[derive(PartialEq, Clone)]
+pub struct RasterLayerView;
+
+impl Component for RasterLayerView {
+    type Props = RastaLayerProps;
+    type State = ();
+    fn render(props: &Self::Props, _: &Self::State) -> Vec<(usize, VNode<Self>)> {
+        let main = VNode::Custom(VComponent::new::<AudioControls, BasicApp>(
+            props.data.clone(),
+        ));
+        let stats = VNode::Custom(VComponent::new::<StatsComponent, BasicApp>(
+            props.stats.clone(),
+        ));
+
+        if let Some(hist) = &props.hist {
+            vec![
+                (0, main),
+                (
+                    1,
+                    VNode::Custom(VComponent::new::<HistComponent, BasicApp>((
+                        hist.clone(),
+                        props.position,
+                    ))),
+                ),
+                (2, stats),
+            ]
+        } else {
+            vec![(0, main), (2, stats)]
         }
     }
 }
 
-impl MessageHandler<Message> for RasterLayerView {
-    fn on_message(&self, message: &Message) {
-        if let Some(delegate) = &self.stats.delegate {
-            delegate.on_message(message);
-        }
-        if let Some(delegate) = &self.audio_controls.delegate {
-            delegate.on_message(message);
-        }
-        if let Some(hist_table) = &self.hist_table {
-            if let Some(delegate) = &hist_table.delegate {
-                delegate.on_message(message);
-            }
-        }
-    }
-}
-
-impl MessageHandler<Click> for RasterLayerView {
-    fn on_message(&self, message: &Click) {}
-}
-
-impl RasterLayerView {
-    pub fn new(band: &RasterBand, position: usize) -> Self {
+impl<'a> From<(RasterBand<'a>, usize)> for RastaLayerProps {
+    fn from((band, position): (RasterBand, usize)) -> Self {
         let band_type = band.band_type();
         let hist = match band_type {
             GdalDataType::UInt8 => Some(generate_image_histogram(
@@ -87,16 +88,16 @@ impl RasterLayerView {
         let data: Array2<f64> = match band_type {
             GdalDataType::UInt8 => band
                 .read_as_array::<u8>((0, 0), band.size(), band.size(), None)
-                    .unwrap()
+                .unwrap()
                 .mapv_into_any(|x| x as f64),
             GdalDataType::UInt16 => band
                 .read_as_array::<u16>((0, 0), band.size(), band.size(), None)
-                    .unwrap()
+                .unwrap()
                 .mapv_into_any(|x| x as f64),
 
             GdalDataType::UInt32 => band
                 .read_as_array::<u32>((0, 0), band.size(), band.size(), None)
-                    .unwrap()
+                .unwrap()
                 .mapv_into_any(|x| x as f64),
 
             GdalDataType::Int8 => band
@@ -115,8 +116,8 @@ impl RasterLayerView {
                 .mapv_into_any(|x| x as f64),
 
             GdalDataType::Float32 => band
-                    .read_as_array::<f32>((0, 0), band.size(), band.size(), None)
-                    .unwrap()
+                .read_as_array::<f32>((0, 0), band.size(), band.size(), None)
+                .unwrap()
                 .mapv_into_any(|x| x as f64),
 
             GdalDataType::Float64 => band
@@ -126,53 +127,26 @@ impl RasterLayerView {
             _ => panic!("Unknown datatype in rasta band"),
         };
         let min_max = band.compute_raster_min_max(false).unwrap();
-        let settings = HistogramSettings::default();
-        RasterLayerView {
-            content: View::new(),
-            audio_controls: View::with(ComponentWrapper::new(RawRastaData {
+        RastaLayerProps {
+            band_type,
+            min: min_max.min,
+            max: min_max.max,
+            data: RawRastaData {
                 data_type: band_type.name(),
                 data,
                 min: min_max.min,
                 max: min_max.max,
                 no_data_value: band.no_data_value(),
                 sender: get_audio(),
-            })),
-            hist_table: hist.map(|hist| View::with(ComponentWrapper::new((hist, position)))),
-            stats: View::with(ComponentWrapper::new(RasterViewerData {
+            },
+            hist,
+            position,
+            stats: RasterViewerData {
                 stats: band.get_statistics(true, true).unwrap().unwrap(),
                 width: band.size().0,
                 height: band.size().1,
-            })),
+            },
         }
-    }
-}
-
-impl ViewDelegate for RasterLayerView {
-    const NAME: &'static str = "RasterView";
-
-    fn did_load(&mut self, view: View) {
-        self.content.add_subview(&self.audio_controls);
-
-        if let Some(hist_table) = &self.hist_table {
-            self.content.add_subview(hist_table);
-        }
-
-        self.content.add_subview(&self.stats);
-        view.add_subview(&self.content);
-        let references: Vec<&dyn Layout> = if let Some(hist_table) = &self.hist_table {
-            vec![&self.audio_controls, hist_table, &self.stats]
-        } else {
-            vec![&self.audio_controls, &self.stats]
-        };
-        let inner_constraints = top_to_bottom(references, &self.content, 16.0);
-        // Add layout constraints to be 100% excluding the safe area
-        // Do last because it will crash because the view needs to be inside the hierarchy
-        LayoutConstraint::activate(
-            &fill_safe_area(&self.content, &view.safe_layout_guide)
-                .into_iter()
-                .chain(inner_constraints)
-                .collect::<Vec<_>>(),
-        )
     }
 }
 
@@ -200,33 +174,33 @@ impl Component for StatsComponent {
             (
                 0,
                 VNode::Label(VLabel {
-                text: stats.mean.to_string(),
+                    text: stats.mean.to_string(),
                 }),
             ),
             (
                 1,
                 VNode::Label(VLabel {
-                text: format!("x: {x}, y: {y}, width: {width}, height: {height}",),
+                    text: format!("x: {x}, y: {y}, width: {width}, height: {height}",),
                 }),
             ),
             (
                 2,
                 VNode::Label(VLabel {
-                text: format!("min: {}, max: {}", stats.min, stats.max),
+                    text: format!("min: {}, max: {}", stats.min, stats.max),
                 }),
             ),
             (
                 3,
                 VNode::Button(VButton {
                     click: Some(|data, point| point.y += data.height),
-                text: "Move North".to_string(),
+                    text: "Move North".to_string(),
                 }),
             ),
             (
                 4,
                 VNode::Button(VButton {
                     click: Some(|data, point| point.y = point.y.saturating_sub(data.height)),
-                text: "Move south".to_string(),
+                    text: "Move south".to_string(),
                 }),
             ),
         ]

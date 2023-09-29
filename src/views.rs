@@ -1,3 +1,4 @@
+use crate::app::BasicApp;
 use crate::audio::{get_audio, AudioMessage};
 use crate::events::{dispatch_action, dispatch_click, Action, Click, MessageHandler};
 
@@ -10,7 +11,7 @@ use cacao::layout::{Layout, LayoutConstraint};
 use cacao::text::Label;
 use cacao::view::{View, ViewDelegate};
 use cacao::{button::Button, view};
-use cacao_framework::Message;
+use cacao_framework::{ComponentWrapper, Message};
 use gdal::vector::LayerAccess;
 use gdal::Dataset;
 use std::cell::RefCell;
@@ -112,9 +113,9 @@ impl DatasetView {
             // TODO: Lets try replace with a proper iterator
             for i in 1..=dataset.raster_count() {
                 let band = dataset.rasterband(i).unwrap();
-                let raster_view =
-                    View::with(RasterLayerView::new(&band, i as usize + last_position));
-                raster_view.set_background_color(cacao::color::Color::SystemRed);
+                let raster_view = View::with(ComponentWrapper::<RasterLayerView, BasicApp>::new(
+                    (band, i as usize + last_position).into(),
+                ));
                 sub_views.push(View::with(LayerView::Raster(raster_view)));
             }
             view.sub_views.borrow_mut().append(&mut sub_views);
@@ -136,8 +137,9 @@ impl DatasetView {
         // TODO: Lets try replace with a proper iterator
         for i in 1..=dataset.raster_count() {
             let band = dataset.rasterband(i).unwrap();
-            let raster_view = View::with(RasterLayerView::new(&band, i as usize + last_position));
-            raster_view.set_background_color(cacao::color::Color::SystemRed);
+            let raster_view = View::with(ComponentWrapper::<RasterLayerView, BasicApp>::new(
+                (band, i as usize + last_position).into(),
+            ));
             let view = View::with(LayerView::Raster(raster_view));
             sub_views.push(view);
         }
@@ -152,7 +154,7 @@ impl DatasetView {
 
 pub enum LayerView {
     Vector(View<VectorLayerView>),
-    Raster(View<RasterLayerView>),
+    Raster(View<ComponentWrapper<RasterLayerView, BasicApp>>),
 }
 
 impl ViewDelegate for LayerView {
@@ -171,18 +173,16 @@ impl ViewDelegate for LayerView {
 
 impl MessageHandler<Action> for LayerView {
     fn on_message(&self, message: &Action) {
-        match self {
-            Self::Vector(_vector_view) => {}
-            Self::Raster(raster_view) => raster_view.on_message(message),
+        if let LayerView::Vector(_) = self {
+            todo!()
         }
     }
 }
 
 impl MessageHandler<Click> for LayerView {
     fn on_message(&self, message: &Click) {
-        match self {
-            Self::Vector(_vector_view) => {}
-            Self::Raster(raster_view) => raster_view.on_message(message),
+        if let LayerView::Vector(_) = self {
+            todo!()
         }
     }
 }
@@ -191,7 +191,12 @@ impl MessageHandler<Message> for LayerView {
     fn on_message(&self, message: &Message) {
         match self {
             Self::Vector(_vector_view) => {}
-            Self::Raster(raster_view) => raster_view.on_message(message),
+            Self::Raster(raster_view) => raster_view
+                .delegate
+                .as_ref()
+                .unwrap()
+                .as_ref()
+                .on_message(message),
         }
     }
 }
