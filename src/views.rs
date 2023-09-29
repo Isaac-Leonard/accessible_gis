@@ -42,8 +42,7 @@ impl MessageHandler<Action> for MainView {
             | Action::SendChangeHistogramSettings(_, _)
             | Action::CloseSheet
             | Action::OpenMainWindow
-            | Action::SendAudioGraph(_, _)
-            | Action::PlayRastaGraph(_, _, _, _) => {
+            | Action::SendAudioGraph(_, _) => {
                 self.dataset_view.borrow().on_message(message);
             }
             Action::GotFile(path) => {
@@ -172,7 +171,7 @@ impl ViewDelegate for LayerView {
 }
 
 impl MessageHandler<Action> for LayerView {
-    fn on_message(&self, message: &Action) {
+    fn on_message(&self, _message: &Action) {
         if let LayerView::Vector(_) = self {
             todo!()
         }
@@ -180,7 +179,7 @@ impl MessageHandler<Action> for LayerView {
 }
 
 impl MessageHandler<Click> for LayerView {
-    fn on_message(&self, message: &Click) {
+    fn on_message(&self, _message: &Click) {
         if let LayerView::Vector(_) = self {
             todo!()
         }
@@ -304,15 +303,6 @@ impl MessageHandler<Action> for DatasetView {
             Action::SendAudioGraph(graph, settings) => self
                 .audio
                 .send(AudioMessage::PlayHistogram(graph.clone(), settings.clone()))
-                .unwrap(),
-            Action::PlayRastaGraph(data, min, max, no_data_value) => self
-                .audio
-                .send(AudioMessage::PlayRasta(
-                    data.clone(),
-                    *min,
-                    *max,
-                    no_data_value.clone(),
-                ))
                 .unwrap(),
             Action::SetFeatureLabel(name) => self.update_new_label(Some(name.clone())),
             Action::UpdateHistogramSettings(_, _) => {

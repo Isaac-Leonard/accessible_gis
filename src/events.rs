@@ -4,7 +4,6 @@ use crate::graph::HistogramSettings;
 
 use cacao::appkit::App;
 use cacao::view::View;
-use ndarray::Array2;
 
 use std::path::PathBuf;
 use std::sync::RwLock;
@@ -13,22 +12,19 @@ use std::sync::RwLock;
 pub enum Action {
     GotFile(PathBuf),
     InvalidFile(PathBuf),
-    SendAudioGraph(Vec<f64>, HistogramSettings),
     SetFeatureLabel(String),
     CloseChangeHistogramSettings,
-    SendChangeHistogramSettings(usize, HistogramSettings),
     CloseSheet,
     OpenMainWindow,
     UpdateHistogramSettings(usize, HistogramSettings),
-    PlayRastaGraph(Array2<f64>, f64, f64, Option<f64>),
+    SendAudioGraph(Vec<f64>, HistogramSettings),
+    SendChangeHistogramSettings(usize, HistogramSettings),
 }
 
 #[derive(Clone, Debug)]
 pub enum Click {
     SelectFile,
-    PlayHistogramGraph(usize),
     DoneChangeHistogramSettings,
-    OpenChangeHistogramSettings(usize),
 }
 
 /// Dispatch a message on a background thread.

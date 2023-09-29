@@ -231,8 +231,8 @@ impl RastaGraph {
                     / (x_scale * y_scale) as f64
             })
         };
-        let min = self.min;
-        let max = self.max;
+        let _min = self.min;
+        let _max = self.max;
         let min = self.min;
         let max = self.max;
         let row_len = data.ncols() as f64;
@@ -269,7 +269,7 @@ impl RastaGraph {
         let _pos_f = -1.0;
         for row in data.rows() {
             for (i, pixel) in row.into_iter().enumerate() {
-                let freq_f = (*pixel as f64 - min) / y_range * freq_range + min_freq;
+                let freq_f = (*pixel - min) / y_range * freq_range + min_freq;
                 let pos_f = i as f64 / (row_len - 1.) * 2.0 - 1.0;
                 pos.set_value(pos_f);
                 freq.set_value(freq_f);
@@ -279,7 +279,7 @@ impl RastaGraph {
     }
 }
 
-fn interpolate_nans(mut arr: &Array2<f64>) -> Array2<f64> {
+fn interpolate_nans(arr: &Array2<f64>) -> Array2<f64> {
     let mut result = arr.clone();
     for ((x, y), el) in arr.indexed_iter() {
         if el.is_nan() {
@@ -297,7 +297,7 @@ fn interpolate_nans(mut arr: &Array2<f64>) -> Array2<f64> {
             ];
             for neighbour in neighbours {
                 if neighbour.copied().is_some_and(f64::is_finite) {
-                    count + 1;
+                    count += 1;
                     sum += *neighbour.unwrap();
                 }
             }

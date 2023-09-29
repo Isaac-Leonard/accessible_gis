@@ -34,8 +34,8 @@ impl Clone for RasterViewerData {
 }
 
 #[derive(PartialEq, Clone)]
-pub struct RastaLayerProps {
-    data: RawRastaData,
+pub struct RasterLayerProps {
+    data: RawRasterData,
     position: usize,
     band_type: GdalDataType,
     hist: Option<Vec<f64>>,
@@ -48,7 +48,7 @@ pub struct RastaLayerProps {
 pub struct RasterLayerView;
 
 impl Component for RasterLayerView {
-    type Props = RastaLayerProps;
+    type Props = RasterLayerProps;
     type State = ();
     fn render(props: &Self::Props, _: &Self::State) -> Vec<(usize, VNode<Self>)> {
         let main = VNode::Custom(VComponent::new::<AudioControls, BasicApp>(
@@ -76,7 +76,7 @@ impl Component for RasterLayerView {
     }
 }
 
-impl<'a> From<(RasterBand<'a>, usize)> for RastaLayerProps {
+impl<'a> From<(RasterBand<'a>, usize)> for RasterLayerProps {
     fn from((band, position): (RasterBand, usize)) -> Self {
         let band_type = band.band_type();
         let hist = match band_type {
@@ -124,14 +124,14 @@ impl<'a> From<(RasterBand<'a>, usize)> for RastaLayerProps {
                 .read_as_array::<f64>((0, 0), band.size(), band.size(), None)
                 .unwrap(),
 
-            _ => panic!("Unknown datatype in rasta band"),
+            _ => panic!("Unknown datatype in raster band"),
         };
         let min_max = band.compute_raster_min_max(false).unwrap();
-        RastaLayerProps {
+        RasterLayerProps {
             band_type,
             min: min_max.min,
             max: min_max.max,
-            data: RawRastaData {
+            data: RawRasterData {
                 data_type: band_type.name(),
                 data,
                 min: min_max.min,
@@ -211,13 +211,13 @@ impl Component for StatsComponent {
 pub struct AudioControls;
 impl Component for AudioControls {
     type State = ();
-    type Props = RawRastaData;
+    type Props = RawRasterData;
     fn render(props: &Self::Props, _state: &Self::State) -> Vec<(usize, VNode<Self>)> {
         vec![
             (
                 0,
                 VNode::Label(VLabel {
-                    text: format!("Rasta file with {} data", props.data_type),
+                    text: format!("Raster file with {} data", props.data_type),
                 }),
             ),
             (
@@ -225,7 +225,7 @@ impl Component for AudioControls {
                 VNode::Button(VButton {
                     text: "Play graph".to_string(),
                     click: Some(|data, _| {
-                        data.sender.send(AudioMessage::PlayRasta(
+                        data.sender.send(AudioMessage::PlayRaster(
                             data.data.clone(),
                             data.min,
                             data.max,
@@ -239,7 +239,7 @@ impl Component for AudioControls {
 }
 
 #[derive(Clone)]
-pub struct RawRastaData {
+pub struct RawRasterData {
     pub data_type: String,
     pub data: Array2<f64>,
     pub min: f64,
@@ -248,7 +248,7 @@ pub struct RawRastaData {
     pub sender: Sender<AudioMessage>,
 }
 
-impl PartialEq for RawRastaData {
+impl PartialEq for RawRasterData {
     fn eq(&self, other: &Self) -> bool {
         self.data_type == other.data_type
             && self.no_data_value == other.no_data_value
@@ -274,7 +274,7 @@ impl Component for HistComponent {
     type Props = (Vec<f64>, usize);
     type State = HistogramSettings;
     type Message = HistogramSettings;
-    fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
+    fn render(props: &Self::Props, _state: &Self::State) -> Vec<(usize, VNode<Self>)> {
         vec![
             (
                 0,
