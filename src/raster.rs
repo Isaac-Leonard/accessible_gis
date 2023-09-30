@@ -3,7 +3,8 @@ use crate::audio::{get_audio, AudioMessage};
 use crate::events::{dispatch_action, Action};
 use crate::graph::{generate_image_histogram, HistogramSettings, RasterGraphSettings};
 
-use cacao_framework::{Component, VButton, VComponent, VLabel, VList, VNode};
+use cacao::appkit::App;
+use cacao_framework::{Component, Message, VButton, VComponent, VLabel, VList, VNode};
 use gdal::raster::GdalDataType;
 
 use gdal::raster::{RasterBand, StatisticsAll};
@@ -132,6 +133,7 @@ impl<'a> From<(RasterBand<'a>, usize)> for RasterLayerProps {
             min: min_max.min,
             max: min_max.max,
             data: RawRasterData {
+                position,
                 data_type: band_type.name(),
                 data,
                 min: min_max.min,
@@ -239,7 +241,12 @@ impl Component for AudioControls {
                 2,
                 VNode::Button(VButton {
                     text: "Change raster audiograph settings".to_owned(),
-                    click: None,
+                    click: Some(|props, settings| {
+                        dispatch_action(Action::SendChangeRasterGraphSettings(
+                            props.position,
+                            settings.clone(),
+                        ))
+                    }),
                 }),
             ),
         ]
@@ -248,6 +255,7 @@ impl Component for AudioControls {
 
 #[derive(Clone)]
 pub struct RawRasterData {
+    pub position: usize,
     pub data_type: String,
     pub data: Array2<f64>,
     pub min: f64,
