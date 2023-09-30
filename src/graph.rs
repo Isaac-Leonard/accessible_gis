@@ -190,6 +190,7 @@ pub struct RasterGraphSettings {
     pub row_duration: Duration,
     pub min_freq: f64,
     pub max_freq: f64,
+    pub rows: usize,
 }
 
 impl Default for RasterGraphSettings {
@@ -198,6 +199,7 @@ impl Default for RasterGraphSettings {
             row_duration: Duration::from_millis(1000),
             min_freq: 55.0,
             max_freq: 1760.0,
+            rows: 10,
         }
     }
 }
@@ -250,22 +252,23 @@ impl RasterGraph {
             row_duration,
             min_freq,
             max_freq,
+            rows,
         } = self.settings;
         dbg!(self.data.iter().filter(|x| x.is_nan()).count());
-        let y_scale = 100;
         let x_scale = 100;
+        let y_scale = self.data.nrows() / rows;
         let data = if let Some(no_data_value) = &self.no_data_value {
-            Zip::from(self.data.exact_chunks((x_scale, y_scale))).map_collect(|chunk| {
+            Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
                 chunk
                     .into_iter()
                     .filter(|x| x.is_finite() && *x != no_data_value)
                     .sum::<f64>()
-                    / (x_scale * y_scale) as f64
+                    / (y_scale * x_scale) as f64
             })
         } else {
-            Zip::from(self.data.exact_chunks((x_scale, y_scale))).map_collect(|chunk| {
+            Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
                 chunk.into_iter().filter(|x| x.is_finite()).sum::<f64>()
-                    / (x_scale * y_scale) as f64
+                    / (y_scale * x_scale) as f64
             })
         };
         let _min = self.min;
