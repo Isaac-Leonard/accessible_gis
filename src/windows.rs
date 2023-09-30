@@ -106,10 +106,6 @@ impl MessageHandler<Action> for WindowManager {
                 self.open_histogram_settings(*position, settings.clone());
             }
 
-            Action::UpdateHistogramSettings(_, _) => {
-                self.close_sheet();
-            }
-
             message => {
                 self.main.on_message(message);
                 self.change_hist_settings.on_message(message);
@@ -123,11 +119,15 @@ impl MessageHandler<Click> for WindowManager {
         dbg!(message);
         self.main.on_message(message);
         self.change_hist_settings.on_message(message);
+        if let Click::DoneChangeHistogramSettings = *message {
+            self.close_sheet();
+        }
     }
 }
 
 impl MessageHandler<Message> for WindowManager {
     fn on_message(&self, message: &Message) {
+        dbg!(message);
         self.main.on_message(message);
         self.change_hist_settings.on_message(message);
     }

@@ -205,7 +205,7 @@ dependencies = [
 [[package]]
 name = "cacao_framework"
 version = "0.1.0"
-source = "git+https://github.com/isaac-leonard/cacao_framework#159f718ae4364a9c16a14a10e2661df5d64460c1"
+source = "git+https://github.com/isaac-leonard/cacao_framework#6ed365ce6fcb28361a29d4c09daeee4dbe3f3d7e"
 dependencies = [
  "cacao",
 ]
@@ -627,9 +627,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.0.1"
+version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad227c3af19d4914570ad36d30409928b75967c298feb9ea1969db3a610bb14e"
+checksum = "8adf3ddd720272c6ea8bf59463c04e0f93d0bbf7c5439b691bca2987e0270897"
 dependencies = [
  "equivalent",
  "hashbrown 0.14.1",
@@ -1597,7 +1597,7 @@ version = "0.19.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b5bb770da30e5cbfde35a2d7b9b8a2c4b8ef89548a7a6aeab5c9a576e3e7421"
 dependencies = [
- "indexmap 2.0.1",
+ "indexmap 2.0.2",
  "toml_datetime",
  "winnow",
 ]

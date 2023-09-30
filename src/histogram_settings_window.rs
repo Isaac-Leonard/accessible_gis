@@ -1,5 +1,8 @@
 use cacao::{
-    appkit::window::{Window, WindowDelegate},
+    appkit::{
+        window::{Window, WindowDelegate},
+        App,
+    },
     button::Button,
     input::TextField,
     layout::{Layout, LayoutConstraint},
@@ -9,6 +12,7 @@ use cacao::{
 use cacao_framework::Message;
 
 use crate::{
+    app::BasicApp,
     events::{dispatch_action, dispatch_click, Action, Click, MessageHandler},
     graph::HistogramSettings,
     layout::top_to_bottom,
@@ -58,7 +62,7 @@ impl MessageHandler<Click> for UpdateHistogramSettingsView {
             Click::DoneChangeHistogramSettings => {
                 let position = self.initial_data.position;
                 let settings = self.get_settings_value();
-                dispatch_action(Action::UpdateHistogramSettings(position, settings));
+                App::<BasicApp, Message>::dispatch_main(Message::custom(settings));
             }
             _ => {}
         }
