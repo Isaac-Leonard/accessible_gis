@@ -191,6 +191,7 @@ pub struct RasterGraphSettings {
     pub min_freq: f64,
     pub max_freq: f64,
     pub rows: usize,
+    pub cols: usize,
 }
 
 impl Default for RasterGraphSettings {
@@ -200,6 +201,7 @@ impl Default for RasterGraphSettings {
             min_freq: 55.0,
             max_freq: 1760.0,
             rows: 10,
+            cols: 10,
         }
     }
 }
@@ -253,9 +255,10 @@ impl RasterGraph {
             min_freq,
             max_freq,
             rows,
+            cols,
         } = self.settings;
         dbg!(self.data.iter().filter(|x| x.is_nan()).count());
-        let x_scale = 100;
+        let x_scale = self.data.ncols() / cols;
         let y_scale = self.data.nrows() / rows;
         let data = if let Some(no_data_value) = &self.no_data_value {
             Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {

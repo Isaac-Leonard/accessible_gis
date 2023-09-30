@@ -129,6 +129,22 @@ impl Component for RasterGraphSettingsComponent {
                 }),
             ),
             (
+                8,
+                VNode::Label(VLabel {
+                    text: "Columns to play".to_owned(),
+                }),
+            ),
+            (
+                9,
+                VNode::TextInput(VTextInput {
+                    initial_value: new.rows.unwrap_or(old.cols).to_string(),
+                    change: Some(|str, _, state| {
+                        state.cols = str.parse().ok();
+                        false
+                    }),
+                }),
+            ),
+            (
                 1000,
                 VNode::Button(VButton {
                     text: "Done".to_owned(),
