@@ -214,6 +214,7 @@ pub struct AudioControls;
 impl Component for AudioControls {
     type Props = RawRasterData;
     type State = RasterGraphSettings;
+    type Message = RasterGraphSettings;
     fn render(props: &Self::Props, _state: &Self::State) -> Vec<(usize, VNode<Self>)> {
         vec![
             (
@@ -250,6 +251,11 @@ impl Component for AudioControls {
                 }),
             ),
         ]
+    }
+
+    fn on_message(msg: &Self::Message, _props: &Self::Props, state: &mut Self::State) -> bool {
+        *state = msg.clone();
+        false
     }
 }
 

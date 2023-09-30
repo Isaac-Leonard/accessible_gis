@@ -94,8 +94,23 @@ impl WindowManager {
         }
     }
 
-    pub fn close_sheet(&self) {
+    pub fn close_histogram_settings(&self) {
         let mut add = self.change_hist_settings.write().unwrap();
+
+        if let Some(add_window) = &*add {
+            let main = self.main.write().unwrap();
+
+            if let Some(main_window) = &*main {
+                main_window.end_sheet(add_window);
+            }
+        }
+
+        *add = None;
+    }
+
+    pub fn close_raster_graph_settings(&self) {
+        eprint!("here");
+        let mut add = self.raster_graph_settings.write().unwrap();
 
         if let Some(add_window) = &*add {
             let main = self.main.write().unwrap();
@@ -112,9 +127,8 @@ impl WindowManager {
 impl MessageHandler<Action> for WindowManager {
     fn on_message(&self, message: &Action) {
         match message {
-            Action::CloseChangeHistogramSettings | Action::CloseRasterSettings => {
-                self.close_sheet();
-            }
+            Action::CloseChangeHistogramSettings => self.close_histogram_settings(),
+            Action::CloseRasterSettings => self.close_raster_graph_settings(),
             Action::OpenMainWindow => {
                 self.open_main();
             }
@@ -145,6 +159,7 @@ impl MessageHandler<Message> for WindowManager {
         dbg!(message);
         self.main.on_message(message);
         self.change_hist_settings.on_message(message);
+        self.raster_graph_settings.on_message(message);
     }
 }
 

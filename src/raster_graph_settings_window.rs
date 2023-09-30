@@ -1,12 +1,18 @@
+use std::time::Duration;
+
 use cacao::{
-    appkit::window::{Window, WindowDelegate},
+    appkit::{
+        window::{Window, WindowDelegate},
+        App,
+    },
     view::ViewController,
 };
-use cacao_framework::{Component, ComponentWrapper};
+use cacao_framework::{Component, ComponentWrapper, Message, VButton, VLabel, VNode, VTextInput};
+use optional_struct::Applyable;
 
 use crate::{
     app::BasicApp,
-    events::{dispatch_action, Action},
+    events::{dispatch_action, Action, MessageHandler},
     graph::{OptionalRasterGraphSettings, RasterGraphSettings},
 };
 
@@ -21,6 +27,14 @@ impl RasterGraphSettingsWindow {
         );
 
         Self { content }
+    }
+}
+
+impl MessageHandler<Message> for RasterGraphSettingsWindow {
+    fn on_message(&self, message: &Message) {
+        if let Some(ref delegate) = self.content.view.delegate {
+            delegate.on_message(message);
+        }
     }
 }
 
@@ -44,10 +58,72 @@ pub struct RasterGraphSettingsComponent;
 impl Component for RasterGraphSettingsComponent {
     type Props = RasterGraphSettings;
     type State = OptionalRasterGraphSettings;
-    fn render(
-        props: &Self::Props,
-        state: &Self::State,
-    ) -> Vec<(usize, cacao_framework::VNode<Self>)> {
-        Vec::new()
+    fn render(old: &Self::Props, new: &Self::State) -> Vec<(usize, cacao_framework::VNode<Self>)> {
+        vec![
+            (
+                0,
+                VNode::Label(VLabel {
+                    text: "Row Duration (ms)".to_owned(),
+                }),
+            ),
+            (
+                1,
+                VNode::TextInput(VTextInput {
+                    initial_value: new
+                        .row_duration
+                        .unwrap_or(old.row_duration)
+                        .as_millis()
+                        .to_string(),
+                    change: Some(|str, _, state| {
+                        state.row_duration = str.parse().ok().map(Duration::from_millis);
+                        false
+                    }),
+                }),
+            ),
+            (
+                2,
+                VNode::Label(VLabel {
+                    text: "Minimum frequency (Hz)".to_owned(),
+                }),
+            ),
+            (
+                3,
+                VNode::TextInput(VTextInput {
+                    initial_value: new.min_freq.unwrap_or(old.min_freq).to_string(),
+                    change: Some(|str, _, state| {
+                        state.min_freq = str.parse().ok();
+                        false
+                    }),
+                }),
+            ),
+            (
+                4,
+                VNode::Label(VLabel {
+                    text: "Maximum frequency (Hz)".to_owned(),
+                }),
+            ),
+            (
+                5,
+                VNode::TextInput(VTextInput {
+                    initial_value: new.max_freq.unwrap_or(old.max_freq).to_string(),
+                    change: Some(|str, _, state| {
+                        state.max_freq = str.parse().ok();
+                        false
+                    }),
+                }),
+            ),
+            (
+                6,
+                VNode::Button(VButton {
+                    text: "Done".to_owned(),
+                    click: Some(|props, state| {
+                        let mut settings = props.clone();
+                        state.clone().apply_to(&mut settings);
+                        App::<BasicApp, Message>::dispatch_main(Message::custom(settings));
+                        dispatch_action(Action::CloseRasterSettings);
+                    }),
+                }),
+            ),
+        ]
     }
 }
