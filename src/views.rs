@@ -39,7 +39,9 @@ impl MessageHandler<Action> for MainView {
             Action::SetFeatureLabel(_)
             | Action::CloseChangeHistogramSettings
             | Action::SendChangeHistogramSettings(_, _)
-            | Action::CloseSheet
+            | Action::SendChangeRasterGraphSettings(_, _)
+            | Action::SendChangeRasterGraphSettings(_, _)
+            | Action::CloseRasterSettings
             | Action::OpenMainWindow
             | Action::SendAudioGraph(_, _) => {
                 self.dataset_view.borrow().on_message(message);

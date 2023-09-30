@@ -7,8 +7,9 @@ use std::sync::RwLock;
 
 use crate::{
     events::{Action, Click, MessageHandler},
-    graph::HistogramSettings,
+    graph::{HistogramSettings, RasterGraphSettings},
     histogram_settings_window::ChangeHistogramSettingsWindow,
+    raster_graph_settings_window::RasterGraphSettingsWindow,
     views::MainView,
 };
 
@@ -16,6 +17,7 @@ use crate::{
 pub struct WindowManager {
     pub main: RwLock<Option<Window<MainWindow>>>,
     pub change_hist_settings: RwLock<Option<Window<ChangeHistogramSettingsWindow>>>,
+    pub raster_graph_settings: RwLock<Option<Window<RasterGraphSettingsWindow>>>,
 }
 
 /// A helper method to handle checking for window existence, and creating
@@ -75,6 +77,22 @@ impl WindowManager {
             *lock = Some(window);
         }
     }
+    pub fn open_raster_graph_settings(&self, position: usize, settings: RasterGraphSettings) {
+        let callback = || {};
+
+        let mut lock = self.raster_graph_settings.write().unwrap();
+
+        if let Some(win) = &*lock {
+            self.begin_sheet(win, callback);
+        } else {
+            let window = Window::with(
+                WindowConfig::default(),
+                RasterGraphSettingsWindow::new(position, settings),
+            );
+            self.begin_sheet(&window, callback);
+            *lock = Some(window);
+        }
+    }
 
     pub fn close_sheet(&self) {
         let mut add = self.change_hist_settings.write().unwrap();
@@ -94,19 +112,18 @@ impl WindowManager {
 impl MessageHandler<Action> for WindowManager {
     fn on_message(&self, message: &Action) {
         match message {
-            Action::CloseChangeHistogramSettings => {
+            Action::CloseChangeHistogramSettings | Action::CloseRasterSettings => {
                 self.close_sheet();
             }
             Action::OpenMainWindow => {
                 self.open_main();
             }
 
-            Action::CloseSheet => {
-                self.close_sheet();
-            }
-
             Action::SendChangeHistogramSettings(position, settings) => {
                 self.open_histogram_settings(*position, settings.clone());
+            }
+            Action::SendChangeRasterGraphSettings(position, settings) => {
+                self.open_raster_graph_settings(*position, settings.clone());
             }
 
             message => {

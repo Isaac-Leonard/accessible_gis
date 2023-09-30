@@ -235,6 +235,13 @@ impl Component for AudioControls {
                     }),
                 }),
             ),
+            (
+                2,
+                VNode::Button(VButton {
+                    text: "Change raster audiograph settings".to_owned(),
+                    click: None,
+                }),
+            ),
         ]
     }
 }

@@ -1,6 +1,6 @@
 use crate::app::BasicApp;
 
-use crate::graph::HistogramSettings;
+use crate::graph::{HistogramSettings, RasterGraphSettings};
 
 use cacao::appkit::App;
 use cacao::view::View;
@@ -14,10 +14,11 @@ pub enum Action {
     InvalidFile(PathBuf),
     SetFeatureLabel(String),
     CloseChangeHistogramSettings,
-    CloseSheet,
+    CloseRasterSettings,
     OpenMainWindow,
     SendAudioGraph(Vec<f64>, HistogramSettings),
     SendChangeHistogramSettings(usize, HistogramSettings),
+    SendChangeRasterGraphSettings(usize, RasterGraphSettings),
 }
 
 #[derive(Clone, Debug)]
