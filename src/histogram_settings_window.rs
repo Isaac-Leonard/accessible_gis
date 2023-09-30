@@ -3,148 +3,136 @@ use cacao::{
         window::{Window, WindowDelegate},
         App,
     },
-    button::Button,
-    input::TextField,
-    layout::{Layout, LayoutConstraint},
-    text::Label,
-    view::{View, ViewController, ViewDelegate},
+    view::ViewController,
 };
-use cacao_framework::Message;
+use cacao_framework::{Component, ComponentWrapper, Message, VButton, VLabel, VNode, VTextInput};
 
 use crate::{
     app::BasicApp,
-    events::{dispatch_action, dispatch_click, Action, Click, MessageHandler},
+    events::{dispatch_action, Action, MessageHandler},
     graph::HistogramSettings,
-    layout::top_to_bottom,
 };
 
-pub struct UpdateHistogramSettingsView {
-    duration_label: Label,
-    duration_value: TextField,
-    min_freq_label: Label,
-    min_freq_value: TextField,
-    max_freq_label: Label,
-    max_freq_value: TextField,
-    done_btn: Button,
-    initial_data: HistogramSettingsWrapper,
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct OptionalHistogramSettings {
+    /// The length the histogram should play for in milliseconds
+    pub duration: Option<usize>,
+    pub min_freq: Option<f64>,
+    pub max_freq: Option<f64>,
 }
 
-impl UpdateHistogramSettingsView {
-    fn new(settings: HistogramSettingsWrapper) -> Self {
-        Self {
-            duration_label: Label::new(),
-            duration_value: TextField::default(),
-            min_freq_label: Label::new(),
-            min_freq_value: TextField::default(),
-            max_freq_label: Label::new(),
-            max_freq_value: TextField::default(),
-            done_btn: Button::new("Done"),
-            initial_data: settings,
-        }
-    }
-
-    fn get_settings_value(&self) -> HistogramSettings {
+impl OptionalHistogramSettings {
+    fn merge_from(&self, settings: &HistogramSettings) -> HistogramSettings {
         HistogramSettings {
-            duration: self.duration_value.get_value().parse().unwrap(),
-            min_freq: self.min_freq_value.get_value().parse().unwrap(),
-            max_freq: self.max_freq_value.get_value().parse().unwrap(),
+            duration: self.duration.unwrap_or(settings.duration),
+            min_freq: self.min_freq.unwrap_or(settings.min_freq),
+            max_freq: self.max_freq.unwrap_or(settings.max_freq),
         }
     }
 }
 
-impl MessageHandler<Action> for UpdateHistogramSettingsView {
-    fn on_message(&self, _message: &Action) {}
-}
+#[derive(Clone, PartialEq)]
+pub struct UpdateHistogramSettingsView;
 
-impl MessageHandler<Click> for UpdateHistogramSettingsView {
-    fn on_message(&self, message: &Click) {
-        match message {
-            Click::DoneChangeHistogramSettings => {
-                let position = self.initial_data.position;
-                let settings = self.get_settings_value();
-                App::<BasicApp, Message>::dispatch_main(Message::custom(settings));
-            }
-            _ => {}
-        }
-    }
-}
-
-impl MessageHandler<Message> for UpdateHistogramSettingsView {
-    fn on_message(&self, _message: &Message) {}
-}
-
-impl ViewDelegate for UpdateHistogramSettingsView {
-    const NAME: &'static str = "UpdateHistogramSettingsView";
-    fn did_load(&mut self, view: View) {
-        view.add_subview(&self.duration_label);
-        self.duration_label
-            .set_text("Duration the graph should play for in milliseconds");
-        view.add_subview(&self.duration_value);
-        self.duration_value
-            .set_text(&self.initial_data.settings.duration.to_string());
-
-        view.add_subview(&self.min_freq_label);
-        self.min_freq_label
-            .set_text("The minimum frequency the of the graph in Hz");
-        view.add_subview(&self.min_freq_value);
-        self.min_freq_value
-            .set_text(&self.initial_data.settings.min_freq.to_string());
-
-        view.add_subview(&self.max_freq_label);
-        self.max_freq_label
-            .set_text("The maximum frequency the of the graph in Hz");
-        view.add_subview(&self.max_freq_value);
-        self.max_freq_value
-            .set_text(&self.initial_data.settings.max_freq.to_string());
-
-        view.add_subview(&self.done_btn);
-        self.done_btn
-            .set_action(|_| dispatch_click(Click::DoneChangeHistogramSettings));
-        LayoutConstraint::activate(&top_to_bottom(
-            vec![
-                &self.duration_label,
-                &self.duration_value,
-                &self.min_freq_label,
-                &self.min_freq_value,
-                &self.max_freq_label,
-                &self.max_freq_value,
-                &self.done_btn,
-            ],
-            &view,
-            16.0,
-        ))
+impl Component for UpdateHistogramSettingsView {
+    type Props = HistogramSettingsWrapper;
+    type State = OptionalHistogramSettings;
+    fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
+        vec![
+            (
+                0,
+                VNode::Label(VLabel {
+                    text: "Duration (ms)".to_owned(),
+                }),
+            ),
+            (
+                1,
+                VNode::TextInput(VTextInput {
+                    initial_value: state
+                        .duration
+                        .unwrap_or(props.settings.duration)
+                        .to_string(),
+                    change: Some(|str, _, state| {
+                        state.duration = str.parse().ok();
+                        false
+                    }),
+                }),
+            ),
+            (
+                2,
+                VNode::Label(VLabel {
+                    text: "Minimum frequency (Hz)".to_owned(),
+                }),
+            ),
+            (
+                3,
+                VNode::TextInput(VTextInput {
+                    initial_value: state
+                        .min_freq
+                        .unwrap_or(props.settings.min_freq)
+                        .to_string(),
+                    change: Some(|str, _, state| {
+                        state.min_freq = str.parse().ok();
+                        false
+                    }),
+                }),
+            ),
+            (
+                4,
+                VNode::Label(VLabel {
+                    text: "Maximum frequency (Hz)".to_owned(),
+                }),
+            ),
+            (
+                5,
+                VNode::TextInput(VTextInput {
+                    initial_value: state
+                        .max_freq
+                        .unwrap_or(props.settings.max_freq)
+                        .to_string(),
+                    change: Some(|str, _, state| {
+                        state.max_freq = str.parse().ok();
+                        false
+                    }),
+                }),
+            ),
+            (
+                6,
+                VNode::Button(VButton {
+                    text: "Done".to_owned(),
+                    click: Some(|props, state| {
+                        App::<BasicApp, Message>::dispatch_main(Message::custom(
+                            state.merge_from(&props.settings),
+                        ));
+                        dispatch_action(Action::CloseChangeHistogramSettings);
+                    }),
+                }),
+            ),
+        ]
     }
 }
 
 pub struct ChangeHistogramSettingsWindow {
-    pub content: ViewController<UpdateHistogramSettingsView>,
+    pub content: ViewController<ComponentWrapper<UpdateHistogramSettingsView, BasicApp>>,
 }
 
 impl ChangeHistogramSettingsWindow {
     pub fn new(position: usize, settings: HistogramSettings) -> Self {
-        let content = ViewController::new(UpdateHistogramSettingsView::new(
-            HistogramSettingsWrapper::new(position, settings),
-        ));
+        let content = ViewController::new(
+            ComponentWrapper::<UpdateHistogramSettingsView, BasicApp>::new(
+                HistogramSettingsWrapper::new(position, settings),
+            ),
+        );
 
         Self { content }
     }
 }
 
-impl MessageHandler<Action> for ChangeHistogramSettingsWindow {
-    fn on_message(&self, message: &Action) {
-        self.content.view.on_message(message);
-    }
-}
-
-impl MessageHandler<Click> for ChangeHistogramSettingsWindow {
-    fn on_message(&self, message: &Click) {
-        self.content.view.on_message(message);
-    }
-}
-
 impl MessageHandler<Message> for ChangeHistogramSettingsWindow {
     fn on_message(&self, message: &Message) {
-        self.content.view.on_message(message);
+        if let Some(delegate) = &self.content.view.delegate {
+            delegate.on_message(message)
+        };
     }
 }
 
@@ -163,7 +151,7 @@ impl WindowDelegate for ChangeHistogramSettingsWindow {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct HistogramSettingsWrapper {
     settings: HistogramSettings,
     position: usize,

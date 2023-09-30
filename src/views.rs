@@ -37,7 +37,6 @@ impl MessageHandler<Action> for MainView {
     fn on_message(&self, message: &Action) {
         match message {
             Action::SetFeatureLabel(_)
-            | Action::UpdateHistogramSettings(_, _)
             | Action::CloseChangeHistogramSettings
             | Action::SendChangeHistogramSettings(_, _)
             | Action::CloseSheet
@@ -61,9 +60,6 @@ impl MessageHandler<Click> for MainView {
     fn on_message(&self, message: &Click) {
         match message {
             Click::SelectFile => FileSelectPanel::new().show(file_selection_handler),
-            message => {
-                self.dataset_view.borrow().on_message(message);
-            }
         }
     }
 }
@@ -305,11 +301,6 @@ impl MessageHandler<Action> for DatasetView {
                 .send(AudioMessage::PlayHistogram(graph.clone(), settings.clone()))
                 .unwrap(),
             Action::SetFeatureLabel(name) => self.update_new_label(Some(name.clone())),
-            Action::UpdateHistogramSettings(_, _) => {
-                for view in self.sub_views.borrow().iter() {
-                    view.on_message(message)
-                }
-            }
             Action::InvalidFile(_) => {}
             Action::GotFile(_) => {}
             _ => {}

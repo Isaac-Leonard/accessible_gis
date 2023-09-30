@@ -16,7 +16,6 @@ pub enum Action {
     CloseChangeHistogramSettings,
     CloseSheet,
     OpenMainWindow,
-    UpdateHistogramSettings(usize, HistogramSettings),
     SendAudioGraph(Vec<f64>, HistogramSettings),
     SendChangeHistogramSettings(usize, HistogramSettings),
 }
@@ -24,7 +23,6 @@ pub enum Action {
 #[derive(Clone, Debug)]
 pub enum Click {
     SelectFile,
-    DoneChangeHistogramSettings,
 }
 
 /// Dispatch a message on a background thread.
