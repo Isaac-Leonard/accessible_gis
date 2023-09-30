@@ -10,6 +10,7 @@ mod histogram_settings_window;
 mod layout;
 mod list_view;
 mod raster;
+mod raster_graph_settings_window;
 mod vector;
 mod views;
 mod windows;

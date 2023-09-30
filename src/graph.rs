@@ -8,6 +8,7 @@ use fundsp::{
     prelude::{sine, AudioNode},
 };
 use ndarray::{Array2, Zip};
+use optional_struct::{optional_struct, Applyable};
 
 use std::{thread::sleep, time::Duration};
 
@@ -133,8 +134,14 @@ pub fn play_histogram(counts: Vec<f64>, settings: HistogramSettings) {
     sonifier.play();
 }
 
-pub fn play_rasta(data: Array2<f64>, min: f64, max: f64, no_data_value: Option<f64>) {
-    let rasta_graph = RastaGraph::new(data, min, max, no_data_value);
+pub fn play_rasta(
+    data: Array2<f64>,
+    min: f64,
+    max: f64,
+    no_data_value: Option<f64>,
+    settings: RasterGraphSettings,
+) {
+    let rasta_graph = RasterGraph::new(data, min, max, no_data_value, settings);
     rasta_graph.play();
 }
 
@@ -158,6 +165,7 @@ where
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[optional_struct]
 pub struct HistogramSettings {
     /// The length the histogram should play for in milliseconds
     pub duration: usize,
@@ -175,20 +183,47 @@ impl Default for HistogramSettings {
     }
 }
 
-pub struct RastaGraph {
+#[derive(Debug, Clone, PartialEq)]
+#[optional_struct]
+pub struct RasterGraphSettings {
+    /// The length the histogram should play for in milliseconds
+    pub row_duration: Duration,
+    pub min_freq: f64,
+    pub max_freq: f64,
+}
+
+impl Default for RasterGraphSettings {
+    fn default() -> Self {
+        Self {
+            row_duration: Duration::from_millis(1000),
+            min_freq: 55.0,
+            max_freq: 1760.0,
+        }
+    }
+}
+
+pub struct RasterGraph {
     data: Array2<f64>,
     no_data_value: Option<f64>,
     min: f64,
     max: f64,
+    settings: RasterGraphSettings,
 }
 
-impl RastaGraph {
-    pub fn new(data: Array2<f64>, min: f64, max: f64, no_data_value: Option<f64>) -> Self {
+impl RasterGraph {
+    pub fn new(
+        data: Array2<f64>,
+        min: f64,
+        max: f64,
+        no_data_value: Option<f64>,
+        settings: RasterGraphSettings,
+    ) -> Self {
         Self {
             data,
             min,
             max,
             no_data_value,
+            settings,
         }
     }
 
@@ -211,9 +246,11 @@ impl RastaGraph {
         T: cpal::Sample + cpal::SizedSample + cpal::FromSample<f64>,
     {
         eprintln!("running");
-        let duration = Duration::from_millis(1000);
-        let min_freq = 55.0;
-        let max_freq = 1760.0;
+        let RasterGraphSettings {
+            row_duration,
+            min_freq,
+            max_freq,
+        } = self.settings;
         dbg!(self.data.iter().filter(|x| x.is_nan()).count());
         let y_scale = 100;
         let x_scale = 100;
@@ -236,7 +273,7 @@ impl RastaGraph {
         let min = self.min;
         let max = self.max;
         let row_len = data.ncols() as f64;
-        let duration_per_sample_ms = duration.div_f64(row_len);
+        let duration_per_sample_ms = row_duration.div_f64(row_len);
         let y_range = max - min;
         let y_range = if y_range == 0.0 { 1.0 } else { y_range };
         let freq_range = max_freq - min_freq;

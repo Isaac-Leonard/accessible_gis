@@ -10,7 +10,7 @@ use cpal::{FromSample, SizedSample, Stream};
 use fundsp::hacker::*;
 use ndarray::Array2;
 
-use crate::graph::{play_histogram, play_rasta, HistogramSettings};
+use crate::graph::{play_histogram, play_rasta, HistogramSettings, RasterGraphSettings};
 
 #[cfg(debug_assertions)] // required when disable_release is set (default)
 #[global_allocator]
@@ -19,7 +19,7 @@ static A: AllocDisabler = AllocDisabler;
 #[derive(Clone, Debug)]
 pub enum AudioMessage {
     PlayHistogram(Vec<f64>, HistogramSettings),
-    PlayRaster(Array2<f64>, f64, f64, Option<f64>),
+    PlayRaster(Array2<f64>, f64, f64, Option<f64>, RasterGraphSettings),
 }
 
 pub fn get_audio() -> mpsc::Sender<AudioMessage> {
@@ -38,8 +38,8 @@ pub fn get_audio() -> mpsc::Sender<AudioMessage> {
                 }*/
                 play_histogram(graph, settings);
                 playing = !playing;
-            } else if let AudioMessage::PlayRaster(data, min, max, no_data_value) = msg {
-                play_rasta(data, min, max, no_data_value);
+            } else if let AudioMessage::PlayRaster(data, min, max, no_data_value, settings) = msg {
+                play_rasta(data, min, max, no_data_value, settings);
             };
         }
     });

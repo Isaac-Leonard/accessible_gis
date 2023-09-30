@@ -1,7 +1,7 @@
 use crate::app::BasicApp;
 use crate::audio::{get_audio, AudioMessage};
 use crate::events::{dispatch_action, Action};
-use crate::graph::{generate_image_histogram, HistogramSettings};
+use crate::graph::{generate_image_histogram, HistogramSettings, RasterGraphSettings};
 
 use cacao_framework::{Component, VButton, VComponent, VLabel, VList, VNode};
 use gdal::raster::GdalDataType;
@@ -210,8 +210,8 @@ impl Component for StatsComponent {
 #[derive(Clone, PartialEq)]
 pub struct AudioControls;
 impl Component for AudioControls {
-    type State = ();
     type Props = RawRasterData;
+    type State = RasterGraphSettings;
     fn render(props: &Self::Props, _state: &Self::State) -> Vec<(usize, VNode<Self>)> {
         vec![
             (
@@ -224,12 +224,13 @@ impl Component for AudioControls {
                 1,
                 VNode::Button(VButton {
                     text: "Play graph".to_string(),
-                    click: Some(|data, _| {
+                    click: Some(|data, settings| {
                         data.sender.send(AudioMessage::PlayRaster(
                             data.data.clone(),
                             data.min,
                             data.max,
                             data.no_data_value,
+                            settings.clone(),
                         ));
                     }),
                 }),

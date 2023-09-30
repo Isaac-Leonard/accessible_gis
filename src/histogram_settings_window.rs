@@ -6,30 +6,13 @@ use cacao::{
     view::ViewController,
 };
 use cacao_framework::{Component, ComponentWrapper, Message, VButton, VLabel, VNode, VTextInput};
+use optional_struct::Applyable;
 
 use crate::{
     app::BasicApp,
     events::{dispatch_action, Action, MessageHandler},
-    graph::HistogramSettings,
+    graph::{HistogramSettings, OptionalHistogramSettings},
 };
-
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct OptionalHistogramSettings {
-    /// The length the histogram should play for in milliseconds
-    pub duration: Option<usize>,
-    pub min_freq: Option<f64>,
-    pub max_freq: Option<f64>,
-}
-
-impl OptionalHistogramSettings {
-    fn merge_from(&self, settings: &HistogramSettings) -> HistogramSettings {
-        HistogramSettings {
-            duration: self.duration.unwrap_or(settings.duration),
-            min_freq: self.min_freq.unwrap_or(settings.min_freq),
-            max_freq: self.max_freq.unwrap_or(settings.max_freq),
-        }
-    }
-}
 
 #[derive(Clone, PartialEq)]
 pub struct UpdateHistogramSettingsView;
@@ -101,9 +84,9 @@ impl Component for UpdateHistogramSettingsView {
                 VNode::Button(VButton {
                     text: "Done".to_owned(),
                     click: Some(|props, state| {
-                        App::<BasicApp, Message>::dispatch_main(Message::custom(
-                            state.merge_from(&props.settings),
-                        ));
+                        let mut settings = props.settings.clone();
+                        state.clone().apply_to(&mut settings);
+                        App::<BasicApp, Message>::dispatch_main(Message::custom(settings));
                         dispatch_action(Action::CloseChangeHistogramSettings);
                     }),
                 }),

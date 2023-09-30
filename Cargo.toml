@@ -17,3 +17,4 @@ gdal-sys = { version = "0.9.0", features = ["bindgen"]}
 ndarray = "0.15.6"
 ndarray-interp = "0.3.1"
 ndarray-stats = "0.5.1"
+optional_struct = "0.3.1"
