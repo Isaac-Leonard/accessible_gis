@@ -13,6 +13,7 @@ mod raster;
 mod raster_graph_settings_window;
 mod vector;
 mod views;
+mod warp;
 mod windows;
 
 use cacao::appkit::App;

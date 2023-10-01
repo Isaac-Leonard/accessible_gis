@@ -8,7 +8,7 @@ use cacao::view::View;
 use std::path::PathBuf;
 use std::sync::RwLock;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Action {
     GotFile(PathBuf),
     InvalidFile(PathBuf),
@@ -21,18 +21,9 @@ pub enum Action {
     SendChangeRasterGraphSettings(usize, RasterGraphSettings),
 }
 
-#[derive(Clone, Debug)]
-pub enum Click {
-    SelectFile,
-}
-
 /// Dispatch a message on a background thread.
 pub fn dispatch_action(message: Action) {
-    App::<BasicApp, Message>::dispatch_main(Message::Action(message));
-}
-
-pub fn dispatch_click(message: Click) {
-    App::<BasicApp, Message>::dispatch_main(Message::Click(message));
+    App::<BasicApp, Action>::dispatch_main(message);
 }
 
 pub trait GetMessagible<Message> {
@@ -74,10 +65,4 @@ impl<M: Send + Sync, T: MessageHandler<M>> MessageHandler<M> for View<T> {
     fn on_message(&self, message: &M) {
         self.delegate.on_message(message)
     }
-}
-
-#[derive(Clone, Debug)]
-pub enum Message {
-    Click(Click),
-    Action(Action),
 }

@@ -2,11 +2,12 @@ use cacao::{
     appkit::window::{Window, WindowConfig, WindowDelegate},
     view::ViewController,
 };
-use cacao_framework::Message;
+use cacao_framework::{ComponentWrapper, Message};
 use std::sync::RwLock;
 
 use crate::{
-    events::{Action, Click, MessageHandler},
+    app::BasicApp,
+    events::{Action, MessageHandler},
     graph::{HistogramSettings, RasterGraphSettings},
     histogram_settings_window::ChangeHistogramSettingsWindow,
     raster_graph_settings_window::RasterGraphSettingsWindow,
@@ -139,18 +140,8 @@ impl MessageHandler<Action> for WindowManager {
             Action::SendChangeRasterGraphSettings(position, settings) => {
                 self.open_raster_graph_settings(*position, settings.clone());
             }
-
-            message => {
-                self.main.on_message(message);
-            }
+            _ => {}
         }
-    }
-}
-
-impl MessageHandler<Click> for WindowManager {
-    fn on_message(&self, message: &Click) {
-        dbg!(message);
-        self.main.on_message(message);
     }
 }
 
@@ -165,34 +156,23 @@ impl MessageHandler<Message> for WindowManager {
 
 pub struct MainWindow {
     pub window: Window,
-    pub content: ViewController<MainView>,
+    pub content: ViewController<ComponentWrapper<MainView, BasicApp>>,
 }
 
 impl MainWindow {
     fn new() -> Self {
         Self {
             window: Window::default(),
-            content: ViewController::new(MainView::new()),
+            content: ViewController::new(ComponentWrapper::new(())),
         }
-    }
-}
-
-impl MessageHandler<Action> for MainWindow {
-    fn on_message(&self, message: &Action) {
-        self.content.view.on_message(message);
-    }
-}
-
-impl MessageHandler<Click> for MainWindow {
-    fn on_message(&self, message: &Click) {
-        dbg!(message);
-        self.content.view.on_message(message);
     }
 }
 
 impl MessageHandler<Message> for MainWindow {
     fn on_message(&self, message: &Message) {
-        self.content.view.on_message(message);
+        if let Some(ref delegate) = self.content.view.delegate {
+            delegate.on_message(message);
+        }
     }
 }
 

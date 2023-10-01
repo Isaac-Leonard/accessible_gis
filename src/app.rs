@@ -1,4 +1,4 @@
-use crate::events::{Message, MessageHandler};
+use crate::events::{Action, MessageHandler};
 use crate::windows::WindowManager;
 use cacao::appkit::{App, AppDelegate};
 use cacao::notification_center::Dispatcher;
@@ -9,13 +9,10 @@ pub struct BasicApp {
     pub window_manager: WindowManager,
 }
 
-impl Dispatcher<Message> for BasicApp {
+impl Dispatcher<Action> for BasicApp {
     /// Handles a message that came over on the main (UI) thread.
-    fn on_ui_message(&self, message: Message) {
-        match &message {
-            Message::Action(action) => self.window_manager.on_message(action),
-            Message::Click(click) => self.window_manager.on_message(click),
-        }
+    fn on_ui_message(&self, message: Action) {
+        self.window_manager.on_message(&message)
     }
 }
 

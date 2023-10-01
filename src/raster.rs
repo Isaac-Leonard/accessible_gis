@@ -3,8 +3,7 @@ use crate::audio::{get_audio, AudioMessage};
 use crate::events::{dispatch_action, Action};
 use crate::graph::{generate_image_histogram, HistogramSettings, RasterGraphSettings};
 
-use cacao::appkit::App;
-use cacao_framework::{Component, Message, VButton, VComponent, VLabel, VList, VNode};
+use cacao_framework::{Component, VButton, VComponent, VLabel, VList, VNode};
 use gdal::raster::GdalDataType;
 
 use gdal::raster::{RasterBand, StatisticsAll};
@@ -211,6 +210,7 @@ impl Component for StatsComponent {
 
 #[derive(Clone, PartialEq)]
 pub struct AudioControls;
+
 impl Component for AudioControls {
     type Props = RawRasterData;
     type State = RasterGraphSettings;

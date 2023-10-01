@@ -274,8 +274,6 @@ impl RasterGraph {
                     / (y_scale * x_scale) as f64
             })
         };
-        let _min = self.min;
-        let _max = self.max;
         let min = self.min;
         let max = self.max;
         let row_len = data.ncols() as f64;
@@ -311,7 +309,7 @@ impl RasterGraph {
         stream.play().unwrap();
         let _pos_f = -1.0;
         for row in data.rows() {
-            for (i, pixel) in row.into_iter().enumerate() {
+            for (i, pixel) in row.indexed_iter() {
                 let freq_f = (*pixel - min) / y_range * freq_range + min_freq;
                 let pos_f = i as f64 / (row_len - 1.) * 2.0 - 1.0;
                 pos.set_value(pos_f);

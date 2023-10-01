@@ -1,283 +1,168 @@
 use crate::app::BasicApp;
 use crate::audio::{get_audio, AudioMessage};
-use crate::events::{dispatch_action, dispatch_click, Action, Click, MessageHandler};
+use crate::events::{dispatch_action, Action};
 
 use crate::raster::*;
-use crate::vector::VectorLayerView;
+use crate::vector::{FeatureViewProps, VectorLayerProps, VectorLayerView};
+use cacao::appkit::App;
 use cacao::filesystem::FileSelectPanel;
 use cacao::foundation::NSURL;
-use cacao::layout::{Layout, LayoutConstraint};
 
-use cacao::text::Label;
-use cacao::view::{View, ViewDelegate};
-use cacao::{button::Button, view};
-use cacao_framework::{ComponentWrapper, Message};
+use cacao_framework::{Component, Message, VButton, VComponent, VLabel, VNode};
 use gdal::vector::LayerAccess;
 use gdal::Dataset;
-use std::cell::RefCell;
+use std::path::PathBuf;
 use std::sync::mpsc::Sender;
 
-pub struct MainView {
-    content: view::View,
-    button: Button,
-    dataset_view: RefCell<Option<View<DatasetView>>>,
-}
-
-impl MainView {
-    pub fn new() -> Self {
-        Self {
-            content: View::new(),
-            button: Button::new("Select file"),
-            dataset_view: RefCell::new(None),
+#[derive(Clone, PartialEq)]
+pub struct MainView;
+impl Component for MainView {
+    type Props = ();
+    type State = Option<PathBuf>;
+    type Message = Action;
+    fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
+        if let Some(path) = state {
+            vec![
+                (
+                    0,
+                    VNode::Button(VButton {
+                        text: "Select file".to_owned(),
+                        click: Some(|_, _| FileSelectPanel::new().show(file_selection_handler)),
+                    }),
+                ),
+                (
+                    1,
+                    VNode::Custom(VComponent::new::<DatasetView, BasicApp>(DatasetViewProps {
+                        file: path.clone(),
+                        dataset: Dataset::open(path).unwrap(),
+                    })),
+                ),
+            ]
+        } else {
+            vec![(
+                0,
+                VNode::Button(VButton {
+                    text: "Select file".to_owned(),
+                    click: Some(|_, _| FileSelectPanel::new().show(file_selection_handler)),
+                }),
+            )]
         }
     }
-}
-
-impl MessageHandler<Action> for MainView {
-    fn on_message(&self, message: &Action) {
-        match message {
-            Action::SetFeatureLabel(_)
-            | Action::CloseChangeHistogramSettings
-            | Action::SendChangeHistogramSettings(_, _)
-            | Action::SendChangeRasterGraphSettings(_, _)
-            | Action::SendChangeRasterGraphSettings(_, _)
-            | Action::CloseRasterSettings
-            | Action::OpenMainWindow
-            | Action::SendAudioGraph(_, _) => {
-                self.dataset_view.borrow().on_message(message);
-            }
-            Action::GotFile(path) => {
-                let dataset = Dataset::open(path).expect("Could'nt read file");
-                let mut dataset_view = self.dataset_view.borrow_mut();
-                let sub_view = View::with(DatasetView::new(dataset));
-                self.content.add_subview(&sub_view);
-                *dataset_view = Some(sub_view);
-            }
-            Action::InvalidFile(_) => {}
+    fn on_message(msg: &Self::Message, _props: &Self::Props, state: &mut Self::State) -> bool {
+        if let &Action::GotFile(ref path) = msg {
+            *state = Some(path.clone())
         }
+        true
     }
 }
 
-impl MessageHandler<Click> for MainView {
-    fn on_message(&self, message: &Click) {
-        match message {
-            Click::SelectFile => FileSelectPanel::new().show(file_selection_handler),
-        }
-    }
-}
+#[derive(Clone, PartialEq)]
+pub struct DatasetView;
 
-impl MessageHandler<Message> for MainView {
-    fn on_message(&self, message: &Message) {
-        self.dataset_view.borrow().on_message(message);
-    }
-}
-
-impl Default for MainView {
+#[derive(Clone)]
+pub struct DatasetViewState(pub Sender<AudioMessage>);
+impl Default for DatasetViewState {
     fn default() -> Self {
-        Self::new()
+        Self(get_audio())
     }
 }
 
-pub struct DatasetView {
-    content: view::View,
-    sub_views: RefCell<Vec<View<LayerView>>>,
-    audio: Sender<AudioMessage>,
-    dataset: RefCell<Dataset>,
-    spatial_reference_label: Label,
+impl PartialEq for DatasetViewState {
+    fn eq(&self, other: &Self) -> bool {
+        true
+    }
 }
 
-impl DatasetView {
-    fn new(dataset: Dataset) -> Self {
-        let audio = get_audio();
-        let view = Self {
-            content: View::new(),
-            dataset: RefCell::new(dataset),
-            audio,
-            sub_views: RefCell::new(Vec::new()),
-            spatial_reference_label: Label::new(),
-        };
-        {
-            let dataset = view.dataset.borrow_mut();
-            let mut sub_views = Vec::new();
-            let layers = dataset.layers();
-            let mut last_position = 0;
-            for layer in layers {
-                let vector_view = View::with(VectorLayerView::new(layer, None));
-                vector_view.set_background_color(cacao::color::Color::SystemRed);
-                sub_views.push(View::with(LayerView::Vector(vector_view)));
-                last_position += 1;
+pub struct DatasetViewProps {
+    dataset: Dataset,
+    file: PathBuf,
+}
+impl Clone for DatasetViewProps {
+    fn clone(&self) -> Self {
+        Self {
+            file: self.file.clone(),
+            dataset: Dataset::open(&self.file).unwrap(),
+        }
+    }
+}
+
+impl PartialEq for DatasetViewProps {
+    fn eq(&self, other: &Self) -> bool {
+        self.file == other.file
+    }
+}
+
+impl Component for DatasetView {
+    type Props = DatasetViewProps;
+    type State = DatasetViewState;
+    type Message = Action;
+    fn render(
+        props: &Self::Props,
+        state: &Self::State,
+    ) -> Vec<(usize, cacao_framework::VNode<Self>)> {
+        vec![(
+            0,
+            VNode::Label(VLabel {
+                text: props
+                    .dataset
+                    .spatial_ref()
+                    .unwrap_or_else(|_| props.dataset.layer(0).unwrap().spatial_ref().unwrap())
+                    .to_pretty_wkt()
+                    .unwrap(),
+            }),
+        )]
+        .into_iter()
+        .chain(
+            props
+                .dataset
+                .layers()
+                .enumerate()
+                .map(|(index, mut layer)| {
+                    (
+                        index + 1,
+                        VNode::Custom(VComponent::new::<VectorLayerView, BasicApp>(
+                            VectorLayerProps {
+                                labeled_by: None,
+                                common_fields: Vec::new(),
+                                feature_props: layer
+                                    .features()
+                                    .map(|feature| FeatureViewProps {
+                                        labeled_by: None,
+                                        feature: feature.into(),
+                                        position: index,
+                                    })
+                                    .collect(),
+                            },
+                        )),
+                    )
+                }),
+        )
+        .chain({
+            let mut rasters = Vec::new();
+            for i in 0..props.dataset.raster_count() {
+                let band = props.dataset.rasterband(i + 1).unwrap();
+                rasters.push(band);
             }
-            // TODO: Lets try replace with a proper iterator
-            for i in 1..=dataset.raster_count() {
-                let band = dataset.rasterband(i).unwrap();
-                let raster_view = View::with(ComponentWrapper::<RasterLayerView, BasicApp>::new(
-                    (band, i as usize + last_position).into(),
-                ));
-                sub_views.push(View::with(LayerView::Raster(raster_view)));
-            }
-            view.sub_views.borrow_mut().append(&mut sub_views);
-        }
-        view
+            rasters.into_iter().enumerate().map(|(index, band)| {
+                (
+                    index + props.dataset.layer_count() as usize + 1,
+                    VNode::Custom(VComponent::new::<RasterLayerView, BasicApp>(
+                        (band, index).into(),
+                    )),
+                )
+            })
+        })
+        .collect()
     }
-
-    fn update_new_label(&self, labeled_by: Option<String>) {
-        let mut sub_views = Vec::new();
-        let dataset = self.dataset.borrow_mut();
-        let layers = dataset.layers();
-        let mut last_position = 0;
-        for layer in layers {
-            let vector_view = View::with(VectorLayerView::new(layer, labeled_by.clone()));
-            vector_view.set_background_color(cacao::color::Color::SystemRed);
-            sub_views.push(View::with(LayerView::Vector(vector_view)));
-            last_position += 1;
-        }
-        // TODO: Lets try replace with a proper iterator
-        for i in 1..=dataset.raster_count() {
-            let band = dataset.rasterband(i).unwrap();
-            let raster_view = View::with(ComponentWrapper::<RasterLayerView, BasicApp>::new(
-                (band, i as usize + last_position).into(),
-            ));
-            let view = View::with(LayerView::Raster(raster_view));
-            sub_views.push(view);
-        }
-        let mut old_sub_views = self.sub_views.borrow_mut();
-        old_sub_views.clear();
-        old_sub_views.append(&mut sub_views);
-        for view in old_sub_views.iter() {
-            self.content.add_subview(view);
-        }
-    }
-}
-
-pub enum LayerView {
-    Vector(View<VectorLayerView>),
-    Raster(View<ComponentWrapper<RasterLayerView, BasicApp>>),
-}
-
-impl ViewDelegate for LayerView {
-    const NAME: &'static str = "LayerView";
-    fn did_load(&mut self, view: View) {
-        match self {
-            Self::Raster(raster) => view.add_subview(raster),
-            Self::Vector(vector) => view.add_subview(vector),
-        }
-        LayoutConstraint::activate(&[
-            view.height.constraint_equal_to_constant(300.),
-            view.width.constraint_equal_to_constant(600.),
-        ])
-    }
-}
-
-impl MessageHandler<Action> for LayerView {
-    fn on_message(&self, _message: &Action) {
-        if let LayerView::Vector(_) = self {
-            todo!()
-        }
-    }
-}
-
-impl MessageHandler<Click> for LayerView {
-    fn on_message(&self, _message: &Click) {
-        if let LayerView::Vector(_) = self {
-            todo!()
-        }
-    }
-}
-
-impl MessageHandler<Message> for LayerView {
-    fn on_message(&self, message: &Message) {
-        match self {
-            Self::Vector(_vector_view) => {}
-            Self::Raster(raster_view) => raster_view
-                .delegate
-                .as_ref()
-                .unwrap()
-                .as_ref()
-                .on_message(message),
-        }
-    }
-}
-
-impl ViewDelegate for MainView {
-    const NAME: &'static str = "SafeAreaView";
-
-    fn did_load(&mut self, view: View) {
-        self.button
-            .set_action(|_| dispatch_click(Click::SelectFile));
-        self.button.set_key_equivalent("c");
-        self.content.add_subview(&self.button);
-        view.add_subview(&self.content);
-        // Add layout constraints to be 100% excluding the safe area
-        // Do last because it will crash because the view needs to be inside the hierarchy
-        cacao::layout::LayoutConstraint::activate(&[
-            self.content
-                .top
-                .constraint_equal_to(&view.safe_layout_guide.top),
-            self.content
-                .leading
-                .constraint_equal_to(&view.safe_layout_guide.leading),
-            self.content
-                .trailing
-                .constraint_equal_to(&view.safe_layout_guide.trailing),
-            self.content
-                .bottom
-                .constraint_equal_to(&view.safe_layout_guide.bottom),
-        ])
-    }
-}
-
-impl ViewDelegate for DatasetView {
-    const NAME: &'static str = "DataSetView";
-
-    fn did_load(&mut self, view: View) {
-        for sub_view in self.sub_views.borrow().iter() {
-            self.content.add_subview(sub_view)
-        }
-        self.spatial_reference_label.set_text(
-            self.dataset
-                .borrow()
-                .spatial_ref()
-                .unwrap_or_else(|_| {
-                    self.dataset
-                        .borrow()
-                        .layer(0)
-                        .unwrap()
-                        .spatial_ref()
-                        .unwrap()
-                })
-                .to_pretty_wkt()
+    fn on_message(message: &Self::Message, _props: &Self::Props, state: &mut Self::State) -> bool {
+        match message {
+            Action::SendAudioGraph(graph, settings) => state
+                .0
+                .send(AudioMessage::PlayHistogram(graph.clone(), settings.clone()))
                 .unwrap(),
-        );
-        self.content.add_subview(&self.spatial_reference_label);
-        view.add_subview(&self.content);
-        // Add layout constraints to be 100% excluding the safe area
-        // Do last because it will crash because the view needs to be inside the hierarchy
-        LayoutConstraint::activate(&[
-            self.content
-                .top
-                .constraint_equal_to(&view.safe_layout_guide.top),
-            self.content
-                .leading
-                .constraint_equal_to(&view.safe_layout_guide.leading),
-            self.content
-                .trailing
-                .constraint_equal_to(&view.safe_layout_guide.trailing),
-            self.content
-                .bottom
-                .constraint_equal_to(&view.safe_layout_guide.bottom),
-            self.spatial_reference_label
-                .top
-                .constraint_equal_to(&self.content.top),
-            self.spatial_reference_label
-                .leading
-                .constraint_equal_to(&self.content.leading),
-            self.spatial_reference_label
-                .height
-                .constraint_equal_to_constant(40.0),
-            self.spatial_reference_label
-                .width
-                .constraint_equal_to_constant(80.0),
-        ])
+            _ => {}
+        };
+        false
     }
 }
 
@@ -292,36 +177,5 @@ fn file_selection_handler(paths: Vec<NSURL>) {
         dispatch_action(Action::InvalidFile(path));
         return;
     }
-    dispatch_action(Action::GotFile(path))
-}
-
-impl MessageHandler<Action> for DatasetView {
-    fn on_message(&self, message: &Action) {
-        match message {
-            Action::SendAudioGraph(graph, settings) => self
-                .audio
-                .send(AudioMessage::PlayHistogram(graph.clone(), settings.clone()))
-                .unwrap(),
-            Action::SetFeatureLabel(name) => self.update_new_label(Some(name.clone())),
-            Action::InvalidFile(_) => {}
-            Action::GotFile(_) => {}
-            _ => {}
-        }
-    }
-}
-
-impl MessageHandler<Click> for DatasetView {
-    fn on_message(&self, message: &Click) {
-        for view in self.sub_views.borrow().iter() {
-            view.on_message(message);
-        }
-    }
-}
-
-impl MessageHandler<Message> for DatasetView {
-    fn on_message(&self, message: &Message) {
-        for view in self.sub_views.borrow().iter() {
-            view.on_message(message);
-        }
-    }
+    App::<BasicApp, Message>::dispatch_main(Message::custom(Action::GotFile(path)))
 }
