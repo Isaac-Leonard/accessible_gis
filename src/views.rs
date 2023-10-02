@@ -3,7 +3,7 @@ use crate::audio::{get_audio, AudioMessage};
 use crate::events::{dispatch_action, Action};
 
 use crate::raster::*;
-use crate::vector::{FeatureViewProps, VectorLayerProps, VectorLayerView};
+use crate::vector::{get_fields, FeatureViewProps, VectorLayerProps, VectorLayerView};
 use cacao::appkit::App;
 use cacao::filesystem::FileSelectPanel;
 use cacao::foundation::NSURL;
@@ -123,7 +123,7 @@ impl Component for DatasetView {
                         VNode::Custom(VComponent::new::<VectorLayerView, BasicApp>(
                             VectorLayerProps {
                                 labeled_by: None,
-                                common_fields: Vec::new(),
+                                common_fields: get_fields(&mut layer),
                                 feature_props: layer
                                     .features()
                                     .map(|feature| FeatureViewProps {

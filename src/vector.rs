@@ -11,7 +11,7 @@ use gdal::vector::{Feature, FieldValue, Geometry};
 #[derive(Clone, PartialEq)]
 pub struct VectorLayerProps {
     pub labeled_by: Option<String>,
-    pub common_fields: Vec<(String, String)>,
+    pub common_fields: Vec<(String, Vec<&'static str>)>,
     pub feature_props: Vec<FeatureViewProps>,
 }
 
@@ -176,7 +176,7 @@ fn render_fields_row(
     vec![
         VNode::Label(VLabel { text: name.clone() }),
         VNode::Label(VLabel {
-            text: field_type.clone(),
+            text: field_type.join(","),
         }),
     ]
 }
@@ -194,7 +194,7 @@ fn actions(_row: usize, data: &(String, String), edge: RowEdge) -> Vec<RowAction
     )]
 }
 
-fn get_fields(layer: &mut Layer) -> Vec<(String, Vec<&'static str>)> {
+pub fn get_fields(layer: &mut Layer) -> Vec<(String, Vec<&'static str>)> {
     let mut fields: Vec<(String, Vec<&'static str>)> = Vec::new();
     for feature in layer.features() {
         for (name, val) in feature.fields() {
