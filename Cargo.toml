@@ -12,7 +12,7 @@ cacao = { git = "https://github.com/isaac-leonard/cacao", branch = "changes_for_
 cacao_framework = { git = "https://github.com/isaac-leonard/cacao_framework"}
 cpal = "0.15.2"
 fundsp = "0.15.0"
-gdal = {version = "0.15.0", features = ["array", "bindgen", "ndarray"]}
+gdal = {version = "0.16.0", features = ["array", "bindgen", "ndarray"]}
 gdal-sys = { version = "0.9.0", features = ["bindgen"]}
 ndarray = "0.15.6"
 ndarray-interp = "0.3.1"

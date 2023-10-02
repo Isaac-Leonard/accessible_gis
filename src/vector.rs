@@ -1,3 +1,6 @@
+use std::collections::{BTreeMap, BTreeSet};
+use std::ops::Index;
+
 use crate::app::BasicApp;
 use crate::events::{dispatch_action, Action};
 
@@ -24,7 +27,7 @@ impl Component for VectorLayerView {
         vec![(
             0,
             VNode::List(VList {
-                count: 0,
+                count: props.common_fields.len(),
                 render: render_fields_row,
             }),
         )]
@@ -195,19 +198,21 @@ fn actions(_row: usize, data: &(String, String), edge: RowEdge) -> Vec<RowAction
 }
 
 pub fn get_fields(layer: &mut Layer) -> Vec<(String, Vec<&'static str>)> {
-    let mut fields: Vec<(String, Vec<&'static str>)> = Vec::new();
+    let mut fields: BTreeMap<String, BTreeSet<&'static str>> = BTreeMap::new();
     for feature in layer.features() {
         for (name, val) in feature.fields() {
             let field_type: &'static str = val.map(custom_field_type_to_string).unwrap_or("Empty");
-            if let Some((_, ref mut types)) = fields.iter_mut().find(|x| x.0 == name) {
-                // Make sure we don't add the same type twice
-                if !types.contains(&field_type) {
-                    types.push(field_type)
-                }
+            if let Some(ref mut types) = fields.get_mut(&name) {
+                types.insert(field_type);
             } else {
-                fields.push((name.clone(), vec![field_type]))
+                let mut types = BTreeSet::new();
+                types.insert(field_type);
+                fields.insert(name.clone(), types);
             }
         }
     }
     fields
+        .into_iter()
+        .map(|(name, types)| (name, types.into_iter().collect()))
+        .collect()
 }
