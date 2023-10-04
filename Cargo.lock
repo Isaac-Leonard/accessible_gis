@@ -206,7 +206,7 @@ dependencies = [
 [[package]]
 name = "cacao_framework"
 version = "0.1.0"
-source = "git+https://github.com/isaac-leonard/cacao_framework#53e60b35c7587b52e3b7f3ccc9fe3338f71987e3"
+source = "git+https://github.com/isaac-leonard/cacao_framework#1a4bc80d6a833ed1293bde7f5eac9e1d99d18fb2"
 dependencies = [
  "cacao",
 ]

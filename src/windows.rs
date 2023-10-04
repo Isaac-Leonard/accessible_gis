@@ -184,6 +184,7 @@ impl MessageHandler<Message> for WindowManager {
         self.main.on_message(message);
         self.change_hist_settings.on_message(message);
         self.raster_graph_settings.on_message(message);
+        self.new_dataset.on_message(message);
     }
 }
 

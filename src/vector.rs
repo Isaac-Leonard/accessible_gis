@@ -28,10 +28,10 @@ impl Component for VectorLayerView {
             (0, VNode::Text("Common fields")),
             (
                 1,
-            VNode::List(VList {
-                count: props.common_fields.len(),
-                render: render_fields_row,
-            }),
+                VNode::List(VList {
+                    count: props.common_fields.len(),
+                    render: render_fields_row,
+                }),
             ),
         ]
         .into_iter()

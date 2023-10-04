@@ -4,6 +4,8 @@ use crate::graph::{HistogramSettings, RasterGraphSettings};
 
 use cacao::appkit::App;
 use cacao::view::View;
+use gdal::raster::GdalDataType;
+use gdal_sys::GDALDataType;
 
 use std::path::PathBuf;
 use std::sync::RwLock;
@@ -21,6 +23,7 @@ pub enum Action {
     SendChangeHistogramSettings(usize, HistogramSettings),
     SendChangeRasterGraphSettings(usize, RasterGraphSettings),
     OpenNewDatasetWindow,
+    CreateDataset(DatasetCreationOptions),
 }
 
 /// Dispatch a message on a background thread.
@@ -67,4 +70,13 @@ impl<M: Send + Sync, T: MessageHandler<M>> MessageHandler<M> for View<T> {
     fn on_message(&self, message: &M) {
         self.delegate.on_message(message)
     }
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct DatasetCreationOptions {
+    pub file_name: String,
+    pub driver_name: String,
+    pub raster_width: usize,
+    pub raster_height: usize,
+    pub raster_data_type: GdalDataType,
 }

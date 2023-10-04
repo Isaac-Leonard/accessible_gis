@@ -21,16 +21,16 @@ impl Component for MainView {
     type State = Vec<PathBuf>;
     type Message = Action;
     fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
-            vec![
-                (
-                    0,
-                    VNode::Button(VButton {
-                        text: "Select file".to_owned(),
-                        click: Some(|_, _| FileSelectPanel::new().show(file_selection_handler)),
-                    }),
-                ),
-                (
-                    1,
+        vec![
+            (
+                0,
+                VNode::Button(VButton {
+                    text: "Select file".to_owned(),
+                    click: Some(|_, _| FileSelectPanel::new().show(file_selection_handler)),
+                }),
+            ),
+            (
+                1,
                 VNode::Button(VButton {
                     text: "New dataset".to_owned(),
                     click: Some(|_, _| dispatch_action(Action::OpenNewDatasetWindow)),
@@ -41,18 +41,22 @@ impl Component for MainView {
         .chain(state.iter().enumerate().map(|(index, path)| {
             (
                 index + 10,
-                    VNode::Custom(VComponent::new::<DatasetView, BasicApp>(DatasetViewProps {
-                        file: path.clone(),
-                        dataset: Dataset::open(path).unwrap(),
-                    })),
+                VNode::Custom(VComponent::new::<DatasetView, BasicApp>(DatasetViewProps {
+                    file: path.clone(),
+                    dataset: Dataset::open(path).unwrap(),
+                })),
             )
         }))
         .collect()
     }
 
     fn on_message(msg: &Self::Message, _props: &Self::Props, state: &mut Self::State) -> bool {
-        if let &Action::GotFile(ref path) = msg {
-            state.push(path.clone())
+        match msg {
+            &Action::GotFile(ref path) => state.push(path.clone()),
+            &Action::CreateDataset(ref settings) => {
+                eprintln!("Reached creation point")
+            }
+            _ => (),
         }
         true
     }
