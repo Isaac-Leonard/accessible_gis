@@ -15,10 +15,12 @@ pub enum Action {
     SetFeatureLabel(String),
     CloseChangeHistogramSettings,
     CloseRasterSettings,
+    CloseNewDatasetWindow,
     OpenMainWindow,
     SendAudioGraph(Vec<f64>, HistogramSettings),
     SendChangeHistogramSettings(usize, HistogramSettings),
     SendChangeRasterGraphSettings(usize, RasterGraphSettings),
+    OpenNewDatasetWindow,
 }
 
 /// Dispatch a message on a background thread.

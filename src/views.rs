@@ -18,10 +18,9 @@ use std::sync::mpsc::Sender;
 pub struct MainView;
 impl Component for MainView {
     type Props = ();
-    type State = Option<PathBuf>;
+    type State = Vec<PathBuf>;
     type Message = Action;
     fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
-        if let Some(path) = state {
             vec![
                 (
                     0,
@@ -32,25 +31,28 @@ impl Component for MainView {
                 ),
                 (
                     1,
+                VNode::Button(VButton {
+                    text: "New dataset".to_owned(),
+                    click: Some(|_, _| dispatch_action(Action::OpenNewDatasetWindow)),
+                }),
+            ),
+        ]
+        .into_iter()
+        .chain(state.iter().enumerate().map(|(index, path)| {
+            (
+                index + 10,
                     VNode::Custom(VComponent::new::<DatasetView, BasicApp>(DatasetViewProps {
                         file: path.clone(),
                         dataset: Dataset::open(path).unwrap(),
                     })),
-                ),
-            ]
-        } else {
-            vec![(
-                0,
-                VNode::Button(VButton {
-                    text: "Select file".to_owned(),
-                    click: Some(|_, _| FileSelectPanel::new().show(file_selection_handler)),
-                }),
-            )]
-        }
+            )
+        }))
+        .collect()
     }
+
     fn on_message(msg: &Self::Message, _props: &Self::Props, state: &mut Self::State) -> bool {
         if let &Action::GotFile(ref path) = msg {
-            *state = Some(path.clone())
+            state.push(path.clone())
         }
         true
     }

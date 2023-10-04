@@ -24,13 +24,16 @@ impl Component for VectorLayerView {
     type Props = VectorLayerProps;
     type State = ();
     fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
-        vec![(
-            0,
+        vec![
+            (0, VNode::Text("Common fields")),
+            (
+                1,
             VNode::List(VList {
                 count: props.common_fields.len(),
                 render: render_fields_row,
             }),
-        )]
+            ),
+        ]
         .into_iter()
         .chain(
             props
@@ -39,7 +42,7 @@ impl Component for VectorLayerView {
                 .enumerate()
                 .map(|(index, feature)| {
                     (
-                        index + 1,
+                        index + 10,
                         VNode::Custom(VComponent::new::<FeatureView, BasicApp>(feature.clone())),
                     )
                 }),

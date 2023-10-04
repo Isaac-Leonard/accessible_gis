@@ -10,6 +10,7 @@ use crate::{
     events::{Action, MessageHandler},
     graph::{HistogramSettings, RasterGraphSettings},
     histogram_settings_window::ChangeHistogramSettingsWindow,
+    new_dataset_window::NewDatasetWindow,
     raster_graph_settings_window::RasterGraphSettingsWindow,
     views::MainView,
 };
@@ -19,6 +20,7 @@ pub struct WindowManager {
     pub main: RwLock<Option<Window<MainWindow>>>,
     pub change_hist_settings: RwLock<Option<Window<ChangeHistogramSettingsWindow>>>,
     pub raster_graph_settings: RwLock<Option<Window<RasterGraphSettingsWindow>>>,
+    pub new_dataset: RwLock<Option<Window<NewDatasetWindow>>>,
 }
 
 /// A helper method to handle checking for window existence, and creating
@@ -78,6 +80,7 @@ impl WindowManager {
             *lock = Some(window);
         }
     }
+
     pub fn open_raster_graph_settings(&self, position: usize, settings: RasterGraphSettings) {
         let callback = || {};
 
@@ -90,6 +93,20 @@ impl WindowManager {
                 WindowConfig::default(),
                 RasterGraphSettingsWindow::new(position, settings),
             );
+            self.begin_sheet(&window, callback);
+            *lock = Some(window);
+        }
+    }
+
+    pub fn open_new_dataset(&self) {
+        let callback = || {};
+
+        let mut lock = self.new_dataset.write().unwrap();
+
+        if let Some(win) = &*lock {
+            self.begin_sheet(win, callback);
+        } else {
+            let window = Window::with(WindowConfig::default(), NewDatasetWindow::new());
             self.begin_sheet(&window, callback);
             *lock = Some(window);
         }
@@ -123,6 +140,20 @@ impl WindowManager {
 
         *add = None;
     }
+
+    pub fn close_new_dataset(&self) {
+        let mut new_dataset_window = self.new_dataset.write().unwrap();
+
+        if let Some(add_window) = &*new_dataset_window {
+            let main = self.main.write().unwrap();
+
+            if let Some(main_window) = &*main {
+                main_window.end_sheet(add_window);
+            }
+        }
+
+        *new_dataset_window = None;
+    }
 }
 
 impl MessageHandler<Action> for WindowManager {
@@ -130,6 +161,7 @@ impl MessageHandler<Action> for WindowManager {
         match message {
             Action::CloseChangeHistogramSettings => self.close_histogram_settings(),
             Action::CloseRasterSettings => self.close_raster_graph_settings(),
+            Action::CloseNewDatasetWindow => self.close_new_dataset(),
             Action::OpenMainWindow => {
                 self.open_main();
             }
@@ -140,6 +172,7 @@ impl MessageHandler<Action> for WindowManager {
             Action::SendChangeRasterGraphSettings(position, settings) => {
                 self.open_raster_graph_settings(*position, settings.clone());
             }
+            Action::OpenNewDatasetWindow => self.open_new_dataset(),
             _ => {}
         }
     }

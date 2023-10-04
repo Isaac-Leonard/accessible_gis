@@ -4,11 +4,13 @@
 #![feature(result_option_inspect)]
 mod app;
 mod audio;
+mod commands;
 mod events;
 mod graph;
 mod histogram_settings_window;
 mod layout;
 mod list_view;
+mod new_dataset_window;
 mod raster;
 mod raster_graph_settings_window;
 mod vector;
