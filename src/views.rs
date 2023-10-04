@@ -2,6 +2,7 @@ use crate::app::BasicApp;
 use crate::audio::{get_audio, AudioMessage};
 use crate::events::{dispatch_action, Action};
 
+use crate::new_dataset_window::create_dataset;
 use crate::raster::*;
 use crate::vector::{get_fields, FeatureViewProps, VectorLayerProps, VectorLayerView};
 use cacao::appkit::App;
@@ -9,16 +10,19 @@ use cacao::filesystem::FileSelectPanel;
 use cacao::foundation::NSURL;
 
 use cacao_framework::{Component, Message, VButton, VComponent, VLabel, VNode};
+use gdal::errors::GdalError;
 use gdal::vector::LayerAccess;
 use gdal::Dataset;
 use std::path::PathBuf;
+use std::rc::Rc;
+use std::sync::atomic;
 use std::sync::mpsc::Sender;
 
 #[derive(Clone, PartialEq)]
 pub struct MainView;
 impl Component for MainView {
     type Props = ();
-    type State = Vec<PathBuf>;
+    type State = Vec<DatasetViewProps>;
     type Message = Action;
     fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
         vec![
@@ -38,13 +42,10 @@ impl Component for MainView {
             ),
         ]
         .into_iter()
-        .chain(state.iter().enumerate().map(|(index, path)| {
+        .chain(state.iter().enumerate().map(|(index, dataset)| {
             (
                 index + 10,
-                VNode::Custom(VComponent::new::<DatasetView, BasicApp>(DatasetViewProps {
-                    file: path.clone(),
-                    dataset: Dataset::open(path).unwrap(),
-                })),
+                VNode::Custom(VComponent::new::<DatasetView, BasicApp>(dataset.clone())),
             )
         }))
         .collect()
@@ -52,9 +53,11 @@ impl Component for MainView {
 
     fn on_message(msg: &Self::Message, _props: &Self::Props, state: &mut Self::State) -> bool {
         match msg {
-            &Action::GotFile(ref path) => state.push(path.clone()),
+            &Action::GotFile(ref path) => {
+                state.push(DatasetViewProps::try_from(path.clone()).unwrap())
+            }
             &Action::CreateDataset(ref settings) => {
-                eprintln!("Reached creation point")
+                state.push(DatasetViewProps::from(create_dataset(settings).unwrap()));
             }
             _ => (),
         }
@@ -79,22 +82,32 @@ impl PartialEq for DatasetViewState {
     }
 }
 
+#[derive(Clone)]
 pub struct DatasetViewProps {
-    dataset: Dataset,
-    file: PathBuf,
+    pub dataset: Rc<Dataset>,
+    pub id: usize,
 }
-impl Clone for DatasetViewProps {
-    fn clone(&self) -> Self {
+
+impl TryFrom<PathBuf> for DatasetViewProps {
+    type Error = GdalError;
+    fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: gen_id(),
+            dataset: Rc::new(Dataset::open(value)?),
+        })
+    }
+}
+impl From<Dataset> for DatasetViewProps {
+    fn from(value: Dataset) -> Self {
         Self {
-            file: self.file.clone(),
-            dataset: Dataset::open(&self.file).unwrap(),
+            id: gen_id(),
+            dataset: value.into(),
         }
     }
 }
-
 impl PartialEq for DatasetViewProps {
     fn eq(&self, other: &Self) -> bool {
-        self.file == other.file
+        self.id == other.id
     }
 }
 
@@ -112,9 +125,14 @@ impl Component for DatasetView {
                 text: props
                     .dataset
                     .spatial_ref()
-                    .unwrap_or_else(|_| props.dataset.layer(0).unwrap().spatial_ref().unwrap())
-                    .to_pretty_wkt()
-                    .unwrap(),
+                    .map(|x| x.to_pretty_wkt().unwrap())
+                    .unwrap_or_else(|_| {
+                        props
+                            .dataset
+                            .layer(0)
+                            .map(|x| x.spatial_ref().unwrap().to_pretty_wkt().unwrap())
+                            .unwrap_or_else(|_| "No spacial reference could be found".to_owned())
+                    }),
             }),
         )]
         .into_iter()
@@ -184,4 +202,9 @@ fn file_selection_handler(paths: Vec<NSURL>) {
         return;
     }
     App::<BasicApp, Message>::dispatch_main(Message::custom(Action::GotFile(path)))
+}
+
+fn gen_id() -> usize {
+    static COUNTER: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
+    COUNTER.fetch_add(1, atomic::Ordering::SeqCst)
 }

@@ -6,7 +6,6 @@ use cacao_framework::{
 };
 use gdal::raster::GdalDataType;
 use gdal::DriverManager;
-use std::path::PathBuf;
 
 use gdal::Dataset;
 
@@ -14,10 +13,26 @@ use crate::app::BasicApp;
 use crate::commands::list_drivers;
 use crate::events::{dispatch_action, Action, DatasetCreationOptions, MessageHandler};
 
-pub fn save(name: PathBuf, driver: &str) -> Result<(), ()> {
-    let driver = DriverManager::get_driver_by_name(driver).map_err(|x| ())?;
-    let dataset = driver.create("in-memory", 64, 64, 1);
-    Err(())
+pub fn create_dataset(options: &DatasetCreationOptions) -> Result<Dataset, ()> {
+    eprintln!("{}", options.driver_name.trim().split('-').next().unwrap());
+    let driver =
+        DriverManager::get_driver_by_name(options.driver_name.split('-').next().unwrap().trim())
+            .map_err(|err| {
+                eprintln!("{:?}", err);
+                ()
+            })?;
+    let dataset = driver
+        .create(
+            &options.file_name,
+            options.raster_width as isize,
+            options.raster_height as isize,
+            options.raster.into(),
+        )
+        .map_err(|err| {
+            eprintln!("{:?}", err);
+            ()
+        })?;
+    Ok(dataset)
 }
 
 #[derive(PartialEq, Clone)]
@@ -52,9 +67,9 @@ pub struct NewDatasetSettings {
 
 impl NewDatasetSettings {
     pub fn to_options(&self, drivers: &[String]) -> DatasetCreationOptions {
-        let options = match self.options {
-            Options::Vector(ref _a) => RasterOptions::for_vector(),
-            Options::Raster(ref options) => options.clone(),
+        let (options, raster) = match self.options {
+            Options::Vector(ref _a) => (RasterOptions::for_vector(), false),
+            Options::Raster(ref options) => (options.clone(), true),
         };
         DatasetCreationOptions {
             file_name: self.file_name.clone(),
@@ -62,6 +77,7 @@ impl NewDatasetSettings {
             raster_width: options.x,
             raster_height: options.y,
             raster_data_type: options.data_type,
+            raster,
         }
     }
 }
@@ -71,7 +87,7 @@ impl Default for NewDatasetSettings {
         Self {
             file_name: "dataset".to_owned(),
             driver: 0,
-            options: Options::Vector(VectorOptions::default()),
+            options: Options::Raster(RasterOptions::default()),
             missed_requirements: Vec::new(),
         }
     }
@@ -168,7 +184,10 @@ impl Component for NewDatasetSettingsComponent {
                 1,
                 VNode::Select(VSelect {
                     options: props.available_drivers.clone(),
-                    select: None,
+                    select: Some(|index, _, state| {
+                        state.driver = index;
+                        false
+                    }),
                 }),
             ),
             (

@@ -79,4 +79,5 @@ pub struct DatasetCreationOptions {
     pub raster_width: usize,
     pub raster_height: usize,
     pub raster_data_type: GdalDataType,
+    pub raster: bool,
 }
