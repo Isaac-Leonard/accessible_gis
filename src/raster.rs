@@ -36,7 +36,8 @@ impl Clone for RasterViewerData {
 #[derive(PartialEq, Clone)]
 pub struct RasterLayerProps {
     data: RawRasterData,
-    position: usize,
+    dataset_index: usize,
+    band_index: usize,
     band_type: GdalDataType,
     hist: Option<Vec<f64>>,
     min: f64,
@@ -65,7 +66,7 @@ impl Component for RasterLayerView {
                     1,
                     VNode::Custom(VComponent::new::<HistComponent, BasicApp>((
                         hist.clone(),
-                        props.position,
+                        props.band_index,
                     ))),
                 ),
                 (2, stats),
@@ -76,8 +77,8 @@ impl Component for RasterLayerView {
     }
 }
 
-impl<'a> From<(RasterBand<'a>, usize)> for RasterLayerProps {
-    fn from((band, position): (RasterBand, usize)) -> Self {
+impl RasterLayerProps {
+    pub fn new(band: RasterBand, dataset_index: usize, band_index: usize) -> Self {
         let band_type = band.band_type();
         let hist = match band_type {
             GdalDataType::UInt8 => Some(generate_image_histogram(
@@ -132,7 +133,6 @@ impl<'a> From<(RasterBand<'a>, usize)> for RasterLayerProps {
             min: min_max.min,
             max: min_max.max,
             data: RawRasterData {
-                position,
                 data_type: band_type.name(),
                 data,
                 min: min_max.min,
@@ -141,7 +141,8 @@ impl<'a> From<(RasterBand<'a>, usize)> for RasterLayerProps {
                 sender: get_audio(),
             },
             hist,
-            position,
+            dataset_index,
+            band_index,
             stats: RasterViewerData {
                 stats: band.get_statistics(true, true).unwrap().unwrap(),
                 width: band.size().0,
@@ -243,10 +244,7 @@ impl Component for AudioControls {
                 VNode::Button(VButton {
                     text: "Change raster audiograph settings".to_owned(),
                     click: Some(|props, settings| {
-                        dispatch_action(Action::SendChangeRasterGraphSettings(
-                            props.position,
-                            settings.clone(),
-                        ))
+                        dispatch_action(Action::SendChangeRasterGraphSettings(0, settings.clone()))
                     }),
                 }),
             ),
@@ -261,7 +259,6 @@ impl Component for AudioControls {
 
 #[derive(Clone)]
 pub struct RawRasterData {
-    pub position: usize,
     pub data_type: String,
     pub data: Array2<f64>,
     pub min: f64,

@@ -235,7 +235,7 @@ impl Component for DatasetView {
                 (
                     index + props.dataset().layer_count() as usize + 21,
                     VNode::Custom(VComponent::new::<RasterLayerView, BasicApp>(
-                        (band, index).into(),
+                        RasterLayerProps::new(band, props.index, index),
                     )),
                 )
             })
