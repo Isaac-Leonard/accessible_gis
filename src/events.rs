@@ -24,6 +24,8 @@ pub enum Action {
     SendChangeRasterGraphSettings(usize, RasterGraphSettings),
     OpenNewDatasetWindow,
     CreateDataset(DatasetCreationOptions),
+    CopyDataset(usize),
+    CreateCoppiedDataset(usize, PathBuf),
 }
 
 /// Dispatch a message on a background thread.

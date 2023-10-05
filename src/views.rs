@@ -6,7 +6,7 @@ use crate::new_dataset_window::create_dataset;
 use crate::raster::*;
 use crate::vector::{get_fields, FeatureViewProps, VectorLayerProps, VectorLayerView};
 use cacao::appkit::App;
-use cacao::filesystem::FileSelectPanel;
+use cacao::filesystem::{FileSavePanel, FileSelectPanel};
 use cacao::foundation::NSURL;
 
 use cacao_framework::{Component, Message, VButton, VComponent, VLabel, VNode};
@@ -22,7 +22,7 @@ use std::sync::mpsc::Sender;
 pub struct MainView;
 impl Component for MainView {
     type Props = ();
-    type State = Vec<DatasetViewProps>;
+    type State = Vec<DatasetWrapper>;
     type Message = Action;
     fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
         vec![
@@ -45,19 +45,41 @@ impl Component for MainView {
         .chain(state.iter().enumerate().map(|(index, dataset)| {
             (
                 index + 10,
-                VNode::Custom(VComponent::new::<DatasetView, BasicApp>(dataset.clone())),
+                VNode::Custom(VComponent::new::<DatasetView, BasicApp>(DatasetViewProps {
+                    index,
+                    dataset: dataset.clone(),
+                })),
             )
         }))
         .collect()
     }
 
     fn on_message(msg: &Self::Message, _props: &Self::Props, state: &mut Self::State) -> bool {
+        eprintln!("{:?}", msg);
         match msg {
             &Action::GotFile(ref path) => {
-                state.push(DatasetViewProps::try_from(path.clone()).unwrap())
+                state.push(DatasetWrapper::try_from(path.clone()).unwrap())
             }
             &Action::CreateDataset(ref settings) => {
-                state.push(DatasetViewProps::from(create_dataset(settings).unwrap()));
+                state.push(DatasetWrapper::from(create_dataset(settings).unwrap()));
+            }
+            &Action::CopyDataset(index) => {
+                let mut panel = FileSavePanel::new();
+                panel.set_message("Destination of copy:");
+                panel.show(move |path| {
+                    if let Some(path) = path {
+                        App::<BasicApp, Message>::dispatch_main(Message::custom(
+                            Action::CreateCoppiedDataset(index, path.try_into().unwrap()),
+                        ));
+                    }
+                })
+            }
+            Action::CreateCoppiedDataset(index, path) => {
+                let copy = {
+                    let dataset = &state[*index].dataset();
+                    dataset.create_copy(&dataset.driver(), path, &[]).unwrap()
+                };
+                state.push(DatasetWrapper::from(copy));
             }
             _ => (),
         }
@@ -82,13 +104,34 @@ impl PartialEq for DatasetViewState {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct DatasetViewProps {
-    pub dataset: Rc<Dataset>,
-    pub id: usize,
+    pub dataset: DatasetWrapper,
+    pub index: usize,
 }
+impl DatasetViewProps {
+    fn new(index: usize, dataset: Dataset) -> Self {
+        Self {
+            index,
+            dataset: dataset.into(),
+        }
+    }
 
-impl TryFrom<PathBuf> for DatasetViewProps {
+    fn dataset(&self) -> &Dataset {
+        self.dataset.dataset()
+    }
+}
+#[derive(Clone)]
+pub struct DatasetWrapper {
+    dataset: Rc<Dataset>,
+    id: usize,
+}
+impl DatasetWrapper {
+    fn dataset(&self) -> &Dataset {
+        self.dataset.as_ref()
+    }
+}
+impl TryFrom<PathBuf> for DatasetWrapper {
     type Error = GdalError;
     fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -97,7 +140,7 @@ impl TryFrom<PathBuf> for DatasetViewProps {
         })
     }
 }
-impl From<Dataset> for DatasetViewProps {
+impl From<Dataset> for DatasetWrapper {
     fn from(value: Dataset) -> Self {
         Self {
             id: gen_id(),
@@ -105,7 +148,7 @@ impl From<Dataset> for DatasetViewProps {
         }
     }
 }
-impl PartialEq for DatasetViewProps {
+impl PartialEq for DatasetWrapper {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
@@ -121,34 +164,45 @@ impl Component for DatasetView {
     ) -> Vec<(usize, cacao_framework::VNode<Self>)> {
         vec![
             (
-            0,
+                0,
                 VNode::Label(VLabel {
-                    text: format!("Driver: {}", props.dataset.driver().long_name(),),
+                    text: format!("Driver: {}", props.dataset().driver().long_name(),),
                 }),
             ),
             (
                 1,
-            VNode::Label(VLabel {
-                text: props
-                    .dataset
-                    .spatial_ref()
-                    .map(|x| x.to_pretty_wkt().unwrap())
-                    .unwrap_or_else(|_| {
-                        props
-                            .dataset
-                            .layer(0)
-                            .map(|x| x.spatial_ref().unwrap().to_pretty_wkt().unwrap())
+                VNode::Label(VLabel {
+                    text: props
+                        .dataset()
+                        .spatial_ref()
+                        .map(|x| x.to_pretty_wkt().unwrap())
+                        .unwrap_or_else(|_| {
+                            props
+                                .dataset()
+                                .layer(0)
+                                .map(|x| x.spatial_ref().unwrap().to_pretty_wkt().unwrap())
                                 .unwrap_or_else(|_| {
-                                    "No spacial reference could be found".to_owned()
+                                    "No spatial reference could be found".to_owned()
                                 })
+                        }),
+                }),
+            ),
+            (
+                2,
+                VNode::Button(VButton {
+                    text: "Copy dataset".to_owned(),
+                    click: Some(|props: &Self::Props, _: &mut Self::State| {
+                        App::<BasicApp, Message>::dispatch_main(Message::custom(
+                            Action::CopyDataset(props.index),
+                        ))
                     }),
-            }),
+                }),
             ),
         ]
         .into_iter()
         .chain(
             props
-                .dataset
+                .dataset()
                 .layers()
                 .enumerate()
                 .map(|(index, mut layer)| {
@@ -173,13 +227,13 @@ impl Component for DatasetView {
         )
         .chain({
             let mut rasters = Vec::new();
-            for i in 0..props.dataset.raster_count() {
-                let band = props.dataset.rasterband(i + 1).unwrap();
+            for i in 0..props.dataset().raster_count() {
+                let band = props.dataset().rasterband(i + 1).unwrap();
                 rasters.push(band);
             }
             rasters.into_iter().enumerate().map(|(index, band)| {
                 (
-                    index + props.dataset.layer_count() as usize + 21,
+                    index + props.dataset().layer_count() as usize + 21,
                     VNode::Custom(VComponent::new::<RasterLayerView, BasicApp>(
                         (band, index).into(),
                     )),
