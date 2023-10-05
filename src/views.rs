@@ -119,8 +119,15 @@ impl Component for DatasetView {
         props: &Self::Props,
         state: &Self::State,
     ) -> Vec<(usize, cacao_framework::VNode<Self>)> {
-        vec![(
+        vec![
+            (
             0,
+                VNode::Label(VLabel {
+                    text: format!("Driver: {}", props.dataset.driver().long_name(),),
+                }),
+            ),
+            (
+                1,
             VNode::Label(VLabel {
                 text: props
                     .dataset
@@ -131,10 +138,13 @@ impl Component for DatasetView {
                             .dataset
                             .layer(0)
                             .map(|x| x.spatial_ref().unwrap().to_pretty_wkt().unwrap())
-                            .unwrap_or_else(|_| "No spacial reference could be found".to_owned())
+                                .unwrap_or_else(|_| {
+                                    "No spacial reference could be found".to_owned()
+                                })
                     }),
             }),
-        )]
+            ),
+        ]
         .into_iter()
         .chain(
             props
@@ -143,7 +153,7 @@ impl Component for DatasetView {
                 .enumerate()
                 .map(|(index, mut layer)| {
                     (
-                        index + 1,
+                        index + 20,
                         VNode::Custom(VComponent::new::<VectorLayerView, BasicApp>(
                             VectorLayerProps {
                                 labeled_by: None,
@@ -169,7 +179,7 @@ impl Component for DatasetView {
             }
             rasters.into_iter().enumerate().map(|(index, band)| {
                 (
-                    index + props.dataset.layer_count() as usize + 1,
+                    index + props.dataset.layer_count() as usize + 21,
                     VNode::Custom(VComponent::new::<RasterLayerView, BasicApp>(
                         (band, index).into(),
                     )),

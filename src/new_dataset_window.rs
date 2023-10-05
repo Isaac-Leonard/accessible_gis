@@ -42,10 +42,7 @@ pub enum State {
 }
 impl Default for State {
     fn default() -> Self {
-        let drivers = match list_drivers() {
-            Ok(drivers) => drivers,
-            Err(message) => return State::Invalid(message),
-        };
+        let drivers = list_drivers();
         State::Valid(ValidState {
             available_drivers: drivers,
         })
