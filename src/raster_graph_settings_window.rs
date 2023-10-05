@@ -14,6 +14,7 @@ use crate::{
     app::BasicApp,
     events::{dispatch_action, Action, MessageHandler},
     graph::{OptionalRasterGraphSettings, RasterGraphSettings},
+    raster::RasterIndex,
 };
 
 pub struct RasterGraphSettingsWindow {
@@ -21,9 +22,9 @@ pub struct RasterGraphSettingsWindow {
 }
 
 impl RasterGraphSettingsWindow {
-    pub fn new(position: usize, settings: RasterGraphSettings) -> Self {
+    pub fn new(settings: RasterGraphSettings, index: RasterIndex) -> Self {
         let content = ViewController::new(
-            ComponentWrapper::<RasterGraphSettingsComponent, BasicApp>::new(settings),
+            ComponentWrapper::<RasterGraphSettingsComponent, BasicApp>::new((settings, index)),
         );
 
         Self { content }
@@ -56,9 +57,12 @@ impl WindowDelegate for RasterGraphSettingsWindow {
 #[derive(Clone, PartialEq)]
 pub struct RasterGraphSettingsComponent;
 impl Component for RasterGraphSettingsComponent {
-    type Props = RasterGraphSettings;
+    type Props = (RasterGraphSettings, RasterIndex);
     type State = OptionalRasterGraphSettings;
-    fn render(old: &Self::Props, new: &Self::State) -> Vec<(usize, cacao_framework::VNode<Self>)> {
+    fn render(
+        (old, _): &Self::Props,
+        new: &Self::State,
+    ) -> Vec<(usize, cacao_framework::VNode<Self>)> {
         vec![
             (
                 0,
@@ -148,10 +152,12 @@ impl Component for RasterGraphSettingsComponent {
                 1000,
                 VNode::Button(VButton {
                     text: "Done".to_owned(),
-                    click: Some(|props, state| {
-                        let mut settings = props.clone();
+                    click: Some(|(old_settings, index), state| {
+                        let mut settings = old_settings.clone();
                         state.clone().apply_to(&mut settings);
-                        App::<BasicApp, Message>::dispatch_main(Message::custom(settings));
+                        App::<BasicApp, Message>::dispatch_main(Message::custom((
+                            settings, *index,
+                        )));
                         dispatch_action(Action::CloseRasterSettings);
                     }),
                 }),

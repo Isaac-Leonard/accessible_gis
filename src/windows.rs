@@ -11,6 +11,7 @@ use crate::{
     graph::{HistogramSettings, RasterGraphSettings},
     histogram_settings_window::ChangeHistogramSettingsWindow,
     new_dataset_window::NewDatasetWindow,
+    raster::RasterIndex,
     raster_graph_settings_window::RasterGraphSettingsWindow,
     views::MainView,
 };
@@ -64,7 +65,7 @@ impl WindowManager {
     /// Opens a "add file" window, which asks for a code and optional server to
     /// check against. This should, probably, be a sheet - but for now it's fine as a
     /// separate window until I can find time to port that API.
-    pub fn open_histogram_settings(&self, position: usize, settings: HistogramSettings) {
+    pub fn open_histogram_settings(&self, settings: HistogramSettings, index: RasterIndex) {
         let callback = || {};
 
         let mut lock = self.change_hist_settings.write().unwrap();
@@ -74,14 +75,14 @@ impl WindowManager {
         } else {
             let window = Window::with(
                 WindowConfig::default(),
-                ChangeHistogramSettingsWindow::new(position, settings),
+                ChangeHistogramSettingsWindow::new(settings, index),
             );
             self.begin_sheet(&window, callback);
             *lock = Some(window);
         }
     }
 
-    pub fn open_raster_graph_settings(&self, position: usize, settings: RasterGraphSettings) {
+    pub fn open_raster_graph_settings(&self, settings: RasterGraphSettings, index: RasterIndex) {
         let callback = || {};
 
         let mut lock = self.raster_graph_settings.write().unwrap();
@@ -91,7 +92,7 @@ impl WindowManager {
         } else {
             let window = Window::with(
                 WindowConfig::default(),
-                RasterGraphSettingsWindow::new(position, settings),
+                RasterGraphSettingsWindow::new(settings, index),
             );
             self.begin_sheet(&window, callback);
             *lock = Some(window);
@@ -166,11 +167,11 @@ impl MessageHandler<Action> for WindowManager {
                 self.open_main();
             }
 
-            Action::SendChangeHistogramSettings(position, settings) => {
-                self.open_histogram_settings(*position, settings.clone());
+            Action::SendChangeHistogramSettings(settings, index) => {
+                self.open_histogram_settings(settings.clone(), *index);
             }
-            Action::SendChangeRasterGraphSettings(position, settings) => {
-                self.open_raster_graph_settings(*position, settings.clone());
+            Action::SendChangeRasterGraphSettings(settings, index) => {
+                self.open_raster_graph_settings(settings.clone(), *index);
             }
             Action::OpenNewDatasetWindow => self.open_new_dataset(),
             _ => {}

@@ -12,6 +12,7 @@ use crate::{
     app::BasicApp,
     events::{dispatch_action, Action, MessageHandler},
     graph::{HistogramSettings, OptionalHistogramSettings},
+    raster::RasterIndex,
 };
 
 #[derive(Clone, PartialEq)]
@@ -86,7 +87,12 @@ impl Component for UpdateHistogramSettingsView {
                     click: Some(|props, state| {
                         let mut settings = props.settings.clone();
                         state.clone().apply_to(&mut settings);
-                        App::<BasicApp, Message>::dispatch_main(Message::custom(settings));
+                        App::<BasicApp, Message>::dispatch_main(Message::custom(
+                            HistogramSettingsWrapper {
+                                settings,
+                                index: props.index,
+                            },
+                        ));
                         dispatch_action(Action::CloseChangeHistogramSettings);
                     }),
                 }),
@@ -100,10 +106,10 @@ pub struct ChangeHistogramSettingsWindow {
 }
 
 impl ChangeHistogramSettingsWindow {
-    pub fn new(position: usize, settings: HistogramSettings) -> Self {
+    pub fn new(settings: HistogramSettings, index: RasterIndex) -> Self {
         let content = ViewController::new(
             ComponentWrapper::<UpdateHistogramSettingsView, BasicApp>::new(
-                HistogramSettingsWrapper::new(position, settings),
+                HistogramSettingsWrapper::new(settings, index),
             ),
         );
 
@@ -136,12 +142,12 @@ impl WindowDelegate for ChangeHistogramSettingsWindow {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct HistogramSettingsWrapper {
-    settings: HistogramSettings,
-    position: usize,
+    pub settings: HistogramSettings,
+    pub index: RasterIndex,
 }
 
 impl HistogramSettingsWrapper {
-    fn new(position: usize, settings: HistogramSettings) -> Self {
-        Self { position, settings }
+    fn new(settings: HistogramSettings, index: RasterIndex) -> Self {
+        Self { settings, index }
     }
 }

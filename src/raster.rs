@@ -2,8 +2,10 @@ use crate::app::BasicApp;
 use crate::audio::{get_audio, AudioMessage};
 use crate::events::{dispatch_action, Action};
 use crate::graph::{generate_image_histogram, HistogramSettings, RasterGraphSettings};
+use crate::histogram_settings_window::HistogramSettingsWrapper;
 
-use cacao_framework::{Component, VButton, VComponent, VLabel, VList, VNode};
+use cacao::appkit::App;
+use cacao_framework::{Component, Message, VButton, VComponent, VLabel, VList, VNode};
 use gdal::raster::GdalDataType;
 
 use gdal::raster::{RasterBand, StatisticsAll};
@@ -36,8 +38,7 @@ impl Clone for RasterViewerData {
 #[derive(PartialEq, Clone)]
 pub struct RasterLayerProps {
     data: RawRasterData,
-    dataset_index: usize,
-    band_index: usize,
+    index: RasterIndex,
     band_type: GdalDataType,
     hist: Option<Vec<f64>>,
     min: f64,
@@ -66,7 +67,7 @@ impl Component for RasterLayerView {
                     1,
                     VNode::Custom(VComponent::new::<HistComponent, BasicApp>((
                         hist.clone(),
-                        props.band_index,
+                        props.index,
                     ))),
                 ),
                 (2, stats),
@@ -78,7 +79,7 @@ impl Component for RasterLayerView {
 }
 
 impl RasterLayerProps {
-    pub fn new(band: RasterBand, dataset_index: usize, band_index: usize) -> Self {
+    pub fn new(band: RasterBand, index: RasterIndex) -> Self {
         let band_type = band.band_type();
         let hist = match band_type {
             GdalDataType::UInt8 => Some(generate_image_histogram(
@@ -139,10 +140,10 @@ impl RasterLayerProps {
                 max: min_max.max,
                 no_data_value: band.no_data_value(),
                 sender: get_audio(),
+                index,
             },
             hist,
-            dataset_index,
-            band_index,
+            index,
             stats: RasterViewerData {
                 stats: band.get_statistics(true, true).unwrap().unwrap(),
                 width: band.size().0,
@@ -215,7 +216,7 @@ pub struct AudioControls;
 impl Component for AudioControls {
     type Props = RawRasterData;
     type State = RasterGraphSettings;
-    type Message = RasterGraphSettings;
+    type Message = (RasterGraphSettings, RasterIndex);
     fn render(props: &Self::Props, _state: &Self::State) -> Vec<(usize, VNode<Self>)> {
         vec![
             (
@@ -244,15 +245,24 @@ impl Component for AudioControls {
                 VNode::Button(VButton {
                     text: "Change raster audiograph settings".to_owned(),
                     click: Some(|props, settings| {
-                        dispatch_action(Action::SendChangeRasterGraphSettings(0, settings.clone()))
+                        dispatch_action(Action::SendChangeRasterGraphSettings(
+                            settings.clone(),
+                            props.index,
+                        ))
                     }),
                 }),
             ),
         ]
     }
 
-    fn on_message(msg: &Self::Message, _props: &Self::Props, state: &mut Self::State) -> bool {
-        *state = msg.clone();
+    fn on_message(
+        (settings, index): &Self::Message,
+        props: &Self::Props,
+        state: &mut Self::State,
+    ) -> bool {
+        if *index == props.index {
+            *state = settings.clone();
+        }
         false
     }
 }
@@ -265,6 +275,18 @@ pub struct RawRasterData {
     pub max: f64,
     pub no_data_value: Option<f64>,
     pub sender: Sender<AudioMessage>,
+    pub index: RasterIndex,
+}
+
+#[derive(Clone, PartialEq, Debug, Copy)]
+pub struct RasterIndex {
+    pub dataset: usize,
+    pub raster: usize,
+}
+impl RasterIndex {
+    pub fn new(dataset: usize, raster: usize) -> Self {
+        Self { dataset, raster }
+    }
 }
 
 impl PartialEq for RawRasterData {
@@ -279,7 +301,7 @@ impl PartialEq for RawRasterData {
 
 fn render_histagram_row(
     index: usize,
-    props: &(Vec<f64>, usize),
+    props: &(Vec<f64>, RasterIndex),
     _: &HistogramSettings,
 ) -> Vec<VNode<HistComponent>> {
     vec![VNode::Label(VLabel {
@@ -290,9 +312,9 @@ fn render_histagram_row(
 #[derive(Clone, PartialEq)]
 pub struct HistComponent;
 impl Component for HistComponent {
-    type Props = (Vec<f64>, usize);
+    type Props = (Vec<f64>, RasterIndex);
     type State = HistogramSettings;
-    type Message = HistogramSettings;
+    type Message = HistogramSettingsWrapper;
     fn render(props: &Self::Props, _state: &Self::State) -> Vec<(usize, VNode<Self>)> {
         vec![
             (
@@ -300,7 +322,9 @@ impl Component for HistComponent {
                 VNode::Button(VButton {
                     text: "Play histogram".to_owned(),
                     click: Some(|(hist, _), settings| {
-                        dispatch_action(Action::SendAudioGraph(hist.clone(), settings.clone()))
+                        App::<BasicApp, Message>::dispatch_main(Message::custom(
+                            Action::SendAudioGraph(hist.clone(), settings.clone()),
+                        ))
                     }),
                 }),
             ),
@@ -315,10 +339,10 @@ impl Component for HistComponent {
                 2,
                 VNode::Button(VButton {
                     text: "Change histogram settings".to_owned(),
-                    click: Some(|(_, position), settings| {
+                    click: Some(|(_, index), settings| {
                         dispatch_action(Action::SendChangeHistogramSettings(
-                            *position,
                             settings.clone(),
+                            *index,
                         ))
                     }),
                 }),
@@ -326,8 +350,17 @@ impl Component for HistComponent {
         ]
     }
 
-    fn on_message(msg: &Self::Message, _props: &Self::Props, state: &mut Self::State) -> bool {
-        *state = msg.clone();
+    fn on_message(
+        HistogramSettingsWrapper {
+            settings,
+            index: target,
+        }: &Self::Message,
+        (_, this_index): &Self::Props,
+        state: &mut Self::State,
+    ) -> bool {
+        if target == this_index {
+            *state = settings.clone()
+        }
         // Only changes audio stuff, the actual ui stays the same, for now
         false
     }

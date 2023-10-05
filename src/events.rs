@@ -1,6 +1,7 @@
 use crate::app::BasicApp;
 
 use crate::graph::{HistogramSettings, RasterGraphSettings};
+use crate::raster::RasterIndex;
 
 use cacao::appkit::App;
 use cacao::view::View;
@@ -20,8 +21,8 @@ pub enum Action {
     CloseNewDatasetWindow,
     OpenMainWindow,
     SendAudioGraph(Vec<f64>, HistogramSettings),
-    SendChangeHistogramSettings(usize, HistogramSettings),
-    SendChangeRasterGraphSettings(usize, RasterGraphSettings),
+    SendChangeHistogramSettings(HistogramSettings, RasterIndex),
+    SendChangeRasterGraphSettings(RasterGraphSettings, RasterIndex),
     OpenNewDatasetWindow,
     CreateDataset(DatasetCreationOptions),
     CopyDataset(usize),

@@ -63,7 +63,8 @@ impl Component for MainView {
             &Action::CreateDataset(ref settings) => {
                 state.push(DatasetWrapper::from(create_dataset(settings).unwrap()));
             }
-            &Action::CopyDataset(index) => {
+            &Action::CopyDataset(ref index) => {
+                let index = *index;
                 let mut panel = FileSavePanel::new();
                 panel.set_message("Destination of copy:");
                 panel.show(move |path| {
@@ -74,7 +75,7 @@ impl Component for MainView {
                     }
                 })
             }
-            Action::CreateCoppiedDataset(index, path) => {
+            &Action::CreateCoppiedDataset(ref index, ref path) => {
                 let copy = {
                     let dataset = &state[*index].dataset();
                     dataset.create_copy(&dataset.driver(), path, &[]).unwrap()
@@ -235,7 +236,7 @@ impl Component for DatasetView {
                 (
                     index + props.dataset().layer_count() as usize + 21,
                     VNode::Custom(VComponent::new::<RasterLayerView, BasicApp>(
-                        RasterLayerProps::new(band, props.index, index),
+                        RasterLayerProps::new(band, RasterIndex::new(props.index, index)),
                     )),
                 )
             })
