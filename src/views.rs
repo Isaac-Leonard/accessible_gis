@@ -57,9 +57,7 @@ impl Component for MainView {
     fn on_message(msg: &Self::Message, _props: &Self::Props, state: &mut Self::State) -> bool {
         eprintln!("{:?}", msg);
         match msg {
-            Action::GotFile(path) => {
-                state.push(DatasetWrapper::try_from(path.clone()).unwrap())
-            }
+            Action::GotFile(path) => state.push(DatasetWrapper::try_from(path.clone()).unwrap()),
             Action::CreateDataset(settings) => {
                 state.push(DatasetWrapper::from(create_dataset(settings).unwrap()));
             }

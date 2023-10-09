@@ -133,22 +133,14 @@ impl RasterLayerProps {
             band_type,
             min: min_max.min,
             max: min_max.max,
-            data: RawRasterData {
-                data_type: band_type.name(),
-                data,
-                min: min_max.min,
-                max: min_max.max,
-                no_data_value: band.no_data_value(),
-                sender: get_audio(),
-                index,
-            },
-            hist,
-            index,
             stats: RasterViewerData {
                 stats: band.get_statistics(true, true).unwrap().unwrap(),
                 width: band.size().0,
                 height: band.size().1,
             },
+            data: RawRasterData::new(band, index),
+            hist,
+            index,
         }
     }
 }
@@ -276,6 +268,68 @@ pub struct RawRasterData {
     pub no_data_value: Option<f64>,
     pub sender: Sender<AudioMessage>,
     pub index: RasterIndex,
+}
+impl RawRasterData {
+    pub fn new(band: RasterBand, index: RasterIndex) -> Self {
+        let band_type = band.band_type();
+        let hist = match band_type {
+            GdalDataType::UInt8 => Some(generate_image_histogram(
+                band.read_band_as::<u8>().unwrap().data,
+            )),
+            _ => None,
+        };
+        let data: Array2<f64> = match band_type {
+            GdalDataType::UInt8 => band
+                .read_as_array::<u8>((0, 0), band.size(), band.size(), None)
+                .unwrap()
+                .mapv_into_any(|x| x as f64),
+            GdalDataType::UInt16 => band
+                .read_as_array::<u16>((0, 0), band.size(), band.size(), None)
+                .unwrap()
+                .mapv_into_any(|x| x as f64),
+
+            GdalDataType::UInt32 => band
+                .read_as_array::<u32>((0, 0), band.size(), band.size(), None)
+                .unwrap()
+                .mapv_into_any(|x| x as f64),
+
+            GdalDataType::Int8 => band
+                .read_as_array::<i8>((0, 0), band.size(), band.size(), None)
+                .unwrap()
+                .mapv_into_any(|x| x as f64),
+
+            GdalDataType::Int16 => band
+                .read_as_array::<i16>((0, 0), band.size(), band.size(), None)
+                .unwrap()
+                .mapv_into_any(|x| x as f64),
+
+            GdalDataType::Int32 => band
+                .read_as_array::<i32>((0, 0), band.size(), band.size(), None)
+                .unwrap()
+                .mapv_into_any(|x| x as f64),
+
+            GdalDataType::Float32 => band
+                .read_as_array::<f32>((0, 0), band.size(), band.size(), None)
+                .unwrap()
+                .mapv_into_any(|x| x as f64),
+
+            GdalDataType::Float64 => band
+                .read_as_array::<f64>((0, 0), band.size(), band.size(), None)
+                .unwrap(),
+
+            _ => panic!("Unknown datatype in raster band"),
+        };
+        let min_max = band.compute_raster_min_max(false).unwrap();
+        RawRasterData {
+            data_type: band_type.name(),
+            data,
+            min: min_max.min,
+            max: min_max.max,
+            no_data_value: band.no_data_value(),
+            sender: get_audio(),
+            index,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Debug, Copy)]
