@@ -26,6 +26,8 @@ pub enum Action {
     CreateDataset(DatasetCreationOptions),
     CopyDataset(usize),
     CreateCoppiedDataset(usize, PathBuf),
+    SlopeRaster(RasterIndex),
+    CreateSlopeRaster(RasterIndex, PathBuf),
 }
 
 /// Dispatch a message on a background thread.

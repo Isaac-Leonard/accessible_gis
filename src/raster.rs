@@ -244,6 +244,17 @@ impl Component for AudioControls {
                     }),
                 }),
             ),
+            (
+                54,
+                VNode::Button(VButton {
+                    text: "Calculate slope".to_string(),
+                    click: Some(|data, settings| {
+                        App::<BasicApp, Message>::dispatch_main(Message::custom(
+                            Action::SlopeRaster(data.index),
+                        ))
+                    }),
+                }),
+            ),
         ]
     }
 

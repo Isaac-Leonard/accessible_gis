@@ -174,7 +174,7 @@ fn slope_of_raster(data: Array2<f64>, no_data_value: f64) -> Array2<f64> {
     Zip::from(data.windows((3, 3))).map_collect(|cell| calc_slope(&cell.to_owned(), no_data_value))
 }
 
-fn slope_of_dataset(dataset: &Dataset, index: RasterIndex, path: PathBuf) -> Dataset {
+pub fn slope_of_dataset(dataset: &Dataset, index: RasterIndex, path: &PathBuf) -> Dataset {
     let raster = dataset.rasterband(index.raster as isize).unwrap();
     let data = RawRasterData::new(raster, index);
     let slope = slope_of_raster(data.data, data.no_data_value.unwrap_or(NAN));

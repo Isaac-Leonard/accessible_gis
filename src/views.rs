@@ -1,5 +1,6 @@
 use crate::app::BasicApp;
 use crate::audio::{get_audio, AudioMessage};
+use crate::derivatives::slope_of_dataset;
 use crate::events::{dispatch_action, Action};
 
 use crate::new_dataset_window::create_dataset;
@@ -79,6 +80,25 @@ impl Component for MainView {
                     dataset.create_copy(&dataset.driver(), path, &[]).unwrap()
                 };
                 state.push(DatasetWrapper::from(copy));
+            }
+            Action::SlopeRaster(index) => {
+                let index = *index;
+                let mut panel = FileSavePanel::new();
+                panel.set_message("Destination of slope data:");
+                panel.show(move |path| {
+                    if let Some(path) = path {
+                        App::<BasicApp, Message>::dispatch_main(Message::custom(
+                            Action::CreateSlopeRaster(index, path.try_into().unwrap()),
+                        ));
+                    }
+                })
+            }
+            Action::CreateSlopeRaster(index, path) => {
+                let slope = {
+                    let dataset = &state[index.dataset].dataset();
+                    slope_of_dataset(dataset, *index, path)
+                };
+                state.push(DatasetWrapper::from(slope));
             }
             _ => (),
         }
@@ -234,7 +254,7 @@ impl Component for DatasetView {
                 (
                     index + props.dataset().layer_count() as usize + 21,
                     VNode::Custom(VComponent::new::<RasterLayerView, BasicApp>(
-                        RasterLayerProps::new(band, RasterIndex::new(props.index, index)),
+                        RasterLayerProps::new(band, RasterIndex::new(props.index, index + 1)),
                     )),
                 )
             })
