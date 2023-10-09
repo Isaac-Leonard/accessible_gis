@@ -5,6 +5,7 @@
 mod app;
 mod audio;
 mod commands;
+mod derivatives;
 mod events;
 mod graph;
 mod histogram_settings_window;

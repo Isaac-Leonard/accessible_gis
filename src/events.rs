@@ -7,7 +7,6 @@ use cacao::appkit::App;
 use cacao::view::View;
 use gdal::raster::GdalDataType;
 
-
 use std::path::PathBuf;
 use std::sync::RwLock;
 
