@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::ops::Index;
+
 
 use crate::app::BasicApp;
 use crate::events::{dispatch_action, Action};
@@ -23,7 +23,7 @@ pub struct VectorLayerView;
 impl Component for VectorLayerView {
     type Props = VectorLayerProps;
     type State = ();
-    fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
+    fn render(props: &Self::Props, _state: &Self::State) -> Vec<(usize, VNode<Self>)> {
         vec![
             (0, VNode::Text("Common fields")),
             (
@@ -78,7 +78,7 @@ struct FeatureView;
 impl Component for FeatureView {
     type Props = FeatureViewProps;
     type State = ();
-    fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
+    fn render(props: &Self::Props, _state: &Self::State) -> Vec<(usize, VNode<Self>)> {
         let labeled_by = props
             .labeled_by
             .clone()
@@ -176,7 +176,7 @@ fn custom_field_type_to_string(val: FieldValue) -> &'static str {
 fn render_fields_row(
     index: usize,
     props: &VectorLayerProps,
-    state: &(),
+    _state: &(),
 ) -> Vec<VNode<VectorLayerView>> {
     let (ref name, ref field_type) = props.common_fields[index];
     vec![

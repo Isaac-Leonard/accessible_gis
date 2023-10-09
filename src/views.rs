@@ -24,7 +24,7 @@ impl Component for MainView {
     type Props = ();
     type State = Vec<DatasetWrapper>;
     type Message = Action;
-    fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
+    fn render(_props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
         vec![
             (
                 0,
@@ -57,13 +57,13 @@ impl Component for MainView {
     fn on_message(msg: &Self::Message, _props: &Self::Props, state: &mut Self::State) -> bool {
         eprintln!("{:?}", msg);
         match msg {
-            &Action::GotFile(ref path) => {
+            Action::GotFile(path) => {
                 state.push(DatasetWrapper::try_from(path.clone()).unwrap())
             }
-            &Action::CreateDataset(ref settings) => {
+            Action::CreateDataset(settings) => {
                 state.push(DatasetWrapper::from(create_dataset(settings).unwrap()));
             }
-            &Action::CopyDataset(ref index) => {
+            Action::CopyDataset(index) => {
                 let index = *index;
                 let mut panel = FileSavePanel::new();
                 panel.set_message("Destination of copy:");
@@ -75,7 +75,7 @@ impl Component for MainView {
                     }
                 })
             }
-            &Action::CreateCoppiedDataset(ref index, ref path) => {
+            Action::CreateCoppiedDataset(index, path) => {
                 let copy = {
                     let dataset = &state[*index].dataset();
                     dataset.create_copy(&dataset.driver(), path, &[]).unwrap()
@@ -100,7 +100,7 @@ impl Default for DatasetViewState {
 }
 
 impl PartialEq for DatasetViewState {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, _other: &Self) -> bool {
         true
     }
 }
@@ -161,7 +161,7 @@ impl Component for DatasetView {
     type Message = Action;
     fn render(
         props: &Self::Props,
-        state: &Self::State,
+        _state: &Self::State,
     ) -> Vec<(usize, cacao_framework::VNode<Self>)> {
         vec![
             (

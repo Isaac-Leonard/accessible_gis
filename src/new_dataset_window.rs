@@ -19,7 +19,7 @@ pub fn create_dataset(options: &DatasetCreationOptions) -> Result<Dataset, ()> {
         DriverManager::get_driver_by_name(options.driver_name.split('-').next().unwrap().trim())
             .map_err(|err| {
                 eprintln!("{:?}", err);
-                ()
+                
             })?;
     let dataset = driver
         .create(
@@ -30,7 +30,7 @@ pub fn create_dataset(options: &DatasetCreationOptions) -> Result<Dataset, ()> {
         )
         .map_err(|err| {
             eprintln!("{:?}", err);
-            ()
+            
         })?;
     Ok(dataset)
 }
@@ -198,7 +198,7 @@ impl Component for NewDatasetSettingsComponent {
                     click: Some(|_, state| {
                         state.options = match state.options {
                             Options::Vector(_) => Options::Raster(RasterOptions::default()),
-                            Options::Raster(_) => Options::Vector(VectorOptions::default()),
+                            Options::Raster(_) => Options::Vector(VectorOptions),
                         }
                     }),
                 }),
@@ -237,7 +237,7 @@ pub struct NewRasterComponent;
 impl Component for NewRasterComponent {
     type Props = ();
     type State = RasterOptions;
-    fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
+    fn render(_props: &Self::Props, _state: &Self::State) -> Vec<(usize, VNode<Self>)> {
         vec![]
     }
 }
@@ -247,7 +247,7 @@ pub struct NewVectorComponent;
 impl Component for NewVectorComponent {
     type Props = ();
     type State = VectorOptions;
-    fn render(props: &Self::Props, state: &Self::State) -> Vec<(usize, VNode<Self>)> {
+    fn render(_props: &Self::Props, _state: &Self::State) -> Vec<(usize, VNode<Self>)> {
         vec![]
     }
 }

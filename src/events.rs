@@ -6,7 +6,7 @@ use crate::raster::RasterIndex;
 use cacao::appkit::App;
 use cacao::view::View;
 use gdal::raster::GdalDataType;
-use gdal_sys::GDALDataType;
+
 
 use std::path::PathBuf;
 use std::sync::RwLock;
