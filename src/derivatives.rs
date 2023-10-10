@@ -25,7 +25,7 @@ fn calc_x_derivative(cell: &Array2<f64>, no_data_value: f64) -> f64 {
     if cell[(2, 0)] != no_data_value && cell[(0, 0)] != no_data_value
     //the normal case
     {
-        sum += cell[(2, 1)] - cell[(0, 0)];
+        sum += cell[(2, 0)] - cell[(0, 0)];
         weight += 2.0;
     } else if cell[(2, 0)] == no_data_value
         && cell[(0, 0)] != no_data_value
@@ -166,7 +166,7 @@ fn calc_slope(cell: &Array2<f64>, no_data_value: f64) -> f64 {
     if x == no_data_value || y == no_data_value {
         no_data_value
     } else {
-        ((x.powi(2) + y.powi(2)).sqrt()).atan() * 180.0 / PI
+        (x.powi(2) + y.powi(2)).sqrt().atan() * 180.0 / PI
     }
 }
 
