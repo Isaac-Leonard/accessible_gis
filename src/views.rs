@@ -18,6 +18,11 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::atomic;
 use std::sync::mpsc::Sender;
+use std::thread::{sleep, Thread};
+use std::time::Duration;
+struct SendableDataset(Dataset);
+
+unsafe impl Send for SendableDataset {}
 
 #[derive(Clone, PartialEq)]
 pub struct MainView;
@@ -93,12 +98,17 @@ impl Component for MainView {
                     }
                 })
             }
-            Action::CreateSlopeRaster(index, path) => {
-                let slope = {
-                    let dataset = &state[index.dataset].dataset();
-                    slope_of_dataset(dataset, *index, path)
-                };
-                state.push(DatasetWrapper::from(slope));
+            Action::CreateSlopeRaster(ref index, ref path) => {
+                let path: PathBuf = path.clone();
+                let dataset = &state[index.dataset].dataset();
+                let copy = dataset.create_copy(&dataset.driver(), &path, &[]).unwrap();
+                let index = *index;
+                std::thread::spawn(move || {
+                    let slope = slope_of_dataset(copy, index, &path);
+                    App::<BasicApp, Message>::dispatch_main(Message::custom(Action::GotFile(
+                        path.clone(),
+                    )));
+                });
             }
             _ => (),
         }

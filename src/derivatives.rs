@@ -166,7 +166,7 @@ fn calc_slope(cell: &Array2<f64>, no_data_value: f64) -> f64 {
     if x == no_data_value || y == no_data_value {
         no_data_value
     } else {
-        ((x.powi(2) + y.powi(2)).sqrt() / 180.0 * PI).atan()
+        ((x.powi(2) + y.powi(2)).sqrt()).atan() * 180.0 / PI
     }
 }
 
@@ -174,15 +174,15 @@ fn slope_of_raster(data: Array2<f64>, no_data_value: f64) -> Array2<f64> {
     Zip::from(data.windows((3, 3))).map_collect(|cell| calc_slope(&cell.to_owned(), no_data_value))
 }
 
-pub fn slope_of_dataset(dataset: &Dataset, index: RasterIndex, path: &PathBuf) -> Dataset {
+pub fn slope_of_dataset(dataset: Dataset, index: RasterIndex, path: &PathBuf) -> Dataset {
     let raster = dataset.rasterband(index.raster as isize).unwrap();
     let data = RawRasterData::new(raster, index);
     let slope = slope_of_raster(data.data, data.no_data_value.unwrap_or(NAN));
-    let copy = dataset.create_copy(&dataset.driver(), path, &[]).unwrap();
     let data = Buffer::new((slope.ncols(), slope.nrows()), slope.into_raw_vec());
-    copy.rasterband(index.raster as isize)
+    dataset
+        .rasterband(index.raster as isize)
         .unwrap()
         .write((0, 0), data.size, &data)
         .unwrap();
-    copy
+    dataset
 }

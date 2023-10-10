@@ -134,7 +134,7 @@ impl RasterLayerProps {
             min: min_max.min,
             max: min_max.max,
             stats: RasterViewerData {
-                stats: band.get_statistics(true, true).unwrap().unwrap(),
+                stats: band.get_statistics(true, false).unwrap().unwrap(),
                 width: band.size().0,
                 height: band.size().1,
             },
