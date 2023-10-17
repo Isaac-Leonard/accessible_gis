@@ -22,28 +22,50 @@ mod windows;
 use std::{path::PathBuf, time::Duration};
 
 use cacao::appkit::App;
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use gdal::{raster::StatisticsMinMax, Dataset};
 use graph::{play_rasta, RasterGraphSettings};
 use raster::read_raster_data;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
-struct Args {
+struct Input {
     /// Name of the person to greet
-    #[arg(short, long, global = true)]
+    #[arg(global = true)]
     name: Option<PathBuf>,
+    #[command(flatten)]
+    freq_settings: FrequencyArgs,
+    #[command(subcommand)]
+    command: Commands,
+    #[arg(short, long, default_value_t = 1, global = true)]
+    band: isize,
+}
 
+#[derive(Debug, Args)]
+pub struct FrequencyArgs {
     #[arg(long, default_value_t = 55.0, global = true)]
     min_freq: f64,
     #[arg(long, default_value_t = 2048.0, global = true)]
     max_freq: f64,
-    #[command(subcommand)]
-    command: Commands,
+}
+
+#[derive(Debug, Args)]
+pub struct GraphArgs {
+    #[arg(short, long, default_value_t = 10)]
+    rows: usize,
+    #[arg(short, long, default_value_t = 10)]
+    columns: usize,
+    #[arg(long, value_parser=parse_duration, default_value = "1000")]
+    row_duration: Duration,
+}
+
+fn parse_duration(arg: &str) -> Result<std::time::Duration, std::num::ParseIntError> {
+    let millis = arg.parse()?;
+    Ok(std::time::Duration::from_millis(millis))
 }
 
 fn main2() -> bool {
-    let args = match Args::try_parse() {
+    let args = match Input::try_parse() {
         Ok(args) => args,
         Err(err) => {
             eprintln!("{err}");
@@ -51,24 +73,28 @@ fn main2() -> bool {
         }
     };
     let dataset = Dataset::open(&args.name.unwrap()).unwrap();
-    let band = dataset.rasterband(1).unwrap();
+    let band = dataset.rasterband(args.band).unwrap();
     let data = read_raster_data(&band);
     let StatisticsMinMax { min, max } = band.compute_raster_min_max(false).unwrap();
     let no_data_value = band.no_data_value();
-    let settings = RasterGraphSettings {
-        min_freq: args.min_freq,
-        max_freq: args.max_freq,
-        row_duration: Duration::from_millis(1000),
-        rows: 10,
-        cols: 10,
-    };
-    play_rasta(data, min, max, no_data_value, settings);
+    match args.command {
+        Commands::Graph(graph_settings) => {
+            let settings = RasterGraphSettings {
+                min_freq: args.freq_settings.min_freq,
+                max_freq: args.freq_settings.max_freq,
+                row_duration: graph_settings.row_duration,
+                rows: graph_settings.rows,
+                cols: graph_settings.columns,
+            };
+            play_rasta(data, min, max, no_data_value, settings);
+        }
+    }
     return true;
 }
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    graph,
+    Graph(GraphArgs),
 }
 
 fn main() {
