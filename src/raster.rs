@@ -6,18 +6,20 @@ use crate::histogram_settings_window::HistogramSettingsWrapper;
 
 use cacao::appkit::App;
 use cacao_framework::{Component, Message, VButton, VComponent, VLabel, VList, VNode};
-use gdal::raster::GdalDataType;
+use gdal::raster::{GdalDataType, StatisticsMinMax};
 
-use gdal::raster::{RasterBand, StatisticsAll};
+use gdal::raster::RasterBand;
 use ndarray::Array2;
 
+use std::f64::NAN;
 use std::sync::mpsc::Sender;
 
 #[derive(PartialEq)]
 pub struct RasterViewerData {
-    width: usize,
-    height: usize,
-    stats: StatisticsAll,
+    pub width: usize,
+    pub height: usize,
+    pub stats: StatisticsMinMax,
+    pub no_data_value: f64,
 }
 
 impl Clone for RasterViewerData {
@@ -25,12 +27,11 @@ impl Clone for RasterViewerData {
         Self {
             width: self.width,
             height: self.height,
-            stats: StatisticsAll {
+            stats: StatisticsMinMax {
                 min: self.stats.min,
                 max: self.stats.max,
-                mean: self.stats.mean,
-                std_dev: self.stats.std_dev,
             },
+            no_data_value: self.no_data_value,
         }
     }
 }
@@ -87,56 +88,16 @@ impl RasterLayerProps {
             )),
             _ => None,
         };
-        let data: Array2<f64> = match band_type {
-            GdalDataType::UInt8 => band
-                .read_as_array::<u8>((0, 0), band.size(), band.size(), None)
-                .unwrap()
-                .mapv_into_any(|x| x as f64),
-            GdalDataType::UInt16 => band
-                .read_as_array::<u16>((0, 0), band.size(), band.size(), None)
-                .unwrap()
-                .mapv_into_any(|x| x as f64),
-
-            GdalDataType::UInt32 => band
-                .read_as_array::<u32>((0, 0), band.size(), band.size(), None)
-                .unwrap()
-                .mapv_into_any(|x| x as f64),
-
-            GdalDataType::Int8 => band
-                .read_as_array::<i8>((0, 0), band.size(), band.size(), None)
-                .unwrap()
-                .mapv_into_any(|x| x as f64),
-
-            GdalDataType::Int16 => band
-                .read_as_array::<i16>((0, 0), band.size(), band.size(), None)
-                .unwrap()
-                .mapv_into_any(|x| x as f64),
-
-            GdalDataType::Int32 => band
-                .read_as_array::<i32>((0, 0), band.size(), band.size(), None)
-                .unwrap()
-                .mapv_into_any(|x| x as f64),
-
-            GdalDataType::Float32 => band
-                .read_as_array::<f32>((0, 0), band.size(), band.size(), None)
-                .unwrap()
-                .mapv_into_any(|x| x as f64),
-
-            GdalDataType::Float64 => band
-                .read_as_array::<f64>((0, 0), band.size(), band.size(), None)
-                .unwrap(),
-
-            _ => panic!("Unknown datatype in raster band"),
-        };
         let min_max = band.compute_raster_min_max(false).unwrap();
         RasterLayerProps {
             band_type,
             min: min_max.min,
             max: min_max.max,
             stats: RasterViewerData {
-                stats: band.get_statistics(true, false).unwrap().unwrap(),
+                stats: band.compute_raster_min_max(false).unwrap(),
                 width: band.size().0,
                 height: band.size().1,
+                no_data_value: band.no_data_value().unwrap_or(NAN),
             },
             data: RawRasterData::new(band, index),
             hist,
@@ -162,6 +123,7 @@ impl Component for StatsComponent {
             width,
             height,
             stats,
+            no_data_value,
         }: &Self::Props,
         ImagePoint { x, y }: &Self::State,
     ) -> Vec<(usize, VNode<Self>)> {
@@ -169,7 +131,7 @@ impl Component for StatsComponent {
             (
                 0,
                 VNode::Label(VLabel {
-                    text: stats.mean.to_string(),
+                    text: format!("No data value: {}", no_data_value),
                 }),
             ),
             (
@@ -181,7 +143,7 @@ impl Component for StatsComponent {
             (
                 2,
                 VNode::Label(VLabel {
-                    text: format!("min: {}, max: {}", stats.min, stats.max),
+                    text: format!("min: {}, max: {}", stats.min, stats.max,),
                 }),
             ),
             (
@@ -248,7 +210,7 @@ impl Component for AudioControls {
                 54,
                 VNode::Button(VButton {
                     text: "Calculate slope".to_string(),
-                    click: Some(|data, settings| {
+                    click: Some(|data, _| {
                         App::<BasicApp, Message>::dispatch_main(Message::custom(
                             Action::SlopeRaster(data.index),
                         ))
@@ -283,53 +245,7 @@ pub struct RawRasterData {
 impl RawRasterData {
     pub fn new(band: RasterBand, index: RasterIndex) -> Self {
         let band_type = band.band_type();
-        let hist = match band_type {
-            GdalDataType::UInt8 => Some(generate_image_histogram(
-                band.read_band_as::<u8>().unwrap().data,
-            )),
-            _ => None,
-        };
-        let data: Array2<f64> = match band_type {
-            GdalDataType::UInt8 => band
-                .read_as_array::<u8>((0, 0), band.size(), band.size(), None)
-                .unwrap()
-                .mapv_into_any(|x| x as f64),
-            GdalDataType::UInt16 => band
-                .read_as_array::<u16>((0, 0), band.size(), band.size(), None)
-                .unwrap()
-                .mapv_into_any(|x| x as f64),
-
-            GdalDataType::UInt32 => band
-                .read_as_array::<u32>((0, 0), band.size(), band.size(), None)
-                .unwrap()
-                .mapv_into_any(|x| x as f64),
-
-            GdalDataType::Int8 => band
-                .read_as_array::<i8>((0, 0), band.size(), band.size(), None)
-                .unwrap()
-                .mapv_into_any(|x| x as f64),
-
-            GdalDataType::Int16 => band
-                .read_as_array::<i16>((0, 0), band.size(), band.size(), None)
-                .unwrap()
-                .mapv_into_any(|x| x as f64),
-
-            GdalDataType::Int32 => band
-                .read_as_array::<i32>((0, 0), band.size(), band.size(), None)
-                .unwrap()
-                .mapv_into_any(|x| x as f64),
-
-            GdalDataType::Float32 => band
-                .read_as_array::<f32>((0, 0), band.size(), band.size(), None)
-                .unwrap()
-                .mapv_into_any(|x| x as f64),
-
-            GdalDataType::Float64 => band
-                .read_as_array::<f64>((0, 0), band.size(), band.size(), None)
-                .unwrap(),
-
-            _ => panic!("Unknown datatype in raster band"),
-        };
+        let data = read_raster_data(&band);
         let min_max = band.compute_raster_min_max(false).unwrap();
         RawRasterData {
             data_type: band_type.name(),
@@ -428,5 +344,48 @@ impl Component for HistComponent {
         }
         // Only changes audio stuff, the actual ui stays the same, for now
         false
+    }
+}
+
+pub fn read_raster_data(band: &RasterBand) -> Array2<f64> {
+    match band.band_type() {
+        GdalDataType::UInt8 => band
+            .read_as_array::<u8>((0, 0), band.size(), band.size(), None)
+            .unwrap()
+            .mapv_into_any(|x| x as f64),
+        GdalDataType::UInt16 => band
+            .read_as_array::<u16>((0, 0), band.size(), band.size(), None)
+            .unwrap()
+            .mapv_into_any(|x| x as f64),
+        GdalDataType::UInt32 => band
+            .read_as_array::<u32>((0, 0), band.size(), band.size(), None)
+            .unwrap()
+            .mapv_into_any(|x| x as f64),
+
+        GdalDataType::Int8 => band
+            .read_as_array::<i8>((0, 0), band.size(), band.size(), None)
+            .unwrap()
+            .mapv_into_any(|x| x as f64),
+
+        GdalDataType::Int16 => band
+            .read_as_array::<i16>((0, 0), band.size(), band.size(), None)
+            .unwrap()
+            .mapv_into_any(|x| x as f64),
+
+        GdalDataType::Int32 => band
+            .read_as_array::<i32>((0, 0), band.size(), band.size(), None)
+            .unwrap()
+            .mapv_into_any(|x| x as f64),
+
+        GdalDataType::Float32 => band
+            .read_as_array::<f32>((0, 0), band.size(), band.size(), None)
+            .unwrap()
+            .mapv_into_any(|x| x as f64),
+
+        GdalDataType::Float64 => band
+            .read_as_array::<f64>((0, 0), band.size(), band.size(), None)
+            .unwrap(),
+
+        _ => panic!("Unknown datatype in raster band"),
     }
 }

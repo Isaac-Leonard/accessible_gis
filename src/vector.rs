@@ -1,15 +1,15 @@
 use std::collections::{BTreeMap, BTreeSet};
-
+use std::vec::IntoIter;
 
 use crate::app::BasicApp;
 use crate::events::{dispatch_action, Action};
 
 use cacao_framework::{Component, VComponent, VLabel, VList, VNode};
-use gdal::vector::{Layer, LayerAccess};
 
 use cacao::listview::{RowAction, RowActionStyle, RowEdge};
 
-use gdal::vector::{Feature, FieldValue, Geometry};
+use gdal::vector::{Feature, FieldValue, Geometry as GdalGeometry, Layer, LayerAccess};
+use gdal_sys::OGRwkbGeometryType;
 
 #[derive(Clone, PartialEq)]
 pub struct VectorLayerProps {
@@ -53,7 +53,7 @@ impl Component for VectorLayerView {
 
 #[derive(Clone, PartialEq)]
 pub struct FeatureProps {
-    geometry: Geometry,
+    geometry: GdalGeometry,
     fields: Vec<Attribute>,
 }
 
@@ -219,3 +219,75 @@ pub fn get_fields(layer: &mut Layer) -> Vec<(String, Vec<&'static str>)> {
         .map(|(name, types)| (name, types.into_iter().collect()))
         .collect()
 }
+
+pub struct PointComponent;
+impl Component for PointComponent {
+    type Props = Point;
+    type State = ();
+    fn render(Point(x, y, z): &Self::Props, _: &Self::State) -> Vec<(usize, VNode<Self>)> {
+        vec![(
+            0,
+            VNode::Label(VLabel {
+                text: format!("({x}, {y}, {z})",),
+            }),
+        )]
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Geometry {
+    Point(Point),
+    Line(Line),
+    Polygon(Polygon),
+    MultiPoint(Vec<Point>),
+    MultiLine(Vec<Line>),
+    MultiPolygon(Vec<Polygon>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Point(f64, f64, f64);
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Line {
+    points: Vec<Point>,
+}
+
+impl IntoIterator for Line {
+    type Item = Point;
+    type IntoIter = IntoIter<Point>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.points.into_iter()
+    }
+}
+
+impl Line {
+    pub fn iter(&self) -> std::slice::Iter<'_, Point> {
+        self.points.iter()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Polygon {
+    points: Vec<Point>,
+}
+
+impl IntoIterator for Polygon {
+    type Item = Point;
+    type IntoIter = IntoIter<Point>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.points.into_iter()
+    }
+}
+
+impl Polygon {
+    pub fn iter(&self) -> std::slice::Iter<'_, Point> {
+        self.points.iter()
+    }
+}
+
+pub struct GdalPoint(GdalGeometry);
+pub struct GdalLine(GdalGeometry);
+pub struct GdalPolygon(GdalGeometry);
+pub struct GdalMultiPoint(GdalGeometry);
+pub struct GdalMultiLine(GdalGeometry);
+pub struct GdalMultiPolygon(GdalGeometry);

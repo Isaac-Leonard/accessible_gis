@@ -186,3 +186,7 @@ pub fn slope_of_dataset(dataset: Dataset, index: RasterIndex, path: &PathBuf) ->
         .unwrap();
     dataset
 }
+
+fn aspect_of_raster(data: Array2<f64>, no_data_value: f64) -> Array2<f64> {
+    Zip::from(data.windows((3, 3))).map_collect(|cell| calc_slope(&cell.to_owned(), no_data_value))
+}
