@@ -273,7 +273,7 @@ impl RasterGraph {
             classified,
             ..
         } = self.settings;
-        let data = if classified {
+        let (data, min, max) = if classified {
             let categories = count_categories(&self.data, self.no_data_value);
             let data = self.data.map(|val| {
                 categories
@@ -283,24 +283,39 @@ impl RasterGraph {
                     .unwrap()
                     .0 as f64
             });
+            let min = *data
+                .iter()
+                .filter(|x| x.is_finite() && Some(**x) != self.no_data_value)
+                .min_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap();
+            let max = *data
+                .iter()
+                .filter(|x| x.is_finite() && Some(**x) != self.no_data_value)
+                .max_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap();
             let self_with_data = Self {
                 data,
                 ..self.clone()
             };
-            self_with_data.calculate_max_count()
+            (self_with_data.calculate_max_count(), min, max)
         } else {
-            self.calculate_mean()
+            let min = *self
+                .data
+                .iter()
+                .filter(|x| x.is_finite() && Some(**x) != self.no_data_value)
+                .min_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap();
+            let max = *self
+                .data
+                .iter()
+                .filter(|x| x.is_finite() && Some(**x) != self.no_data_value)
+                .max_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap();
+            (self.calculate_mean(), min, max)
         };
-        let min = *data
-            .iter()
-            .filter(|x| x.is_finite() && Some(**x) != self.no_data_value)
-            .min_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap();
-        let max = *data
-            .iter()
-            .filter(|x| x.is_finite() && Some(**x) != self.no_data_value)
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap();
+        dbg!(min);
+        dbg!(max);
+
         let row_len = data.ncols() as f64;
         let duration_per_sample_ms = row_duration.div_f64(row_len);
         let y_range = max - min;
