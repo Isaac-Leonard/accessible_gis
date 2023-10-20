@@ -18,3 +18,12 @@ There are also settings for controlling the duration each row will play for and 
 A similar function is in place for playing the histogram of images with byte valued data for spectral analysis.
 It will create a histogram, run through it and set a frequency value for each pixel count then play the frequencies from left to right as an audio graph, modeled off of the sonify R package and graphs that exist in some IOS apps such as the ones for looking at battery usage throughout the day in the iphones settings, again there are settings to control aspects of this graph.
 It will also provide stats for raster images and spatial reference information for all datasets when possible.
+
+#Useful GDAL commands
+Clip a raster to the area of a given vector dataset:
+gdalwarp -cutline vector -crop_to_cutline raster raster_clipped
+Multiply the pixel values of 2 rasters together:
+gdal_calc.py -A raster_a -B raster_b --outfile=a_x_b --calc="A*B" --NoDataValue=-9999
+Reclassify raster values:
+gdal_calc.py -A raster --outfile=raster_classified --calc="(A<=400)+10*(A>400)*(A<=1180)+100*(A>1180)*(A<=2500)" --NoDataValue=-9999
+Note this uses boolean logic where a<400 is 1 if true or 0 if false where the result can be nultiplied

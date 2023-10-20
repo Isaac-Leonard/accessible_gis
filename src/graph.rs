@@ -7,10 +7,11 @@ use fundsp::{
     hacker::{panner, shared, var},
     prelude::{sine, AudioNode},
 };
+use itertools::{Either, Itertools};
 use ndarray::{Array2, Zip};
 use optional_struct::{optional_struct, Applyable};
 
-use std::{thread::sleep, time::Duration};
+use std::{collections::HashMap, thread::sleep, time::Duration};
 
 /// Generate a sine wave audio signal for a given frequency.
 ///
@@ -192,6 +193,24 @@ pub struct RasterGraphSettings {
     pub max_freq: f64,
     pub rows: usize,
     pub cols: usize,
+    pub classified: bool,
+}
+
+fn count_categories(data: &Array2<f64>, no_data_value: Option<f64>) -> Vec<f64> {
+    let to_unique = |x: &&f64| x.to_bits();
+    let cmp_floats = |a: &&f64, b: &&f64| a.partial_cmp(b).unwrap();
+    if let Some(no_data_value) = no_data_value {
+        Either::Left(
+            data.iter()
+                .filter(move |x| **x != no_data_value && x.is_finite()),
+        )
+    } else {
+        Either::Right(data.iter().filter(|x| x.is_finite()))
+    }
+    .unique_by(to_unique)
+    .sorted_by(cmp_floats)
+    .copied()
+    .collect()
 }
 
 impl Default for RasterGraphSettings {
@@ -202,15 +221,15 @@ impl Default for RasterGraphSettings {
             max_freq: 1760.0,
             rows: 10,
             cols: 10,
+            classified: false,
         }
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct RasterGraph {
     data: Array2<f64>,
     no_data_value: Option<f64>,
-    min: f64,
-    max: f64,
     settings: RasterGraphSettings,
 }
 
@@ -224,8 +243,6 @@ impl RasterGraph {
     ) -> Self {
         Self {
             data,
-            min,
-            max,
             no_data_value,
             settings,
         }
@@ -249,33 +266,41 @@ impl RasterGraph {
     where
         T: cpal::Sample + cpal::SizedSample + cpal::FromSample<f64>,
     {
-        eprintln!("running");
         let RasterGraphSettings {
             row_duration,
             min_freq,
             max_freq,
-            rows,
-            cols,
+            classified,
+            ..
         } = self.settings;
-        dbg!(self.data.iter().filter(|x| x.is_nan()).count());
-        let x_scale = self.data.ncols() / cols;
-        let y_scale = self.data.nrows() / rows;
-        let data = if let Some(no_data_value) = &self.no_data_value {
-            Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
-                chunk
-                    .into_iter()
-                    .filter(|x| x.is_finite() && *x != no_data_value)
-                    .sum::<f64>()
-                    / (y_scale * x_scale) as f64
-            })
+        let data = if classified {
+            let categories = count_categories(&self.data, self.no_data_value);
+            let data = self.data.map(|val| {
+                categories
+                    .iter()
+                    .enumerate()
+                    .find(|category| val == category.1)
+                    .unwrap()
+                    .0 as f64
+            });
+            let self_with_data = Self {
+                data,
+                ..self.clone()
+            };
+            self_with_data.calculate_max_count()
         } else {
-            Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
-                chunk.into_iter().filter(|x| x.is_finite()).sum::<f64>()
-                    / (y_scale * x_scale) as f64
-            })
+            self.calculate_mean()
         };
-        let min = self.min;
-        let max = self.max;
+        let min = *data
+            .iter()
+            .filter(|x| x.is_finite() && Some(**x) != self.no_data_value)
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap();
+        let max = *data
+            .iter()
+            .filter(|x| x.is_finite() && Some(**x) != self.no_data_value)
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap();
         let row_len = data.ncols() as f64;
         let duration_per_sample_ms = row_duration.div_f64(row_len);
         let y_range = max - min;
@@ -316,6 +341,59 @@ impl RasterGraph {
                 freq.set_value(freq_f);
                 sleep(duration_per_sample_ms);
             }
+        }
+    }
+
+    fn calculate_mean(&self) -> Array2<f64> {
+        let x_scale = self.data.ncols() / self.settings.cols;
+        let y_scale = self.data.nrows() / self.settings.rows;
+        if let Some(no_data_value) = &self.no_data_value {
+            Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
+                chunk
+                    .into_iter()
+                    .filter(|x| x.is_finite() && *x != no_data_value)
+                    .sum::<f64>()
+                    / (y_scale * x_scale) as f64
+            })
+        } else {
+            Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
+                chunk.into_iter().filter(|x| x.is_finite()).sum::<f64>()
+                    / (y_scale * x_scale) as f64
+            })
+        }
+    }
+
+    /// Counts each pixel in each cell and returns the most common one for each cell
+    /// Note this isn't very clever so if there's 20 different values then 5% being the same in a cell is enough to return it as the most common, first past the post style
+    ///If every cell happens to have the same 5% majority then the whole image will be interpreted as that value.
+    fn calculate_max_count(&self) -> Array2<f64> {
+        let x_scale = self.data.ncols() / self.settings.cols;
+        let y_scale = self.data.nrows() / self.settings.rows;
+        if let Some(no_data_value) = &self.no_data_value {
+            Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
+                let mut counts = HashMap::<u64, usize>::new();
+                for x in chunk
+                    .into_iter()
+                    .filter(|x| x.is_finite() && *x != no_data_value)
+                {
+                    counts
+                        .entry(x.to_bits())
+                        .and_modify(|count| *count += 1)
+                        .or_insert(1);
+                }
+                f64::from_bits(counts.into_iter().sorted_by_key(|x| x.1).last().unwrap().0)
+            })
+        } else {
+            Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
+                let mut counts = HashMap::<u64, usize>::new();
+                for x in chunk.into_iter().filter(|x| x.is_finite()) {
+                    counts
+                        .entry(x.to_bits())
+                        .and_modify(|count| *count += 1)
+                        .or_insert(1);
+                }
+                f64::from_bits(counts.into_iter().sorted_by_key(|x| x.1).last().unwrap().0)
+            })
         }
     }
 }

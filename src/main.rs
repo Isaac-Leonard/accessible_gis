@@ -30,7 +30,6 @@ use raster::read_raster_data;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Input {
-    /// Name of the person to greet
     #[arg(global = true)]
     name: Option<PathBuf>,
     #[command(flatten)]
@@ -57,6 +56,8 @@ pub struct GraphArgs {
     columns: usize,
     #[arg(long, value_parser=parse_duration, default_value = "1000")]
     row_duration: Duration,
+    #[arg(long, default_value_t = false)]
+    classified: bool,
 }
 
 fn parse_duration(arg: &str) -> Result<std::time::Duration, std::num::ParseIntError> {
@@ -72,7 +73,7 @@ fn main2() -> bool {
             return false;
         }
     };
-    let dataset = Dataset::open(&args.name.unwrap()).unwrap();
+    let dataset = Dataset::open(args.name.unwrap()).unwrap();
     let band = dataset.rasterband(args.band).unwrap();
     let data = read_raster_data(&band);
     let StatisticsMinMax { min, max } = band.compute_raster_min_max(false).unwrap();
@@ -85,6 +86,7 @@ fn main2() -> bool {
                 row_duration: graph_settings.row_duration,
                 rows: graph_settings.rows,
                 cols: graph_settings.columns,
+                classified: graph_settings.classified,
             };
             play_rasta(data, min, max, no_data_value, settings);
         }
