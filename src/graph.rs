@@ -280,8 +280,9 @@ impl RasterGraph {
                     .iter()
                     .enumerate()
                     .find(|category| val == category.1)
-                    .unwrap()
-                    .0 as f64
+                    .map(|x| x.0 as f64)
+                    .or(self.no_data_value)
+                    .unwrap_or(f64::NAN)
             });
             let min = *data
                 .iter()
@@ -350,7 +351,11 @@ impl RasterGraph {
         let _pos_f = -1.0;
         for row in data.rows() {
             for (i, pixel) in row.indexed_iter() {
-                let freq_f = (*pixel - min) / y_range * freq_range + min_freq;
+                let freq_f = if let Some(pixel) = pixel {
+                    (*pixel - min) / y_range * freq_range + min_freq
+                } else {
+                    0.
+                };
                 let pos_f = i as f64 / (row_len - 1.) * 2.0 - 1.0;
                 pos.set_value(pos_f);
                 freq.set_value(freq_f);
@@ -359,29 +364,31 @@ impl RasterGraph {
         }
     }
 
-    fn calculate_mean(&self) -> Array2<f64> {
+    fn calculate_mean(&self) -> Array2<Option<f64>> {
         let x_scale = self.data.ncols() / self.settings.cols;
         let y_scale = self.data.nrows() / self.settings.rows;
-        if let Some(no_data_value) = &self.no_data_value {
-            Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
-                chunk
-                    .into_iter()
-                    .filter(|x| x.is_finite() && *x != no_data_value)
-                    .sum::<f64>()
-                    / (y_scale * x_scale) as f64
-            })
-        } else {
-            Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
-                chunk.into_iter().filter(|x| x.is_finite()).sum::<f64>()
-                    / (y_scale * x_scale) as f64
-            })
-        }
+        Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
+            let cleaned = if let Some(ref no_data_value) = self.no_data_value {
+                Either::Left(
+                    chunk
+                        .into_iter()
+                        .filter(move |x| x.is_finite() && *x != no_data_value),
+                )
+            } else {
+                Either::Right(chunk.into_iter().filter(|x| x.is_finite()))
+            };
+            if cleaned.clone().count() == 0 {
+                None
+            } else {
+                Some(cleaned.sum::<f64>() / (y_scale * x_scale) as f64)
+            }
+        })
     }
 
     /// Counts each pixel in each cell and returns the most common one for each cell
     /// Note this isn't very clever so if there's 20 different values then 5% being the same in a cell is enough to return it as the most common, first past the post style
     ///If every cell happens to have the same 5% majority then the whole image will be interpreted as that value.
-    fn calculate_max_count(&self) -> Array2<f64> {
+    fn calculate_max_count(&self) -> Array2<Option<f64>> {
         let x_scale = self.data.ncols() / self.settings.cols;
         let y_scale = self.data.nrows() / self.settings.rows;
         if let Some(no_data_value) = &self.no_data_value {
@@ -396,7 +403,11 @@ impl RasterGraph {
                         .and_modify(|count| *count += 1)
                         .or_insert(1);
                 }
-                f64::from_bits(counts.into_iter().sorted_by_key(|x| x.1).last().unwrap().0)
+                counts
+                    .into_iter()
+                    .sorted_by_key(|x| x.1)
+                    .last()
+                    .map(|x| f64::from_bits(x.0))
             })
         } else {
             Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
@@ -407,7 +418,11 @@ impl RasterGraph {
                         .and_modify(|count| *count += 1)
                         .or_insert(1);
                 }
-                f64::from_bits(counts.into_iter().sorted_by_key(|x| x.1).last().unwrap().0)
+                counts
+                    .into_iter()
+                    .sorted_by_key(|x| x.1)
+                    .last()
+                    .map(|x| f64::from_bits(x.0))
             })
         }
     }
