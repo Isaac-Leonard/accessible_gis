@@ -8,8 +8,6 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.72"
 assert_no_alloc = "1.1.2"
-cacao = { git = "https://github.com/isaac-leonard/cacao", branch = "changes_for_framework"}
-cacao_framework = { git = "https://github.com/isaac-leonard/cacao_framework"}
 clap = { version = "4.4.6", features = ["derive"] }
 cpal = "0.15.2"
 fundsp = "0.15.0"
@@ -20,3 +18,7 @@ ndarray = "0.15.6"
 ndarray-interp = "0.3.1"
 ndarray-stats = "0.5.1"
 optional_struct = "0.3.1"
+
+[target.'cfg(target_os="macos")'.dependencies]
+cacao = { git = "https://github.com/isaac-leonard/cacao", branch = "changes_for_framework"}
+cacao_framework = { git = "https://github.com/isaac-leonard/cacao_framework"}

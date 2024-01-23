@@ -7,6 +7,7 @@ mod commandline;
 mod commands;
 mod derivatives;
 mod graph;
+#[cfg(target_os = "macos")]
 mod gui;
 pub mod raster;
 mod warp;
@@ -18,7 +19,10 @@ fn main() {
         Ok(args) => commandline::launch_commandline_app(args),
         Err(err) => {
             eprintln!("{err}");
-            gui::launch_app()
+            #[cfg(target_os = "macos")]
+            gui::launch_app();
+            #[cfg(not(target_os = "macos"))]
+            exit(-1)
         }
     };
 }
