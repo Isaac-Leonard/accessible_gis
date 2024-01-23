@@ -19,7 +19,7 @@ mod views;
 mod warp;
 mod windows;
 
-use std::{path::PathBuf, time::Duration};
+use std::{path::PathBuf, process::exit, time::Duration};
 
 use cacao::appkit::App;
 use clap::{Args, Parser, Subcommand};
@@ -81,10 +81,26 @@ fn main() {
 }
 
 fn launch_commandline_app(args: Input) {
-    let dataset = Dataset::open(args.name.unwrap()).unwrap();
-    let band = dataset.rasterband(args.band).unwrap();
+    let Some(name) = args.name else {
+        eprint!("No file name provided");
+        exit(-1)
+    };
+    let Ok(dataset) = Dataset::open(&name) else {
+        eprint!("Failed to read dataset at {}", name.to_string_lossy());
+        exit(-1)
+    };
+    let Ok(band) = dataset.rasterband(args.band) else {
+        eprint!(
+            "Failed to read rasta band {} of the specified dataset",
+            args.band
+        );
+        exit(-1)
+    };
     let data = read_raster_data(&band);
-    let StatisticsMinMax { min, max } = band.compute_raster_min_max(false).unwrap();
+    let Ok(StatisticsMinMax { min, max }) = band.compute_raster_min_max(false) else {
+        eprint!("Could not calculate the minimum and maximum pixel values of the specified band of the dataset");
+        exit(-1)
+    };
     let no_data_value = band.no_data_value();
     match args.command {
         Commands::Graph(graph_settings) => {
