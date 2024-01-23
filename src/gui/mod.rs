@@ -1,4 +1,4 @@
-pub mod app;
+mod app;
 mod events;
 mod histogram_settings_window;
 mod layout;
@@ -9,3 +9,5 @@ mod raster_graph_settings_window;
 mod vector;
 mod views;
 mod windows;
+
+pub use app::launch_app;

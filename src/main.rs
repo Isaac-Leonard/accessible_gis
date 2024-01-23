@@ -11,22 +11,14 @@ mod gui;
 pub mod raster;
 mod warp;
 
-use cacao::appkit::App;
 use clap::Parser;
-use gui::app::BasicApp;
-
-use commandline::{launch_commandline_app, Input};
 
 fn main() {
-    match Input::try_parse() {
-        Ok(args) => launch_commandline_app(args),
+    match commandline::Input::try_parse() {
+        Ok(args) => commandline::launch_commandline_app(args),
         Err(err) => {
             eprintln!("{err}");
-            launch_gui_app()
+            gui::launch_app()
         }
     };
-}
-
-fn launch_gui_app() {
-    App::new("com.accessible.gis", BasicApp::default()).run();
 }

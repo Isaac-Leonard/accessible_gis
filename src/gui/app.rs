@@ -33,3 +33,7 @@ impl AppDelegate for BasicApp {
         true
     }
 }
+
+pub fn launch_app() {
+    App::new("com.accessible.gis", BasicApp::default()).run();
+}
