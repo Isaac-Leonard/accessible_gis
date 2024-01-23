@@ -9,9 +9,9 @@ use gdal::DriverManager;
 
 use gdal::Dataset;
 
-use crate::app::BasicApp;
+use super::app::BasicApp;
+use super::events::{dispatch_action, Action, DatasetCreationOptions, MessageHandler};
 use crate::commands::list_drivers;
-use crate::events::{dispatch_action, Action, DatasetCreationOptions, MessageHandler};
 
 pub fn create_dataset(options: &DatasetCreationOptions) -> Result<Dataset, ()> {
     eprintln!("{}", options.driver_name.trim().split('-').next().unwrap());
@@ -19,7 +19,6 @@ pub fn create_dataset(options: &DatasetCreationOptions) -> Result<Dataset, ()> {
         DriverManager::get_driver_by_name(options.driver_name.split('-').next().unwrap().trim())
             .map_err(|err| {
                 eprintln!("{:?}", err);
-                
             })?;
     let dataset = driver
         .create(
@@ -30,7 +29,6 @@ pub fn create_dataset(options: &DatasetCreationOptions) -> Result<Dataset, ()> {
         )
         .map_err(|err| {
             eprintln!("{:?}", err);
-            
         })?;
     Ok(dataset)
 }

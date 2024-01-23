@@ -1,5 +1,4 @@
-use crate::app::BasicApp;
-
+use super::app::BasicApp;
 use crate::graph::{HistogramSettings, RasterGraphSettings};
 use crate::raster::RasterIndex;
 

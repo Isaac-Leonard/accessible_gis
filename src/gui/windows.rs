@@ -5,15 +5,17 @@ use cacao::{
 use cacao_framework::{ComponentWrapper, Message};
 use std::sync::RwLock;
 
-use crate::{
+use super::{
     app::BasicApp,
     events::{Action, MessageHandler},
-    graph::{HistogramSettings, RasterGraphSettings},
     histogram_settings_window::ChangeHistogramSettingsWindow,
     new_dataset_window::NewDatasetWindow,
-    raster::RasterIndex,
     raster_graph_settings_window::RasterGraphSettingsWindow,
     views::MainView,
+};
+use crate::{
+    graph::{HistogramSettings, RasterGraphSettings},
+    raster::RasterIndex,
 };
 
 #[derive(Default)]

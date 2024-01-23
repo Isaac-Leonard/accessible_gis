@@ -1,5 +1,5 @@
-use crate::events::{Action, MessageHandler};
-use crate::windows::WindowManager;
+use super::events::{Action, MessageHandler};
+use super::windows::WindowManager;
 use cacao::appkit::{App, AppDelegate};
 use cacao::notification_center::Dispatcher;
 use cacao_framework::Message as FrameworkMessage;

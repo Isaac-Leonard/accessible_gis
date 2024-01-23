@@ -8,9 +8,11 @@ use cacao::{
 use cacao_framework::{Component, ComponentWrapper, Message, VButton, VLabel, VNode, VTextInput};
 use optional_struct::Applyable;
 
-use crate::{
+use super::{
     app::BasicApp,
     events::{dispatch_action, Action, MessageHandler},
+};
+use crate::{
     graph::{HistogramSettings, OptionalHistogramSettings},
     raster::RasterIndex,
 };

@@ -2,27 +2,18 @@
 #![feature(array_windows)]
 #![feature(sort_floats)]
 
-mod app;
 mod audio;
 mod commandline;
 mod commands;
 mod derivatives;
-mod events;
 mod graph;
-mod histogram_settings_window;
-mod layout;
-mod list_view;
-mod new_dataset_window;
-mod raster;
-mod raster_graph_settings_window;
-mod vector;
-mod views;
+mod gui;
+pub mod raster;
 mod warp;
-mod windows;
 
-use app::BasicApp;
 use cacao::appkit::App;
 use clap::Parser;
+use gui::app::BasicApp;
 
 use commandline::{launch_commandline_app, Input};
 

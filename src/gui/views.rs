@@ -1,11 +1,12 @@
-use crate::app::BasicApp;
+use super::app::BasicApp;
+use super::events::{dispatch_action, Action};
 use crate::audio::{get_audio, AudioMessage};
 use crate::derivatives::slope_of_dataset;
-use crate::events::{dispatch_action, Action};
+use crate::raster::RasterIndex;
 
-use crate::new_dataset_window::create_dataset;
-use crate::raster::*;
-use crate::vector::{get_fields, FeatureViewProps, VectorLayerProps, VectorLayerView};
+use super::new_dataset_window::create_dataset;
+use super::raster::*;
+use super::vector::{get_fields, FeatureViewProps, VectorLayerProps, VectorLayerView};
 use cacao::appkit::App;
 use cacao::filesystem::{FileSavePanel, FileSelectPanel};
 use cacao::foundation::NSURL;
@@ -19,7 +20,7 @@ use std::rc::Rc;
 use std::sync::atomic;
 use std::sync::mpsc::Sender;
 use std::thread::{sleep, Thread};
-use std::time::Duration;
+
 struct SendableDataset(Dataset);
 
 unsafe impl Send for SendableDataset {}

@@ -1,5 +1,13 @@
 use std::time::Duration;
 
+use super::{
+    app::BasicApp,
+    events::{dispatch_action, Action, MessageHandler},
+};
+use crate::{
+    graph::{OptionalRasterGraphSettings, RasterGraphSettings},
+    raster::RasterIndex,
+};
 use cacao::{
     appkit::{
         window::{Window, WindowDelegate},
@@ -9,13 +17,6 @@ use cacao::{
 };
 use cacao_framework::{Component, ComponentWrapper, Message, VButton, VLabel, VNode, VTextInput};
 use optional_struct::Applyable;
-
-use crate::{
-    app::BasicApp,
-    events::{dispatch_action, Action, MessageHandler},
-    graph::{OptionalRasterGraphSettings, RasterGraphSettings},
-    raster::RasterIndex,
-};
 
 pub struct RasterGraphSettingsWindow {
     content: ViewController<ComponentWrapper<RasterGraphSettingsComponent, BasicApp>>,

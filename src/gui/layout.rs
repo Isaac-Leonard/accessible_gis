@@ -1,6 +1,4 @@
-use cacao::{
-    layout::{Layout, LayoutConstraint, SafeAreaLayoutGuide},
-};
+use cacao::layout::{Layout, LayoutConstraint, SafeAreaLayoutGuide};
 
 /// Takes a list of views, a parent view that  contains them and returns layout constraints that will position them from top to bottom separated by the specified padding.
 /// The padding is also applied to the sides of each view.

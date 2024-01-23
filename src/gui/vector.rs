@@ -1,15 +1,14 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::vec::IntoIter;
 
-use crate::app::BasicApp;
-use crate::events::{dispatch_action, Action};
+use super::app::BasicApp;
+use super::events::{dispatch_action, Action};
 
 use cacao_framework::{Component, VComponent, VLabel, VList, VNode};
 
 use cacao::listview::{RowAction, RowActionStyle, RowEdge};
 
 use gdal::vector::{Feature, FieldValue, Geometry as GdalGeometry, Layer, LayerAccess};
-use gdal_sys::OGRwkbGeometryType;
 
 #[derive(Clone, PartialEq)]
 pub struct VectorLayerProps {
