@@ -20,7 +20,7 @@ pub struct Input {
 }
 
 #[derive(Debug, Args)]
-pub struct FrequencyArgs {
+struct FrequencyArgs {
     #[arg(long, default_value_t = 55.0, global = true)]
     min_freq: f64,
     #[arg(long, default_value_t = 2048.0, global = true)]
@@ -28,7 +28,7 @@ pub struct FrequencyArgs {
 }
 
 #[derive(Debug, Args)]
-pub struct GraphArgs {
+struct GraphArgs {
     #[arg(short, long, default_value_t = 10)]
     rows: usize,
     #[arg(short, long, default_value_t = 10)]
@@ -48,6 +48,7 @@ fn parse_duration(arg: &str) -> Result<std::time::Duration, std::num::ParseIntEr
 enum Commands {
     Graph(GraphArgs),
 }
+
 pub fn launch_commandline_app(args: Input) {
     let Some(name) = args.name else {
         eprint!("No file name provided");

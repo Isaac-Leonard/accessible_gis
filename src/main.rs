@@ -1,7 +1,7 @@
 #![feature(let_chains)]
 #![feature(array_windows)]
 #![feature(sort_floats)]
-#![feature(result_option_inspect)]
+
 mod app;
 mod audio;
 mod commandline;
