@@ -65,14 +65,22 @@ fn parse_duration(arg: &str) -> Result<std::time::Duration, std::num::ParseIntEr
     Ok(std::time::Duration::from_millis(millis))
 }
 
-fn main2() -> bool {
-    let args = match Input::try_parse() {
-        Ok(args) => args,
+#[derive(Subcommand, Debug)]
+enum Commands {
+    Graph(GraphArgs),
+}
+
+fn main() {
+    match Input::try_parse() {
+        Ok(args) => launch_commandline_app(args),
         Err(err) => {
             eprintln!("{err}");
-            return false;
+            launch_gui_app()
         }
     };
+}
+
+fn launch_commandline_app(args: Input) {
     let dataset = Dataset::open(args.name.unwrap()).unwrap();
     let band = dataset.rasterband(args.band).unwrap();
     let data = read_raster_data(&band);
@@ -91,18 +99,8 @@ fn main2() -> bool {
             play_rasta(data, min, max, no_data_value, settings);
         }
     }
-    return true;
 }
 
-#[derive(Subcommand, Debug)]
-enum Commands {
-    Graph(GraphArgs),
-}
-
-fn main() {
-    let commandline = main2();
-    if commandline {
-        return;
-    }
+fn launch_gui_app() {
     App::new("com.accessible.gis", app::BasicApp::default()).run();
 }
