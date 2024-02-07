@@ -14,7 +14,7 @@ use super::{
     views::MainView,
 };
 use crate::{
-    audio::graph::{HistogramSettings, RasterGraphSettings},
+    audio::{graph::RasterGraphSettings, histogram::HistogramSettings},
     gis::raster::RasterIndex,
 };
 

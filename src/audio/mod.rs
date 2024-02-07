@@ -2,6 +2,7 @@
 #![allow(clippy::precedence)]
 
 pub mod graph;
+pub mod histogram;
 
 use std::sync::mpsc;
 use std::thread;
@@ -12,8 +13,8 @@ use cpal::{FromSample, SizedSample, Stream};
 use fundsp::hacker::*;
 use ndarray::Array2;
 
-use graph::{play_histogram, play_rasta, HistogramSettings, RasterGraphSettings};
-
+use graph::{play_rasta, RasterGraphSettings};
+use histogram::{play_histogram, HistogramSettings};
 #[cfg(debug_assertions)] // required when disable_release is set (default)
 #[global_allocator]
 static A: AllocDisabler = AllocDisabler;
