@@ -1,5 +1,5 @@
 use super::app::BasicApp;
-use crate::graph::{HistogramSettings, RasterGraphSettings};
+use crate::audio::graph::{HistogramSettings, RasterGraphSettings};
 use crate::raster::RasterIndex;
 
 use cacao::appkit::App;

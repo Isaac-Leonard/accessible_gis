@@ -1,6 +1,8 @@
 //! Make some noise via cpal.
 #![allow(clippy::precedence)]
 
+pub mod graph;
+
 use std::sync::mpsc;
 use std::thread;
 
@@ -10,7 +12,7 @@ use cpal::{FromSample, SizedSample, Stream};
 use fundsp::hacker::*;
 use ndarray::Array2;
 
-use crate::graph::{play_histogram, play_rasta, HistogramSettings, RasterGraphSettings};
+use graph::{play_histogram, play_rasta, HistogramSettings, RasterGraphSettings};
 
 #[cfg(debug_assertions)] // required when disable_release is set (default)
 #[global_allocator]

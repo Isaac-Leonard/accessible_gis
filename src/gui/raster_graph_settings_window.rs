@@ -5,7 +5,7 @@ use super::{
     events::{dispatch_action, Action, MessageHandler},
 };
 use crate::{
-    graph::{OptionalRasterGraphSettings, RasterGraphSettings},
+    audio::graph::{OptionalRasterGraphSettings, RasterGraphSettings},
     raster::RasterIndex,
 };
 use cacao::{

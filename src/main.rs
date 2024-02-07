@@ -2,11 +2,10 @@
 #![feature(array_windows)]
 #![feature(sort_floats)]
 
-mod audio;
+pub mod audio;
 mod commandline;
 mod commands;
 mod derivatives;
-mod graph;
 #[cfg(target_os = "macos")]
 mod gui;
 pub mod raster;

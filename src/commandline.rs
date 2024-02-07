@@ -3,7 +3,7 @@ use std::{path::PathBuf, process::exit, time::Duration};
 use clap::{Args, Parser, Subcommand};
 use gdal::{raster::StatisticsMinMax, Dataset};
 
-use crate::graph::{play_rasta, RasterGraphSettings};
+use crate::audio::graph::{play_rasta, RasterGraphSettings};
 use crate::raster::read_raster_data;
 
 #[derive(Parser, Debug)]

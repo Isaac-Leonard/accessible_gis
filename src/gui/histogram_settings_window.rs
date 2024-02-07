@@ -13,7 +13,7 @@ use super::{
     events::{dispatch_action, Action, MessageHandler},
 };
 use crate::{
-    graph::{HistogramSettings, OptionalHistogramSettings},
+    audio::graph::{HistogramSettings, OptionalHistogramSettings},
     raster::RasterIndex,
 };
 
