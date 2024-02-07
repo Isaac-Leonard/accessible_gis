@@ -1,8 +1,5 @@
 use assert_no_alloc::assert_no_alloc;
-use cpal::{
-    traits::{DeviceTrait, HostTrait, StreamTrait},
-    FromSample, SizedSample,
-};
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use fundsp::{
     hacker::{panner, shared, var},
     prelude::{sine, AudioNode},
@@ -13,6 +10,8 @@ use optional_struct::{optional_struct, Applyable};
 
 use std::{collections::HashMap, thread::sleep, time::Duration};
 
+use super::low_level::write_data;
+
 pub fn play_rasta(
     data: Array2<f64>,
     min: f64,
@@ -22,25 +21,6 @@ pub fn play_rasta(
 ) {
     let rasta_graph = RasterGraph::new(data, min, max, no_data_value, settings);
     rasta_graph.play();
-}
-
-pub fn write_data<T>(output: &mut [T], channels: usize, next_sample: &mut dyn FnMut() -> (f64, f64))
-where
-    T: SizedSample + FromSample<f64>,
-{
-    for frame in output.chunks_mut(channels) {
-        let sample = next_sample();
-        let left = T::from_sample(sample.0);
-        let right: T = T::from_sample(sample.1);
-
-        for (channel, sample) in frame.iter_mut().enumerate() {
-            if channel & 1 == 0 {
-                *sample = left;
-            } else {
-                *sample = right;
-            }
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

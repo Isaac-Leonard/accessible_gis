@@ -1,4 +1,4 @@
-use super::graph::write_data;
+use super::low_level::write_data;
 use assert_no_alloc::assert_no_alloc;
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
