@@ -14,7 +14,7 @@ use super::{
 };
 use crate::{
     audio::graph::{HistogramSettings, OptionalHistogramSettings},
-    raster::RasterIndex,
+    gis::raster::RasterIndex,
 };
 
 #[derive(Clone, PartialEq)]

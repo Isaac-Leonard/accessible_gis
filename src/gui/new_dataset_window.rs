@@ -11,7 +11,7 @@ use gdal::Dataset;
 
 use super::app::BasicApp;
 use super::events::{dispatch_action, Action, DatasetCreationOptions, MessageHandler};
-use crate::commands::list_drivers;
+use crate::gis::commands::list_drivers;
 
 pub fn create_dataset(options: &DatasetCreationOptions) -> Result<Dataset, ()> {
     eprintln!("{}", options.driver_name.trim().split('-').next().unwrap());

@@ -15,7 +15,7 @@ use super::{
 };
 use crate::{
     audio::graph::{HistogramSettings, RasterGraphSettings},
-    raster::RasterIndex,
+    gis::raster::RasterIndex,
 };
 
 #[derive(Default)]

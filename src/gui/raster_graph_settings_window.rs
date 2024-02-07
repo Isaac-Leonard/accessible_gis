@@ -6,7 +6,7 @@ use super::{
 };
 use crate::{
     audio::graph::{OptionalRasterGraphSettings, RasterGraphSettings},
-    raster::RasterIndex,
+    gis::raster::RasterIndex,
 };
 use cacao::{
     appkit::{

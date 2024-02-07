@@ -1,8 +1,8 @@
 use super::app::BasicApp;
 use super::events::{dispatch_action, Action};
 use crate::audio::{get_audio, AudioMessage};
-use crate::derivatives::slope_of_dataset;
-use crate::raster::RasterIndex;
+use crate::gis::derivatives::slope_of_dataset;
+use crate::gis::raster::RasterIndex;
 
 use super::new_dataset_window::create_dataset;
 use super::raster::*;

@@ -3,7 +3,7 @@ use super::events::{dispatch_action, Action};
 use super::histogram_settings_window::HistogramSettingsWrapper;
 use crate::audio::graph::{generate_image_histogram, HistogramSettings, RasterGraphSettings};
 use crate::audio::AudioMessage;
-use crate::raster::{RasterIndex, RawRasterData};
+use crate::gis::raster::{RasterIndex, RawRasterData};
 
 use cacao::appkit::App;
 use cacao_framework::{Component, Message, VButton, VComponent, VLabel, VList, VNode};

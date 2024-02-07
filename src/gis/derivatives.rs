@@ -6,7 +6,7 @@ use std::{
 use gdal::{raster::Buffer, Dataset};
 use ndarray::{Array2, Zip};
 
-use crate::raster::{RasterIndex, RawRasterData};
+use crate::gis::raster::{RasterIndex, RawRasterData};
 
 /// Note that this code has been adapted from existing code from QGIS
 

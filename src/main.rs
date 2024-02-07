@@ -4,12 +4,9 @@
 
 pub mod audio;
 mod commandline;
-mod commands;
-mod derivatives;
+pub mod gis;
 #[cfg(target_os = "macos")]
 mod gui;
-pub mod raster;
-mod warp;
 
 use clap::Parser;
 

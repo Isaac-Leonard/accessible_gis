@@ -1,6 +1,6 @@
 use super::app::BasicApp;
 use crate::audio::graph::{HistogramSettings, RasterGraphSettings};
-use crate::raster::RasterIndex;
+use crate::gis::raster::RasterIndex;
 
 use cacao::appkit::App;
 use cacao::view::View;

@@ -4,7 +4,7 @@ use clap::{Args, Parser, Subcommand};
 use gdal::{raster::StatisticsMinMax, Dataset};
 
 use crate::audio::graph::{play_rasta, RasterGraphSettings};
-use crate::raster::read_raster_data;
+use crate::gis::raster::read_raster_data;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
