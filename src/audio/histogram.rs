@@ -1,9 +1,6 @@
-use super::low_level::write_data;
+use super::low_level::{write_data, Playable, Waveform};
 use assert_no_alloc::assert_no_alloc;
-use cpal::{
-    traits::{DeviceTrait, HostTrait, StreamTrait},
-    FromSample, SizedSample,
-};
+use cpal::traits::{DeviceTrait, StreamTrait};
 use fundsp::{
     hacker::{panner, shared, var},
     prelude::{sine, AudioNode},
@@ -28,13 +25,6 @@ pub struct AudioHistogram {
     settings: HistogramSettings,
 }
 
-enum Waveform {
-    Sine,
-    Square,
-    Triangle,
-    Sawtooth,
-}
-
 impl AudioHistogram {
     pub fn new(y: Vec<f64>, settings: HistogramSettings) -> Self {
         AudioHistogram {
@@ -43,20 +33,9 @@ impl AudioHistogram {
             settings,
         }
     }
+}
 
-    pub fn play(&self) {
-        let host = cpal::default_host();
-        let device = host.default_output_device().unwrap();
-        let config = device.default_output_config().unwrap();
-
-        match config.sample_format() {
-            cpal::SampleFormat::F32 => self.run::<f32>(&device, &config.into()),
-            cpal::SampleFormat::I16 => self.run::<i16>(&device, &config.into()),
-            cpal::SampleFormat::U16 => self.run::<u16>(&device, &config.into()),
-            _ => panic!("Unsupported format"),
-        }
-    }
-
+impl Playable for AudioHistogram {
     fn run<T>(&self, device: &cpal::Device, config: &cpal::StreamConfig)
     where
         T: cpal::Sample + cpal::SizedSample + cpal::FromSample<f64>,
