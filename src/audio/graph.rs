@@ -10,7 +10,7 @@ use optional_struct::{optional_struct, Applyable};
 
 use std::{collections::HashMap, thread::sleep, time::Duration};
 
-use super::low_level::write_data;
+use super::low_level::{write_data, Playable};
 
 pub fn play_rasta(
     data: Array2<f64>,
@@ -87,20 +87,71 @@ impl RasterGraph {
         }
     }
 
-    pub fn play(&self) {
-        let host = cpal::default_host();
-        let device = host.default_output_device().unwrap();
-        let config = device.default_output_config().unwrap();
-
-        match config.sample_format() {
-            cpal::SampleFormat::F32 => self.run::<f32>(&device, &config.into()),
-            cpal::SampleFormat::F64 => self.run::<f64>(&device, &config.into()),
-            cpal::SampleFormat::I16 => self.run::<i16>(&device, &config.into()),
-            cpal::SampleFormat::U16 => self.run::<u16>(&device, &config.into()),
-            _ => panic!("Unsupported format"),
-        }
+    fn calculate_mean(&self) -> Array2<Option<f64>> {
+        let x_scale = self.data.ncols() / self.settings.cols;
+        let y_scale = self.data.nrows() / self.settings.rows;
+        Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
+            let cleaned = if let Some(ref no_data_value) = self.no_data_value {
+                Either::Left(
+                    chunk
+                        .into_iter()
+                        .filter(move |x| x.is_finite() && *x != no_data_value),
+                )
+            } else {
+                Either::Right(chunk.into_iter().filter(|x| x.is_finite()))
+            };
+            if cleaned.clone().count() == 0 {
+                None
+            } else {
+                Some(cleaned.sum::<f64>() / (y_scale * x_scale) as f64)
+            }
+        })
     }
 
+    /// Counts each pixel in each cell and returns the most common one for each cell
+    /// Note this isn't very clever so if there's 20 different values then 5% being the same in a cell is enough to return it as the most common, first past the post style
+    ///If every cell happens to have the same 5% majority then the whole image will be interpreted as that value.
+    fn calculate_max_count(&self) -> Array2<Option<f64>> {
+        let x_scale = self.data.ncols() / self.settings.cols;
+        let y_scale = self.data.nrows() / self.settings.rows;
+        if let Some(no_data_value) = &self.no_data_value {
+            Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
+                let mut counts = HashMap::<u64, usize>::new();
+                for x in chunk
+                    .into_iter()
+                    .filter(|x| x.is_finite() && *x != no_data_value)
+                {
+                    counts
+                        .entry(x.to_bits())
+                        .and_modify(|count| *count += 1)
+                        .or_insert(1);
+                }
+                counts
+                    .into_iter()
+                    .sorted_by_key(|x| x.1)
+                    .last()
+                    .map(|x| f64::from_bits(x.0))
+            })
+        } else {
+            Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
+                let mut counts = HashMap::<u64, usize>::new();
+                for x in chunk.into_iter().filter(|x| x.is_finite()) {
+                    counts
+                        .entry(x.to_bits())
+                        .and_modify(|count| *count += 1)
+                        .or_insert(1);
+                }
+                counts
+                    .into_iter()
+                    .sorted_by_key(|x| x.1)
+                    .last()
+                    .map(|x| f64::from_bits(x.0))
+            })
+        }
+    }
+}
+
+impl Playable for RasterGraph {
     fn run<T>(&self, device: &cpal::Device, config: &cpal::StreamConfig)
     where
         T: cpal::Sample + cpal::SizedSample + cpal::FromSample<f64>,
@@ -200,69 +251,6 @@ impl RasterGraph {
                 freq.set_value(freq_f);
                 sleep(duration_per_sample_ms);
             }
-        }
-    }
-
-    fn calculate_mean(&self) -> Array2<Option<f64>> {
-        let x_scale = self.data.ncols() / self.settings.cols;
-        let y_scale = self.data.nrows() / self.settings.rows;
-        Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
-            let cleaned = if let Some(ref no_data_value) = self.no_data_value {
-                Either::Left(
-                    chunk
-                        .into_iter()
-                        .filter(move |x| x.is_finite() && *x != no_data_value),
-                )
-            } else {
-                Either::Right(chunk.into_iter().filter(|x| x.is_finite()))
-            };
-            if cleaned.clone().count() == 0 {
-                None
-            } else {
-                Some(cleaned.sum::<f64>() / (y_scale * x_scale) as f64)
-            }
-        })
-    }
-
-    /// Counts each pixel in each cell and returns the most common one for each cell
-    /// Note this isn't very clever so if there's 20 different values then 5% being the same in a cell is enough to return it as the most common, first past the post style
-    ///If every cell happens to have the same 5% majority then the whole image will be interpreted as that value.
-    fn calculate_max_count(&self) -> Array2<Option<f64>> {
-        let x_scale = self.data.ncols() / self.settings.cols;
-        let y_scale = self.data.nrows() / self.settings.rows;
-        if let Some(no_data_value) = &self.no_data_value {
-            Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
-                let mut counts = HashMap::<u64, usize>::new();
-                for x in chunk
-                    .into_iter()
-                    .filter(|x| x.is_finite() && *x != no_data_value)
-                {
-                    counts
-                        .entry(x.to_bits())
-                        .and_modify(|count| *count += 1)
-                        .or_insert(1);
-                }
-                counts
-                    .into_iter()
-                    .sorted_by_key(|x| x.1)
-                    .last()
-                    .map(|x| f64::from_bits(x.0))
-            })
-        } else {
-            Zip::from(self.data.exact_chunks((y_scale, x_scale))).map_collect(|chunk| {
-                let mut counts = HashMap::<u64, usize>::new();
-                for x in chunk.into_iter().filter(|x| x.is_finite()) {
-                    counts
-                        .entry(x.to_bits())
-                        .and_modify(|count| *count += 1)
-                        .or_insert(1);
-                }
-                counts
-                    .into_iter()
-                    .sorted_by_key(|x| x.1)
-                    .last()
-                    .map(|x| f64::from_bits(x.0))
-            })
         }
     }
 }
