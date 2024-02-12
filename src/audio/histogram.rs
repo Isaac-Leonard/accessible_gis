@@ -1,4 +1,4 @@
-use super::low_level::{write_data, Playable, Waveform};
+use super::low_level::{write_data, AudioWave, Playable, Waveform};
 use assert_no_alloc::assert_no_alloc;
 use cpal::traits::{DeviceTrait, StreamTrait};
 use fundsp::{
@@ -42,35 +42,15 @@ impl Playable for AudioHistogram {
     {
         // ... generate sound signal based on self.y and other parameters
 
-        let sample_rate = config.sample_rate.0 as f64;
-        let channels = config.channels as usize;
         let HistogramSettings {
             duration,
             min_freq,
             max_freq,
         } = self.settings.clone();
-        let freq = shared(440.0);
-        let c = var(&freq) >> sine();
-        let pos = shared(-1.0);
-        let mut c = (c | var(&pos)) >> panner();
-        c.set_sample_rate(sample_rate);
-        c.allocate();
-
-        let mut next_value = move || assert_no_alloc(|| c.get_stereo());
-
-        let err_fn = |err| panic!("an error occurred on stream: {}", err);
-
-        let stream = device
-            .build_output_stream(
-                config,
-                move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
-                    write_data(data, channels, &mut &mut next_value);
-                },
-                err_fn,
-                None,
-            )
-            .unwrap();
-        stream.play().unwrap();
+        let wave = match self.waveform {
+            Waveform::Sine => AudioWave::new::<T, _>(sine(), device, config),
+            _ => unimplemented!(),
+        };
         let _pos_f = -1.0;
         let min = self
             .y
@@ -92,8 +72,8 @@ impl Playable for AudioHistogram {
         for (x, y) in self.y.iter().copied().enumerate() {
             let freq_f = (y - min) / y_range * freq_range + min_freq;
             let pos_f = x as f64 / (y_len - 1) as f64 * 2.0 - 1.0;
-            pos.set_value(pos_f);
-            freq.set_value(freq_f);
+            wave.set_position(pos_f);
+            wave.set_freq(freq_f);
             sleep(duration_per_sample_ms);
         }
     }

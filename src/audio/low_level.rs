@@ -1,7 +1,10 @@
+use std::thread::sleep;
+use std::time::Duration;
+
 use assert_no_alloc::*;
-use cpal::traits::{DeviceTrait, HostTrait};
-use cpal::Stream;
-use cpal::{FromSample, SizedSample};
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{Device, FromSample, SizedSample};
+use cpal::{Stream, StreamConfig};
 use fundsp::hacker::*;
 
 pub fn write_data<T>(output: &mut [T], channels: usize, next_sample: &mut dyn FnMut() -> (f64, f64))
@@ -141,7 +144,9 @@ pub trait Playable {
 
         match config.sample_format() {
             cpal::SampleFormat::F32 => self.run::<f32>(&device, &config.into()),
+            cpal::SampleFormat::F64 => self.run::<f64>(&device, &config.into()),
             cpal::SampleFormat::I16 => self.run::<i16>(&device, &config.into()),
+            cpal::SampleFormat::U8 => self.run::<u8>(&device, &config.into()),
             cpal::SampleFormat::U16 => self.run::<u16>(&device, &config.into()),
             _ => panic!("Unsupported format"),
         }
@@ -157,4 +162,58 @@ pub enum Waveform {
     Square,
     Triangle,
     Sawtooth,
+}
+
+pub struct AudioWave {
+    freq: Shared<f64>,
+    pos: Shared<f64>,
+    stream: Stream,
+}
+
+impl AudioWave {
+    pub fn new<
+        S: cpal::Sample + cpal::SizedSample + cpal::FromSample<f64>,
+        T: AudioNode<Sample = f64, Inputs = U1, Outputs = U1> + Send + 'static,
+    >(
+        source: An<T>,
+        device: &Device,
+        config: &StreamConfig,
+    ) -> Self {
+        let freq = shared(440.0);
+        let c = var(&freq) >> source;
+        let pos = shared(-1.0);
+        let mut c = (c | var(&pos)) >> panner();
+        c.set_sample_rate(config.sample_rate.0 as f64);
+        c.allocate();
+        let mut next_value = move || assert_no_alloc(|| c.get_stereo());
+
+        let err_fn = |err| panic!("an error occurred on stream: {}", err);
+
+        let channels = config.channels as usize;
+        let stream = device
+            .build_output_stream(
+                config,
+                move |data: &mut [S], _: &cpal::OutputCallbackInfo| {
+                    write_data(data, channels, &mut &mut next_value);
+                },
+                err_fn,
+                None,
+            )
+            .unwrap();
+        stream.play().unwrap();
+
+        Self { freq, pos, stream }
+    }
+
+    pub fn sleep(&self, duration: Duration) {
+        sleep(duration);
+    }
+
+    pub fn set_position(&self, pos: f64) {
+        self.pos.set(pos)
+    }
+
+    pub fn set_freq(&self, freq: f64) {
+        self.freq.set(freq)
+    }
 }
