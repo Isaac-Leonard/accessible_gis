@@ -1,9 +1,11 @@
 use std::{path::PathBuf, process::exit, time::Duration};
 
 use clap::{Args, Parser, Subcommand};
+use gdal::raster::GdalDataType;
 use gdal::{raster::StatisticsMinMax, Dataset};
 
 use crate::audio::graph::{play_rasta, RasterGraphSettings};
+use crate::audio::histogram::{generate_image_histogram, play_histogram};
 use crate::gis::raster::read_raster_data;
 
 #[derive(Parser, Debug)]
@@ -47,6 +49,7 @@ fn parse_duration(arg: &str) -> Result<std::time::Duration, std::num::ParseIntEr
 #[derive(Subcommand, Debug)]
 enum Commands {
     Graph(GraphArgs),
+    Histogram,
 }
 
 pub fn launch_commandline_app(args: Input) {
@@ -65,14 +68,14 @@ pub fn launch_commandline_app(args: Input) {
         );
         exit(-1)
     };
-    let data = read_raster_data(&band);
-    let Ok(StatisticsMinMax { min, max }) = band.compute_raster_min_max(false) else {
-        eprint!("Could not calculate the minimum and maximum pixel values of the specified band of the dataset");
-        exit(-1)
-    };
-    let no_data_value = band.no_data_value();
     match args.command {
         Commands::Graph(graph_settings) => {
+            let data = read_raster_data(&band);
+            let Ok(StatisticsMinMax { min, max }) = band.compute_raster_min_max(false) else {
+                eprint!("Could not calculate the minimum and maximum pixel values of the specified band of the dataset");
+                exit(-1)
+            };
+            let no_data_value = band.no_data_value();
             let settings = RasterGraphSettings {
                 min_freq: args.freq_settings.min_freq,
                 max_freq: args.freq_settings.max_freq,
@@ -82,6 +85,19 @@ pub fn launch_commandline_app(args: Input) {
                 classified: graph_settings.classified,
             };
             play_rasta(data, min, max, no_data_value, settings);
+        }
+        Commands::Histogram => {
+            let data = match band.band_type() {
+                GdalDataType::UInt8 => band
+                    .read_as_array::<u8>((0, 0), band.size(), band.size(), None)
+                    .unwrap(),
+                _ => {
+                    eprint!("Currently we can only generate histograms for byte data");
+                    exit(-1);
+                }
+            };
+            let counts = generate_image_histogram(data.into_raw_vec());
+            play_histogram(counts, Default::default());
         }
     }
 }
