@@ -10,6 +10,8 @@ use optional_struct::{optional_struct, Applyable};
 
 use std::{collections::HashMap, thread::sleep, time::Duration};
 
+use crate::audio::low_level::AudioWave;
+
 use super::low_level::{write_data, Playable};
 
 pub fn play_rasta(
@@ -216,28 +218,7 @@ impl Playable for RasterGraph {
 
         let sample_rate = config.sample_rate.0 as f64;
         let channels = config.channels as usize;
-        let freq = shared(0.0);
-        let c = var(&freq) >> sine();
-        let pos = shared(-1.0);
-        let mut c = (c | var(&pos)) >> panner();
-        c.set_sample_rate(sample_rate);
-        c.allocate();
-
-        let mut next_value = move || assert_no_alloc(|| c.get_stereo());
-
-        let err_fn = |err| panic!("an error occurred on stream: {}", err);
-
-        let stream = device
-            .build_output_stream(
-                config,
-                move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
-                    write_data(data, channels, &mut &mut next_value);
-                },
-                err_fn,
-                None,
-            )
-            .unwrap();
-        stream.play().unwrap();
+        let wave = AudioWave::new::<T, _>(sine(), device, config);
         let _pos_f = -1.0;
         for row in data.rows() {
             for (i, pixel) in row.indexed_iter() {
@@ -247,9 +228,9 @@ impl Playable for RasterGraph {
                     0.
                 };
                 let pos_f = i as f64 / (row_len - 1.) * 2.0 - 1.0;
-                pos.set_value(pos_f);
-                freq.set_value(freq_f);
-                sleep(duration_per_sample_ms);
+                wave.set_position(pos_f);
+                wave.set_freq(freq_f);
+                wave.sleep(duration_per_sample_ms);
             }
         }
     }
