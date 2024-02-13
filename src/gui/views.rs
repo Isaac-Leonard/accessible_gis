@@ -276,7 +276,11 @@ impl Component for DatasetView {
         match message {
             Action::SendAudioGraph(graph, settings) => state
                 .0
-                .send(AudioMessage::PlayHistogram(graph.clone(), settings.clone()))
+                .send(AudioMessage::PlayHistogram(
+                    graph.clone(),
+                    settings.clone(),
+                    Default::default(),
+                ))
                 .unwrap(),
             _ => {}
         };

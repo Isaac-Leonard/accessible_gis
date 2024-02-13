@@ -1,3 +1,5 @@
+use std::fmt::Display;
+use std::str::FromStr;
 use std::{path::PathBuf, process::exit, time::Duration};
 
 use clap::{Args, Parser, Subcommand};
@@ -5,7 +7,10 @@ use gdal::raster::GdalDataType;
 use gdal::{raster::StatisticsMinMax, Dataset};
 
 use crate::audio::graph::{play_rasta, RasterGraphSettings};
-use crate::audio::histogram::{generate_image_histogram, play_histogram};
+use crate::audio::{
+    histogram::{generate_image_histogram, play_histogram},
+    Waveform,
+};
 use crate::gis::raster::read_raster_data;
 
 #[derive(Parser, Debug)]
@@ -19,6 +24,8 @@ pub struct Input {
     command: Commands,
     #[arg(short, long, default_value_t = 1, global = true)]
     band: isize,
+    #[arg(short, long, default_value_t=WaveType::Sine, global = true)]
+    wave: WaveType,
 }
 
 #[derive(Debug, Args)]
@@ -68,6 +75,7 @@ pub fn launch_commandline_app(args: Input) {
         );
         exit(-1)
     };
+    let wave: Waveform = args.wave.into();
     match args.command {
         Commands::Graph(graph_settings) => {
             let data = read_raster_data(&band);
@@ -97,7 +105,43 @@ pub fn launch_commandline_app(args: Input) {
                 }
             };
             let counts = generate_image_histogram(data.into_raw_vec());
-            play_histogram(counts, Default::default());
+            play_histogram(counts, Default::default(), wave.into());
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, PartialEq)]
+pub enum WaveType {
+    #[default]
+    Sine,
+    Triangle,
+}
+
+impl FromStr for WaveType {
+    type Err = &'static str;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "sine" => Ok(Self::Sine),
+            "triangle" => Ok(Self::Triangle),
+            _ => Err("Not a valid wave type"),
+        }
+    }
+}
+
+impl Display for WaveType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Sine => f.write_str("sine"),
+            Self::Triangle => f.write_str("triangle"),
+        }
+    }
+}
+
+impl From<WaveType> for Waveform {
+    fn from(value: WaveType) -> Self {
+        match value {
+            WaveType::Sine => Self::Sine,
+            WaveType::Triangle => Self::Triangle,
         }
     }
 }

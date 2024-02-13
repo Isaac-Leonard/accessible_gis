@@ -5,6 +5,7 @@ pub mod graph;
 pub mod histogram;
 mod low_level;
 
+pub use low_level::Waveform;
 use std::sync::mpsc;
 use std::thread;
 
@@ -25,7 +26,7 @@ static A: AllocDisabler = AllocDisabler;
 
 #[derive(Clone, Debug)]
 pub enum AudioMessage {
-    PlayHistogram(Vec<f64>, HistogramSettings),
+    PlayHistogram(Vec<f64>, HistogramSettings, Waveform),
     PlayRaster(Array2<f64>, f64, f64, Option<f64>, RasterGraphSettings),
 }
 
@@ -35,8 +36,8 @@ pub fn get_audio() -> mpsc::Sender<AudioMessage> {
         let mut playing = false;
         loop {
             let msg = rx.recv().unwrap();
-            if let AudioMessage::PlayHistogram(graph, settings) = msg {
-                play_histogram(graph, settings);
+            if let AudioMessage::PlayHistogram(graph, settings, wave) = msg {
+                play_histogram(graph, settings, wave);
                 playing = !playing;
             } else if let AudioMessage::PlayRaster(data, min, max, no_data_value, settings) = msg {
                 play_rasta(data, min, max, no_data_value, settings);

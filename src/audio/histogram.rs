@@ -3,7 +3,7 @@ use assert_no_alloc::assert_no_alloc;
 use cpal::traits::{DeviceTrait, StreamTrait};
 use fundsp::{
     hacker::{panner, shared, var},
-    prelude::{sine, AudioNode},
+    prelude::{sine, triangle, AudioNode},
 };
 use optional_struct::{optional_struct, Applyable};
 use std::{thread::sleep, time::Duration};
@@ -26,10 +26,10 @@ pub struct AudioHistogram {
 }
 
 impl AudioHistogram {
-    pub fn new(y: Vec<f64>, settings: HistogramSettings) -> Self {
+    pub fn new(y: Vec<f64>, settings: HistogramSettings, waveform: Waveform) -> Self {
         AudioHistogram {
             y,
-            waveform: Waveform::Sine,
+            waveform,
             settings,
         }
     }
@@ -49,6 +49,7 @@ impl Playable for AudioHistogram {
         } = self.settings.clone();
         let wave = match self.waveform {
             Waveform::Sine => AudioWave::new::<T, _>(sine(), device, config),
+            Waveform::Triangle => AudioWave::new::<T, _>(triangle(), device, config),
             _ => unimplemented!(),
         };
         let _pos_f = -1.0;
@@ -87,8 +88,8 @@ pub fn generate_image_histogram(data: Vec<u8>) -> Vec<f64> {
     counts
 }
 
-pub fn play_histogram(counts: Vec<f64>, settings: HistogramSettings) {
-    let sonifier = AudioHistogram::new(counts, settings);
+pub fn play_histogram(counts: Vec<f64>, settings: HistogramSettings, wave: Waveform) {
+    let sonifier = AudioHistogram::new(counts, settings, wave);
     sonifier.play();
 }
 
