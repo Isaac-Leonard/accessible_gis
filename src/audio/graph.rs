@@ -1,4 +1,3 @@
-use fundsp::prelude::sine;
 use itertools::{Either, Itertools};
 use ndarray::{Array2, Zip};
 use optional_struct::{optional_struct, Applyable};
@@ -211,7 +210,7 @@ impl Playable for RasterGraph {
         let freq_range = max_freq - min_freq;
         // ... generate sound signal based on self.y and other parameters
 
-        let wave = AudioWave::new::<T, _>(sine(), device, config);
+        let wave = AudioWave::new::<T>(crate::audio::Waveform::Sine, device, config);
         let _pos_f = -1.0;
         for row in data.rows() {
             for (i, pixel) in row.indexed_iter() {

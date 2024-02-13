@@ -1,5 +1,4 @@
 use super::low_level::{AudioWave, Playable, Waveform};
-use fundsp::prelude::{sine, triangle};
 use optional_struct::{optional_struct, Applyable};
 use std::{thread::sleep, time::Duration};
 
@@ -42,11 +41,7 @@ impl Playable for AudioHistogram {
             min_freq,
             max_freq,
         } = self.settings.clone();
-        let wave = match self.waveform {
-            Waveform::Sine => AudioWave::new::<T, _>(sine(), device, config),
-            Waveform::Triangle => AudioWave::new::<T, _>(triangle(), device, config),
-            _ => unimplemented!(),
-        };
+        let wave = AudioWave::new::<T>(self.waveform.clone(), device, config);
         let _pos_f = -1.0;
         let min = self
             .y
