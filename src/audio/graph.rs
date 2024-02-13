@@ -1,18 +1,13 @@
-use assert_no_alloc::assert_no_alloc;
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use fundsp::{
-    hacker::{panner, shared, var},
-    prelude::{sine, AudioNode},
-};
+use fundsp::prelude::sine;
 use itertools::{Either, Itertools};
 use ndarray::{Array2, Zip};
 use optional_struct::{optional_struct, Applyable};
 
-use std::{collections::HashMap, thread::sleep, time::Duration};
+use std::{collections::HashMap, time::Duration};
 
 use crate::audio::low_level::AudioWave;
 
-use super::low_level::{write_data, Playable};
+use super::low_level::Playable;
 
 pub fn play_rasta(
     data: Array2<f64>,
@@ -216,8 +211,6 @@ impl Playable for RasterGraph {
         let freq_range = max_freq - min_freq;
         // ... generate sound signal based on self.y and other parameters
 
-        let sample_rate = config.sample_rate.0 as f64;
-        let channels = config.channels as usize;
         let wave = AudioWave::new::<T, _>(sine(), device, config);
         let _pos_f = -1.0;
         for row in data.rows() {

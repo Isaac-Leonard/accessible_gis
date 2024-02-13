@@ -10,15 +10,10 @@ use std::sync::mpsc;
 use std::thread;
 
 use assert_no_alloc::*;
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::Stream;
-use fundsp::hacker::*;
 use ndarray::Array2;
 
 use graph::{play_rasta, RasterGraphSettings};
 use histogram::{play_histogram, HistogramSettings};
-
-use low_level::write_data;
 
 #[cfg(debug_assertions)] // required when disable_release is set (default)
 #[global_allocator]

@@ -1,10 +1,5 @@
-use super::low_level::{write_data, AudioWave, Playable, Waveform};
-use assert_no_alloc::assert_no_alloc;
-use cpal::traits::{DeviceTrait, StreamTrait};
-use fundsp::{
-    hacker::{panner, shared, var},
-    prelude::{sine, triangle, AudioNode},
-};
+use super::low_level::{AudioWave, Playable, Waveform};
+use fundsp::prelude::{sine, triangle};
 use optional_struct::{optional_struct, Applyable};
 use std::{thread::sleep, time::Duration};
 

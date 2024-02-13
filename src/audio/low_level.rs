@@ -169,6 +169,8 @@ pub enum Waveform {
 pub struct AudioWave {
     freq: Shared<f64>,
     pos: Shared<f64>,
+    // This is here as the stream cannot be dropped without ending the audio playback
+    #[allow(dead_code)]
     stream: Stream,
 }
 
