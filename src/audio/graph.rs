@@ -65,26 +65,17 @@ impl Default for RasterGraphSettings {
 
 #[derive(Clone, Debug)]
 pub struct RasterGraph {
-    data: Array2<f64>,
-    no_data_value: Option<f64>,
-    settings: RasterGraphSettings,
+    inner: Vec<RasterGraphInner>,
 }
 
-impl RasterGraph {
-    pub fn new(
-        data: Array2<f64>,
-        min: f64,
-        max: f64,
-        no_data_value: Option<f64>,
-        settings: RasterGraphSettings,
-    ) -> Self {
-        Self {
-            data,
-            no_data_value,
-            settings,
-        }
-    }
+#[derive(Clone, Debug)]
+struct RasterGraphInner {
+    pub data: Array2<f64>,
+    pub no_data_value: Option<f64>,
+    pub settings: RasterGraphSettings,
+}
 
+impl RasterGraphInner {
     fn calculate_mean(&self) -> Array2<Option<f64>> {
         let x_scale = self.data.ncols() / self.settings.cols;
         let y_scale = self.data.nrows() / self.settings.rows;
@@ -149,84 +140,130 @@ impl RasterGraph {
     }
 }
 
+impl RasterGraph {
+    pub fn new(
+        data: Array2<f64>,
+        min: f64,
+        max: f64,
+        no_data_value: Option<f64>,
+        settings: RasterGraphSettings,
+    ) -> Self {
+        Self {
+            inner: vec![RasterGraphInner {
+                data,
+                no_data_value,
+                settings,
+            }],
+        }
+    }
+}
+
 impl Playable for RasterGraph {
     fn run<T>(&self, device: &cpal::Device, config: &cpal::StreamConfig)
     where
         T: cpal::Sample + cpal::SizedSample + cpal::FromSample<f64>,
     {
-        let RasterGraphSettings {
-            row_duration,
-            min_freq,
-            max_freq,
-            classified,
-            wave,
-            rows: _,
-            cols: _,
-        } = self.settings;
-        let (data, min, max) = if classified {
-            let categories = count_categories(&self.data, self.no_data_value);
-            let data = self.data.map(|val| {
-                categories
-                    .iter()
-                    .enumerate()
-                    .find(|category| val == category.1)
-                    .map(|x| x.0 as f64)
-                    .or(self.no_data_value)
-                    .unwrap_or(f64::NAN)
-            });
-            let min = *data
-                .iter()
-                .filter(|x| x.is_finite() && Some(**x) != self.no_data_value)
-                .min_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap();
-            let max = *data
-                .iter()
-                .filter(|x| x.is_finite() && Some(**x) != self.no_data_value)
-                .max_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap();
-            let self_with_data = Self {
-                data,
-                ..self.clone()
-            };
-            (self_with_data.calculate_max_count(), min, max)
-        } else {
-            let min = *self
-                .data
-                .iter()
-                .filter(|x| x.is_finite() && Some(**x) != self.no_data_value)
-                .min_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap();
-            let max = *self
-                .data
-                .iter()
-                .filter(|x| x.is_finite() && Some(**x) != self.no_data_value)
-                .max_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap();
-            (self.calculate_mean(), min, max)
-        };
-        dbg!(min);
-        dbg!(max);
-
-        let row_len = data.ncols() as f64;
-        let duration_per_sample_ms = row_duration.div_f64(row_len);
-        let y_range = max - min;
-        let y_range = if y_range == 0.0 { 1.0 } else { y_range };
-        let freq_range = max_freq - min_freq;
-        // ... generate sound signal based on self.y and other parameters
-
-        let wave = AudioWave::new::<T>(wave, device, config);
-        let _pos_f = -1.0;
-        for row in data.rows() {
-            for (i, pixel) in row.indexed_iter() {
-                let freq_f = if let Some(pixel) = pixel {
-                    (*pixel - min) / y_range * freq_range + min_freq
+        let everything = self
+            .inner
+            .iter()
+            .map(|graph| {
+                let RasterGraphSettings {
+                    row_duration,
+                    min_freq,
+                    max_freq,
+                    classified,
+                    wave,
+                    rows: _,
+                    cols: _,
+                } = graph.settings;
+                let (data, min, max) = if classified {
+                    let categories = count_categories(&graph.data, graph.no_data_value);
+                    let data = graph.data.map(|val| {
+                        categories
+                            .iter()
+                            .enumerate()
+                            .find(|category| val == category.1)
+                            .map(|x| x.0 as f64)
+                            .or(graph.no_data_value)
+                            .unwrap_or(f64::NAN)
+                    });
+                    let min = *data
+                        .iter()
+                        .filter(|x| x.is_finite() && Some(**x) != graph.no_data_value)
+                        .min_by(|a, b| a.partial_cmp(b).unwrap())
+                        .unwrap();
+                    let max = *data
+                        .iter()
+                        .filter(|x| x.is_finite() && Some(**x) != graph.no_data_value)
+                        .max_by(|a, b| a.partial_cmp(b).unwrap())
+                        .unwrap();
+                    let self_with_data = RasterGraphInner {
+                        data,
+                        ..graph.clone()
+                    };
+                    (self_with_data.calculate_max_count(), min, max)
                 } else {
-                    0.
+                    let min = *graph
+                        .data
+                        .iter()
+                        .filter(|x| x.is_finite() && Some(**x) != graph.no_data_value)
+                        .min_by(|a, b| a.partial_cmp(b).unwrap())
+                        .unwrap();
+                    let max = *graph
+                        .data
+                        .iter()
+                        .filter(|x| x.is_finite() && Some(**x) != graph.no_data_value)
+                        .max_by(|a, b| a.partial_cmp(b).unwrap())
+                        .unwrap();
+                    (graph.calculate_mean(), min, max)
                 };
-                let pos_f = i as f64 / (row_len - 1.) * 2.0 - 1.0;
-                wave.set_position(pos_f);
-                wave.set_freq(freq_f);
-                wave.sleep(duration_per_sample_ms);
+                dbg!(min);
+                dbg!(max);
+
+                let row_len = data.ncols() as f64;
+                let duration_per_sample_ms = row_duration.div_f64(row_len);
+                let y_range = max - min;
+                let y_range = if y_range == 0.0 { 1.0 } else { y_range };
+                let freq_range = max_freq - min_freq;
+                // ... generate sound signal based on self.y and other parameters
+
+                let wave = AudioWave::new::<T>(wave, device, config);
+                let _pos_f = -1.0;
+                return (
+                    wave,
+                    data,
+                    (
+                        min,
+                        max,
+                        min_freq,
+                        max_freq,
+                        y_range,
+                        freq_range,
+                        row_len,
+                        duration_per_sample_ms,
+                    ),
+                );
+            })
+            .collect::<Vec<_>>();
+        let mut row = 0;
+        for (
+            wave,
+            data,
+            (min, max, min_freq, max_freq, y_range, freq_range, row_len, duration_per_sample_ms),
+        ) in everything
+        {
+            for row in data.rows() {
+                for (i, pixel) in row.indexed_iter() {
+                    let freq_f = if let Some(pixel) = pixel {
+                        (*pixel - min) / y_range * freq_range + min_freq
+                    } else {
+                        0.
+                    };
+                    let pos_f = i as f64 / (row_len - 1.) * 2.0 - 1.0;
+                    wave.set_position(pos_f);
+                    wave.set_freq(freq_f);
+                    wave.sleep(duration_per_sample_ms);
+                }
             }
         }
     }

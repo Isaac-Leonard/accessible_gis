@@ -2,7 +2,7 @@ use std::fmt::Display;
 use std::str::FromStr;
 use std::{path::PathBuf, process::exit, time::Duration};
 
-use clap::{Args, FromArgMatches, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use gdal::raster::GdalDataType;
 use gdal::{raster::StatisticsMinMax, Dataset};
 use itertools::Itertools;
