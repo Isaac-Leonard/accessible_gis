@@ -6,7 +6,7 @@ use std::{collections::HashMap, time::Duration};
 
 use crate::audio::low_level::AudioWave;
 
-use super::low_level::Playable;
+use super::{low_level::Playable, Waveform};
 
 pub fn play_rasta(
     data: Array2<f64>,
@@ -29,6 +29,7 @@ pub struct RasterGraphSettings {
     pub rows: usize,
     pub cols: usize,
     pub classified: bool,
+    pub wave: Waveform,
 }
 
 fn count_categories(data: &Array2<f64>, no_data_value: Option<f64>) -> Vec<f64> {
@@ -57,6 +58,7 @@ impl Default for RasterGraphSettings {
             rows: 10,
             cols: 10,
             classified: false,
+            wave: Waveform::default(),
         }
     }
 }
@@ -157,7 +159,9 @@ impl Playable for RasterGraph {
             min_freq,
             max_freq,
             classified,
-            ..
+            wave,
+            rows: _,
+            cols: _,
         } = self.settings;
         let (data, min, max) = if classified {
             let categories = count_categories(&self.data, self.no_data_value);
@@ -210,7 +214,7 @@ impl Playable for RasterGraph {
         let freq_range = max_freq - min_freq;
         // ... generate sound signal based on self.y and other parameters
 
-        let wave = AudioWave::new::<T>(crate::audio::Waveform::Sine, device, config);
+        let wave = AudioWave::new::<T>(wave, device, config);
         let _pos_f = -1.0;
         for row in data.rows() {
             for (i, pixel) in row.indexed_iter() {

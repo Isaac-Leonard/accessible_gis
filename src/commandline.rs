@@ -91,6 +91,7 @@ pub fn launch_commandline_app(args: Input) {
                 rows: graph_settings.rows,
                 cols: graph_settings.columns,
                 classified: graph_settings.classified,
+                wave,
             };
             play_rasta(data, min, max, no_data_value, settings);
         }

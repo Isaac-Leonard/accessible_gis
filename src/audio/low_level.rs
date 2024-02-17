@@ -47,7 +47,7 @@ pub trait Playable {
         T: cpal::Sample + cpal::SizedSample + cpal::FromSample<f64>;
 }
 
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub enum Waveform {
     #[default]
     Sine,
