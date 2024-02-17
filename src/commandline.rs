@@ -6,6 +6,7 @@ use clap::{Args, Parser, Subcommand};
 use gdal::raster::GdalDataType;
 use gdal::{raster::StatisticsMinMax, Dataset};
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 
 use crate::audio::graph::{play_rasta, RasterGraphSettings};
 use crate::audio::{
@@ -18,30 +19,48 @@ use crate::gis::raster::read_raster_data;
 #[command(author, version, about, long_about = None)]
 pub struct Input {
     #[command(subcommand)]
-    command: Commands,
+    command: AllCommands,
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone, Serialize, Deserialize)]
 pub struct HistogramArgs {
-    #[arg(global = true)]
-    name: Option<PathBuf>,
+    #[arg()]
+    #[serde(default)]
+    name: PathBuf,
     #[arg(short, long, default_value_t = 1, global = true)]
+    #[serde(default = "default_band")]
     band: isize,
     #[command(flatten)]
+    #[serde(flatten)]
     freq_settings: FrequencyArgs,
     #[arg(short, long, default_value_t=WaveType::Sine, global = true)]
+    #[serde(default)]
     wave: WaveType,
 }
 
-#[derive(Debug, Args, Clone)]
+fn default_band() -> isize {
+    1
+}
+
+#[derive(Debug, Args, Clone, Serialize, Deserialize)]
 pub struct FrequencyArgs {
     #[arg(long, default_value_t = 55.0)]
+    #[serde(default = "default_min_freq")]
     min_freq: f64,
     #[arg(long, default_value_t = 2048.0)]
+    #[serde(default = "default_max_freq")]
     max_freq: f64,
 }
 
-#[derive(Debug, Args, Clone)]
+fn default_min_freq() -> f64 {
+    55.0
+}
+
+fn default_max_freq() -> f64 {
+    2048.0
+}
+
+#[derive(Debug, Args, Clone, Serialize, Deserialize)]
 pub struct GlobalGraphArgs {
     #[arg(short, long, default_value_t = 10)]
     rows: usize,
@@ -53,7 +72,7 @@ pub struct GlobalGraphArgs {
     classified: bool,
 }
 
-#[derive(Debug, Args, Clone)]
+#[derive(Debug, Args, Clone, Serialize, Deserialize)]
 pub struct IndividualGraphArgs {
     #[arg()]
     pub name: String,
@@ -95,9 +114,35 @@ fn parse_duration(arg: &str) -> Result<std::time::Duration, std::num::ParseIntEr
 }
 
 #[derive(Subcommand, Debug)]
+enum AllCommands {
+    Json(JsonArgs),
+    #[command(flatten)]
+    Commands(Commands),
+}
+
+#[derive(Subcommand, Debug)]
 enum Commands {
     Graph(IndividualGraphArgs),
     Histogram(HistogramArgs),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum JsonCommands {
+    Graph(Vec<IndividualGraphArgs>),
+    Histogram(HistogramArgs),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Args)]
+pub struct JsonArgs {
+    #[arg()]
+    payload: JsonCommands,
+}
+
+impl FromStr for JsonCommands {
+    type Err = serde_json::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str(s)
+    }
 }
 
 #[derive(Debug, Args)]
@@ -112,71 +157,50 @@ pub struct GraphArgs {
 
 pub fn launch_commandline_app(args: Input) {
     match args.command {
-        Commands::Graph(args) => {
-            let args = args.clone();
-            let name = args.name;
-            let Ok(dataset) = Dataset::open(&name) else {
-                eprint!("Failed to read dataset at {}", name);
-                exit(-1)
-            };
-            let Ok(band) = dataset.rasterband(args.band) else {
-                eprint!(
-                    "Failed to read rasta band {} of the specified dataset",
-                    args.band
-                );
-                exit(-1)
-            };
-            let wave: Waveform = args.wave.into();
-            let data = read_raster_data(&band);
-            let Ok(StatisticsMinMax { min, max }) = band.compute_raster_min_max(false) else {
-                eprint!("Could not calculate the minimum and maximum pixel values of the specified band of the dataset");
-                exit(-1)
-            };
-            let no_data_value = band.no_data_value();
-            let settings = RasterGraphSettings {
-                min_freq: args.freq_settings.min_freq,
-                max_freq: args.freq_settings.max_freq,
-                row_duration: args.global.row_duration,
-                rows: args.global.rows,
-                cols: args.global.columns,
-                classified: args.global.classified,
-                wave,
-            };
-            play_rasta(data, min, max, no_data_value, settings);
-        }
-        Commands::Histogram(args) => {
-            let Some(name) = args.name else {
-                eprint!("No file name provided");
-                exit(-1)
-            };
-            let Ok(dataset) = Dataset::open(&name) else {
-                eprint!("Failed to read dataset at {}", name.to_string_lossy());
-                exit(-1)
-            };
-            let Ok(band) = dataset.rasterband(args.band) else {
-                eprint!(
-                    "Failed to read rasta band {} of the specified dataset",
-                    args.band
-                );
-                exit(-1)
-            };
-            let wave: Waveform = args.wave.into();
-            let data = match band.band_type() {
-                GdalDataType::UInt8 => band
-                    .read_as_array::<u8>((0, 0), band.size(), band.size(), None)
-                    .unwrap(),
-                _ => {
-                    eprint!("Currently we can only generate histograms for byte data");
-                    exit(-1);
-                }
-            };
-            let counts = generate_image_histogram(data.into_raw_vec());
-            play_histogram(counts, Default::default(), wave);
-        }
+        AllCommands::Commands(cmd) => match cmd {
+            Commands::Graph(args) => {
+                let args = args.clone();
+                let name = args.name;
+                let Ok(dataset) = Dataset::open(&name) else {
+                    eprint!("Failed to read dataset at {}", name);
+                    exit(-1)
+                };
+                let Ok(band) = dataset.rasterband(args.band) else {
+                    eprint!(
+                        "Failed to read rasta band {} of the specified dataset",
+                        args.band
+                    );
+                    exit(-1)
+                };
+                let wave: Waveform = args.wave.into();
+                let data = read_raster_data(&band);
+                let Ok(StatisticsMinMax { min, max }) = band.compute_raster_min_max(false) else {
+                    eprint!("Could not calculate the minimum and maximum pixel values of the specified band of the dataset");
+                    exit(-1)
+                };
+                let no_data_value = band.no_data_value();
+                let settings = RasterGraphSettings {
+                    min_freq: args.freq_settings.min_freq,
+                    max_freq: args.freq_settings.max_freq,
+                    row_duration: args.global.row_duration,
+                    rows: args.global.rows,
+                    cols: args.global.columns,
+                    classified: args.global.classified,
+                    wave,
+                };
+                play_rasta(data, min, max, no_data_value, settings);
+            }
+            Commands::Histogram(args) => run_histogram(args),
+        },
+        AllCommands::Json(JsonArgs { payload }) => match payload {
+            JsonCommands::Histogram(args) => run_histogram(args),
+            JsonCommands::Graph(args) => unimplemented!(),
+        },
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum WaveType {
     #[default]
     Sine,
@@ -218,4 +242,31 @@ impl From<WaveType> for Waveform {
             WaveType::Sawtooth => Self::Sawtooth,
         }
     }
+}
+
+fn run_histogram(args: HistogramArgs) {
+    let name = args.name;
+    let Ok(dataset) = Dataset::open(&name) else {
+        eprint!("Failed to read dataset at {}", name.to_string_lossy());
+        exit(-1)
+    };
+    let Ok(band) = dataset.rasterband(args.band) else {
+        eprint!(
+            "Failed to read rasta band {} of the specified dataset",
+            args.band
+        );
+        exit(-1)
+    };
+    let wave: Waveform = args.wave.into();
+    let data = match band.band_type() {
+        GdalDataType::UInt8 => band
+            .read_as_array::<u8>((0, 0), band.size(), band.size(), None)
+            .unwrap(),
+        _ => {
+            eprint!("Currently we can only generate histograms for byte data");
+            exit(-1);
+        }
+    };
+    let counts = generate_image_histogram(data.into_raw_vec());
+    play_histogram(counts, Default::default(), wave);
 }

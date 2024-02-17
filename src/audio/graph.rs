@@ -2,7 +2,7 @@ use itertools::{Either, Itertools};
 use ndarray::{Array2, Zip};
 use optional_struct::{optional_struct, Applyable};
 
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, thread::sleep, time::Duration};
 
 use crate::audio::low_level::AudioWave;
 
@@ -244,6 +244,7 @@ impl Playable for RasterGraph {
             })
             .collect::<Vec<_>>();
         let row_count = everything[0].1.nrows();
+        let duration_per_sample_ms = everything[0].2 .5;
         for row in 0..row_count {
             for (
                 wave,
@@ -261,7 +262,7 @@ impl Playable for RasterGraph {
                     let pos_f = i as f64 / (row_len - 1.) * 2.0 - 1.0;
                     wave.set_position(pos_f);
                     wave.set_freq(freq_f);
-                    wave.sleep(*duration_per_sample_ms);
+                    sleep(*duration_per_sample_ms);
                 }
             }
         }
