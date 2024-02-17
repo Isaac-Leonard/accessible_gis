@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.72"
 assert_no_alloc = "1.1.2"
-clap = { version = "4.4.6", features = ["derive"] }
+clap = { version = "4.4.6", features = ["derive", "string"] }
 cpal = "0.15.2"
 fundsp = "0.15.0"
 gdal = {version = "0.16.0", features = ["array", "bindgen", "ndarray"]}
