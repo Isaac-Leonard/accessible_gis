@@ -78,7 +78,7 @@ impl Component for MainView {
                 panel.show(move |path| {
                     if let Some(path) = path {
                         App::<BasicApp, Message>::dispatch_main(Message::custom(
-                            Action::CreateCoppiedDataset(index, path.try_into().unwrap()),
+                            Action::CreateCoppiedDataset(index, path.into()),
                         ));
                     }
                 })
@@ -97,7 +97,7 @@ impl Component for MainView {
                 panel.show(move |path| {
                     if let Some(path) = path {
                         App::<BasicApp, Message>::dispatch_main(Message::custom(
-                            Action::CreateSlopeRaster(index, path.try_into().unwrap()),
+                            Action::CreateSlopeRaster(index, path.into()),
                         ));
                     }
                 })
@@ -106,7 +106,8 @@ impl Component for MainView {
                 let dest: PathBuf = path.clone();
                 let src = state[index.dataset].path();
                 std::thread::spawn(move || {
-                    let slope = slope_of_dataset(src, dest.clone());
+                    // TODO: Check output for success
+                    let _slope = slope_of_dataset(src, dest.clone());
                     App::<BasicApp, Message>::dispatch_main(Message::custom(Action::GotFile(
                         dest.clone(),
                     )));
@@ -281,16 +282,15 @@ impl Component for DatasetView {
         .collect()
     }
     fn on_message(message: &Self::Message, _props: &Self::Props, state: &mut Self::State) -> bool {
-        match message {
-            Action::SendAudioGraph(graph, settings) => state
+        if let Action::SendAudioGraph(graph, settings) = message {
+            state
                 .0
                 .send(AudioMessage::PlayHistogram(
                     graph.clone(),
                     settings.clone(),
                     Default::default(),
                 ))
-                .expect("Something went wrong in the audio thread"),
-            _ => {}
+                .expect("Something went wrong in the audio thread")
         };
         false
     }

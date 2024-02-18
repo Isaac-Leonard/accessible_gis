@@ -220,7 +220,7 @@ impl Playable for RasterGraph {
 
                 let wave = AudioWave::new::<T>(wave, device, config);
                 let _pos_f = -1.0;
-                return (
+                (
                     wave,
                     data,
                     (
@@ -231,7 +231,7 @@ impl Playable for RasterGraph {
                         row_len,
                         duration_per_sample_ms,
                     ),
-                );
+                )
             })
             .collect::<Vec<_>>();
         let row_count = everything[0].1.nrows();

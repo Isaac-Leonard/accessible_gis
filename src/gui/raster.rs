@@ -186,13 +186,15 @@ impl Component for AudioControls {
                 VNode::Button(VButton {
                     text: "Play graph".to_string(),
                     click: Some(|data, settings| {
-                        data.sender.send(AudioMessage::PlayRaster(
-                            data.data.clone(),
-                            data.min,
-                            data.max,
-                            data.no_data_value,
-                            settings.clone(),
-                        ));
+                        data.sender
+                            .send(AudioMessage::PlayRaster(
+                                data.data.clone(),
+                                data.min,
+                                data.max,
+                                data.no_data_value,
+                                settings.clone(),
+                            ))
+                            .expect("Something went wrong in the audio thread");
                     }),
                 }),
             ),

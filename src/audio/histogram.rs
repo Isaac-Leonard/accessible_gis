@@ -41,7 +41,7 @@ impl Playable for AudioHistogram {
             min_freq,
             max_freq,
         } = self.settings.clone();
-        let wave = AudioWave::new::<T>(self.waveform.clone(), device, config);
+        let wave = AudioWave::new::<T>(self.waveform, device, config);
         let _pos_f = -1.0;
         let min = self
             .y

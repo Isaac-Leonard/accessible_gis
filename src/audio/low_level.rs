@@ -1,6 +1,3 @@
-use std::thread::sleep;
-use std::time::Duration;
-
 use assert_no_alloc::*;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, FromSample, SizedSample};
@@ -110,10 +107,6 @@ impl AudioWave {
         stream.play().unwrap();
 
         Self { freq, pos, stream }
-    }
-
-    pub fn sleep(&self, duration: Duration) {
-        sleep(duration);
     }
 
     pub fn set_position(&self, pos: f64) {

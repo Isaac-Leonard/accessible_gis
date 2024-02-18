@@ -1,8 +1,6 @@
 mod app;
 mod events;
 mod histogram_settings_window;
-mod layout;
-mod list_view;
 mod new_dataset_window;
 mod raster;
 mod raster_graph_settings_window;

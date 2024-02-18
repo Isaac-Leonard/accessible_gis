@@ -293,7 +293,7 @@ fn gen_graph_options(
         classified: args.global.classified,
         wave,
     };
-    return (data, min, max, no_data_value, settings);
+    (data, min, max, no_data_value, settings)
 }
 
 fn run_single_graph(args: IndividualGraphArgs) {
