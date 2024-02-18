@@ -6,7 +6,8 @@ use clap::{Args, Parser, Subcommand};
 use gdal::raster::GdalDataType;
 use gdal::{raster::StatisticsMinMax, Dataset};
 use itertools::Itertools;
-use serde::{Deserialize, Serialize};
+use serde::de::Visitor;
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::audio::graph::{play_rasta, RasterGraphSettings};
 use crate::audio::{
@@ -63,13 +64,29 @@ fn default_max_freq() -> f64 {
 #[derive(Debug, Args, Clone, Serialize, Deserialize)]
 pub struct GlobalGraphArgs {
     #[arg(short, long, default_value_t = 10)]
+    #[serde(default = "default_rows")]
     rows: usize,
     #[arg(short, long, default_value_t = 10)]
+    #[serde(default = "default_cols")]
     columns: usize,
     #[arg(long, value_parser=parse_duration, default_value = "1000")]
+    #[serde(
+        default = "default_row_duration",
+        deserialize_with = "deserialize_duration"
+    )]
     row_duration: Duration,
     #[arg(long, default_value_t = false)]
+    #[serde(default)]
     classified: bool,
+}
+fn default_rows() -> usize {
+    10
+}
+fn default_cols() -> usize {
+    10
+}
+fn default_row_duration() -> Duration {
+    Duration::from_millis(1000)
 }
 
 #[derive(Debug, Args, Clone, Serialize, Deserialize)]
@@ -77,12 +94,16 @@ pub struct IndividualGraphArgs {
     #[arg()]
     pub name: String,
     #[arg(short, long, default_value_t=WaveType::Sine)]
+    #[serde(default)]
     pub wave: WaveType,
     #[arg(short, long, default_value_t = 1)]
+    #[serde(default = "default_band")]
     pub band: isize,
     #[command(flatten)]
+    #[serde(flatten)]
     pub freq_settings: FrequencyArgs,
     #[command(flatten)]
+    #[serde(flatten)]
     pub global: GlobalGraphArgs,
 }
 
@@ -158,43 +179,19 @@ pub struct GraphArgs {
 pub fn launch_commandline_app(args: Input) {
     match args.command {
         AllCommands::Commands(cmd) => match cmd {
-            Commands::Graph(args) => {
-                let args = args.clone();
-                let name = args.name;
-                let Ok(dataset) = Dataset::open(&name) else {
-                    eprint!("Failed to read dataset at {}", name);
-                    exit(-1)
-                };
-                let Ok(band) = dataset.rasterband(args.band) else {
-                    eprint!(
-                        "Failed to read rasta band {} of the specified dataset",
-                        args.band
-                    );
-                    exit(-1)
-                };
-                let wave: Waveform = args.wave.into();
-                let data = read_raster_data(&band);
-                let Ok(StatisticsMinMax { min, max }) = band.compute_raster_min_max(false) else {
-                    eprint!("Could not calculate the minimum and maximum pixel values of the specified band of the dataset");
-                    exit(-1)
-                };
-                let no_data_value = band.no_data_value();
-                let settings = RasterGraphSettings {
-                    min_freq: args.freq_settings.min_freq,
-                    max_freq: args.freq_settings.max_freq,
-                    row_duration: args.global.row_duration,
-                    rows: args.global.rows,
-                    cols: args.global.columns,
-                    classified: args.global.classified,
-                    wave,
-                };
-                play_rasta(data, min, max, no_data_value, settings);
-            }
+            Commands::Graph(args) => run_single_graph(args),
             Commands::Histogram(args) => run_histogram(args),
         },
         AllCommands::Json(JsonArgs { payload }) => match payload {
             JsonCommands::Histogram(args) => run_histogram(args),
-            JsonCommands::Graph(args) => unimplemented!(),
+            JsonCommands::Graph(args) => {
+                if args.len() == 1 {
+                    let args = args[0].clone();
+                    run_single_graph(args)
+                } else {
+                    unimplemented!()
+                }
+            }
         },
     }
 }
@@ -269,4 +266,58 @@ fn run_histogram(args: HistogramArgs) {
     };
     let counts = generate_image_histogram(data.into_raw_vec());
     play_histogram(counts, Default::default(), wave);
+}
+
+fn run_single_graph(args: IndividualGraphArgs) {
+    let args = args.clone();
+    let name = args.name;
+    let Ok(dataset) = Dataset::open(&name) else {
+        eprint!("Failed to read dataset at {}", name);
+        exit(-1)
+    };
+    let Ok(band) = dataset.rasterband(args.band) else {
+        eprint!(
+            "Failed to read rasta band {} of the specified dataset",
+            args.band
+        );
+        exit(-1)
+    };
+    let wave: Waveform = args.wave.into();
+    let data = read_raster_data(&band);
+    let Ok(StatisticsMinMax { min, max }) = band.compute_raster_min_max(false) else {
+        eprint!("Could not calculate the minimum and maximum pixel values of the specified band of the dataset");
+        exit(-1)
+    };
+    let no_data_value = band.no_data_value();
+    let settings = RasterGraphSettings {
+        min_freq: args.freq_settings.min_freq,
+        max_freq: args.freq_settings.max_freq,
+        row_duration: args.global.row_duration,
+        rows: args.global.rows,
+        cols: args.global.columns,
+        classified: args.global.classified,
+        wave,
+    };
+    play_rasta(data, min, max, no_data_value, settings);
+}
+
+fn deserialize_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_u64(MillisVisitor)
+}
+
+struct MillisVisitor;
+impl<'de> Visitor<'de> for MillisVisitor {
+    type Value = Duration;
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("A u64 value representing milliseconds")
+    }
+    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(Duration::from_millis(v))
+    }
 }
