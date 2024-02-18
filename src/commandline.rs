@@ -6,6 +6,7 @@ use clap::{Args, Parser, Subcommand};
 use gdal::raster::GdalDataType;
 use gdal::{raster::StatisticsMinMax, Dataset};
 use itertools::Itertools;
+use ndarray::Array2;
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -184,14 +185,7 @@ pub fn launch_commandline_app(args: Input) {
         },
         AllCommands::Json(JsonArgs { payload }) => match payload {
             JsonCommands::Histogram(args) => run_histogram(args),
-            JsonCommands::Graph(args) => {
-                if args.len() == 1 {
-                    let args = args[0].clone();
-                    run_single_graph(args)
-                } else {
-                    unimplemented!()
-                }
-            }
+            JsonCommands::Graph(args) => run_multiple_graph(args),
         },
     }
 }
@@ -268,8 +262,9 @@ fn run_histogram(args: HistogramArgs) {
     play_histogram(counts, Default::default(), wave);
 }
 
-fn run_single_graph(args: IndividualGraphArgs) {
-    let args = args.clone();
+fn gen_graph_options(
+    args: IndividualGraphArgs,
+) -> (Array2<f64>, f64, f64, Option<f64>, RasterGraphSettings) {
     let name = args.name;
     let Ok(dataset) = Dataset::open(&name) else {
         eprint!("Failed to read dataset at {}", name);
@@ -298,7 +293,16 @@ fn run_single_graph(args: IndividualGraphArgs) {
         classified: args.global.classified,
         wave,
     };
-    play_rasta(data, min, max, no_data_value, settings);
+    return (data, min, max, no_data_value, settings);
+}
+
+fn run_single_graph(args: IndividualGraphArgs) {
+    let vals = gen_graph_options(args);
+    play_rasta(vec![vals]);
+}
+fn run_multiple_graph(args: Vec<IndividualGraphArgs>) {
+    let vals = args.into_iter().map(gen_graph_options).collect();
+    play_rasta(vals);
 }
 
 fn deserialize_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>
