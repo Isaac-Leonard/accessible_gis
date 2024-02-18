@@ -25,8 +25,8 @@ pub enum AudioMessage {
     PlayRaster(Array2<f64>, f64, f64, Option<f64>, RasterGraphSettings),
 }
 
-pub fn get_audio() -> mpsc::Sender<AudioMessage> {
-    let (tx, rx) = mpsc::channel();
+pub fn get_audio() -> mpsc::SyncSender<AudioMessage> {
+    let (tx, rx) = mpsc::sync_channel(0);
     // Note we do not save the returned JoinHandle and so create a detached thread.
     thread::spawn(move || audio_thread(rx));
     tx

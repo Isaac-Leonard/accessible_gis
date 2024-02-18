@@ -1,6 +1,6 @@
 use gdal::raster::{GdalDataType, RasterBand};
 use ndarray::Array2;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::SyncSender;
 
 use crate::audio::{get_audio, AudioMessage};
 
@@ -65,7 +65,7 @@ pub struct RawRasterData {
     pub min: f64,
     pub max: f64,
     pub no_data_value: Option<f64>,
-    pub sender: Sender<AudioMessage>,
+    pub sender: SyncSender<AudioMessage>,
     pub index: RasterIndex,
 }
 impl RawRasterData {

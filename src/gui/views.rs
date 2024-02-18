@@ -18,7 +18,7 @@ use gdal::Dataset;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::atomic;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::SyncSender;
 use std::thread::{sleep, Thread};
 
 struct SendableDataset(Dataset);
@@ -121,7 +121,7 @@ impl Component for MainView {
 pub struct DatasetView;
 
 #[derive(Clone)]
-pub struct DatasetViewState(pub Sender<AudioMessage>);
+pub struct DatasetViewState(pub SyncSender<AudioMessage>);
 impl Default for DatasetViewState {
     fn default() -> Self {
         Self(get_audio())
@@ -281,7 +281,7 @@ impl Component for DatasetView {
                     settings.clone(),
                     Default::default(),
                 ))
-                .unwrap(),
+                .expect("Something went wrong in the audio thread"),
             _ => {}
         };
         false
