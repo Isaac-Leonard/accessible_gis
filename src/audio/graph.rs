@@ -237,26 +237,28 @@ impl Playable for RasterGraph {
             })
             .collect::<Vec<_>>();
         let row_count = everything[0].1.nrows();
+        let col_count = everything[0].1.ncols();
         let duration_per_sample_ms = everything[0].2 .5;
         for row in 0..row_count {
-            for (
-                wave,
-                data,
-                (min, min_freq, y_range, freq_range, row_len, duration_per_sample_ms),
-            ) in everything.iter()
-            {
-                let row = data.row(row);
-                for (i, pixel) in row.indexed_iter() {
+            for i in 0..col_count {
+                for (
+                    wave,
+                    data,
+                    (min, min_freq, y_range, freq_range, row_len, duration_per_sample_ms),
+                ) in everything.iter()
+                {
+                    let row = data.row(row);
+                    let pixel = row[i];
                     let freq_f = if let Some(pixel) = pixel {
-                        (*pixel - min) / y_range * freq_range + min_freq
+                        (pixel - min) / y_range * freq_range + min_freq
                     } else {
                         0.
                     };
                     let pos_f = i as f64 / (row_len - 1.) * 2.0 - 1.0;
                     wave.set_position(pos_f);
                     wave.set_freq(freq_f);
-                    sleep(*duration_per_sample_ms);
                 }
+                sleep(duration_per_sample_ms);
             }
         }
     }
