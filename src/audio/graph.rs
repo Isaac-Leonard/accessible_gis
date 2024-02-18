@@ -139,13 +139,11 @@ impl RasterGraph {
         Self {
             inner: vals
                 .into_iter()
-                .map(
-                    |(data, min, max, no_data_value, settings)| RasterGraphInner {
-                        data,
-                        no_data_value,
-                        settings,
-                    },
-                )
+                .map(|(data, _, _, no_data_value, settings)| RasterGraphInner {
+                    data,
+                    no_data_value,
+                    settings,
+                })
                 .collect(),
         }
     }

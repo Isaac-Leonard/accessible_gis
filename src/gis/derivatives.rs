@@ -109,7 +109,7 @@ fn calc_y_derivative(cell: &Array2<f64>, no_data_value: f64) -> f64 {
     {
         sum += cell[(0, 1)] - cell[(0, 2)];
         weight += 1.0;
-    } else if cell[((2, 0))] == no_data_value
+    } else if cell[(2, 0)] == no_data_value
         && cell[(0, 0)] != no_data_value
         && cell[(0, 1)] != no_data_value
     {
@@ -136,20 +136,20 @@ fn calc_y_derivative(cell: &Array2<f64>, no_data_value: f64) -> f64 {
     }
 
     //third row
-    if cell[((2, 0))] != no_data_value && cell[(2, 2)] != no_data_value {
-        sum += cell[((2, 0))] - cell[(2, 2)];
+    if cell[(2, 0)] != no_data_value && cell[(2, 2)] != no_data_value {
+        sum += cell[(2, 0)] - cell[(2, 2)];
         weight += 2.0;
-    } else if cell[((2, 0))] == no_data_value
+    } else if cell[(2, 0)] == no_data_value
         && cell[(2, 2)] != no_data_value
         && cell[(2, 1)] != no_data_value
     {
         sum += cell[(2, 1)] - cell[(2, 2)];
         weight += 1.0;
     } else if cell[(2, 2)] == no_data_value
-        && cell[((2, 0))] != no_data_value
+        && cell[(2, 0)] != no_data_value
         && cell[(2, 1)] != no_data_value
     {
-        sum += cell[((2, 0))] - cell[(2, 1)];
+        sum += cell[(2, 0)] - cell[(2, 1)];
         weight += 1.0;
     }
 

@@ -19,7 +19,6 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::atomic;
 use std::sync::mpsc::SyncSender;
-use std::thread::{sleep, Thread};
 
 struct SendableDataset(Dataset);
 
