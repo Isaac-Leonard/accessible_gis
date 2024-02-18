@@ -6,7 +6,7 @@ pub mod histogram;
 mod low_level;
 
 pub use low_level::Waveform;
-use std::sync::mpsc;
+use std::sync::mpsc::{self, Receiver};
 use std::thread;
 
 use assert_no_alloc::*;
@@ -27,17 +27,23 @@ pub enum AudioMessage {
 
 pub fn get_audio() -> mpsc::Sender<AudioMessage> {
     let (tx, rx) = mpsc::channel();
-    thread::spawn(move || {
-        let mut playing = false;
-        loop {
-            let msg = rx.recv().unwrap();
-            if let AudioMessage::PlayHistogram(graph, settings, wave) = msg {
-                play_histogram(graph, settings, wave);
-                playing = !playing;
-            } else if let AudioMessage::PlayRaster(data, min, max, no_data_value, settings) = msg {
-                play_rasta(vec![(data, min, max, no_data_value, settings)]);
-            };
-        }
-    });
+    // Note we do not save the returned JoinHandle and so create a detached thread.
+    thread::spawn(move || audio_thread(rx));
     tx
+}
+
+fn audio_thread(rx: Receiver<AudioMessage>) {
+    loop {
+        let msg = rx
+            .recv()
+            .expect("The Sender related to the audio thread has been dropped");
+        match msg {
+            AudioMessage::PlayHistogram(graph, settings, wave) => {
+                play_histogram(graph, settings, wave)
+            }
+            AudioMessage::PlayRaster(data, min, max, no_data_value, settings) => {
+                play_rasta(vec![(data, min, max, no_data_value, settings)]);
+            }
+        };
+    }
 }

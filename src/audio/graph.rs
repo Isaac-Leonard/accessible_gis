@@ -241,11 +241,8 @@ impl Playable for RasterGraph {
         let duration_per_sample_ms = everything[0].2 .5;
         for row in 0..row_count {
             for i in 0..col_count {
-                for (
-                    wave,
-                    data,
-                    (min, min_freq, y_range, freq_range, row_len, duration_per_sample_ms),
-                ) in everything.iter()
+                for (wave, data, (min, min_freq, y_range, freq_range, row_len, _)) in
+                    everything.iter()
                 {
                     let row = data.row(row);
                     let pixel = row[i];
