@@ -1,7 +1,7 @@
 use super::app::BasicApp;
 use super::events::{dispatch_action, Action};
 use crate::audio::{get_audio, AudioMessage};
-use crate::gis::derivatives::slope_of_dataset;
+use crate::gis::commands::slope_of_dataset;
 use crate::gis::raster::RasterIndex;
 
 use super::new_dataset_window::create_dataset;
@@ -17,6 +17,7 @@ use gdal::vector::LayerAccess;
 use gdal::Dataset;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::str::FromStr;
 use std::sync::atomic;
 use std::sync::mpsc::SyncSender;
 
@@ -65,7 +66,10 @@ impl Component for MainView {
         match msg {
             Action::GotFile(path) => state.push(DatasetWrapper::try_from(path.clone()).unwrap()),
             Action::CreateDataset(settings) => {
-                state.push(DatasetWrapper::from(create_dataset(settings).unwrap()));
+                state.push(DatasetWrapper::from((
+                    PathBuf::from_str(&settings.file_name).unwrap(),
+                    create_dataset(settings).unwrap(),
+                )));
             }
             Action::CopyDataset(index) => {
                 let index = *index;
@@ -84,7 +88,7 @@ impl Component for MainView {
                     let dataset = &state[*index].dataset();
                     dataset.create_copy(&dataset.driver(), path, &[]).unwrap()
                 };
-                state.push(DatasetWrapper::from(copy));
+                state.push(DatasetWrapper::from((path.to_owned(), copy)));
             }
             Action::SlopeRaster(index) => {
                 let index = *index;
@@ -99,14 +103,12 @@ impl Component for MainView {
                 })
             }
             Action::CreateSlopeRaster(ref index, ref path) => {
-                let path: PathBuf = path.clone();
-                let dataset = &state[index.dataset].dataset();
-                let copy = dataset.create_copy(&dataset.driver(), &path, &[]).unwrap();
-                let index = *index;
+                let dest: PathBuf = path.clone();
+                let src = state[index.dataset].path();
                 std::thread::spawn(move || {
-                    let slope = slope_of_dataset(copy, index, &path);
+                    let slope = slope_of_dataset(src, dest.clone());
                     App::<BasicApp, Message>::dispatch_main(Message::custom(Action::GotFile(
-                        path.clone(),
+                        dest.clone(),
                     )));
                 });
             }
@@ -139,13 +141,6 @@ pub struct DatasetViewProps {
     pub index: usize,
 }
 impl DatasetViewProps {
-    fn new(index: usize, dataset: Dataset) -> Self {
-        Self {
-            index,
-            dataset: dataset.into(),
-        }
-    }
-
     fn dataset(&self) -> &Dataset {
         self.dataset.dataset()
     }
@@ -153,30 +148,44 @@ impl DatasetViewProps {
 #[derive(Clone)]
 pub struct DatasetWrapper {
     dataset: Rc<Dataset>,
+    path: PathBuf,
     id: usize,
 }
+
 impl DatasetWrapper {
     fn dataset(&self) -> &Dataset {
         self.dataset.as_ref()
     }
+
+    fn path(&self) -> PathBuf {
+        self.path.clone()
+    }
 }
+
 impl TryFrom<PathBuf> for DatasetWrapper {
     type Error = GdalError;
     fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
         Ok(Self {
             id: gen_id(),
+            path: value.clone(),
             dataset: Rc::new(Dataset::open(value)?),
         })
     }
 }
-impl From<Dataset> for DatasetWrapper {
-    fn from(value: Dataset) -> Self {
+
+impl From<(PathBuf, Dataset)> for DatasetWrapper {
+    /// You must ensure that path is the correct path for this dataset
+    /// TODO: Should this be unsafe?
+    /// Unsafety is normally about pointers and memory but attaching the wrong file to a file path feels pretty unsafe to me
+    fn from(value: (PathBuf, Dataset)) -> Self {
         Self {
             id: gen_id(),
-            dataset: value.into(),
+            path: value.0,
+            dataset: Rc::new(value.1),
         }
     }
 }
+
 impl PartialEq for DatasetWrapper {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id

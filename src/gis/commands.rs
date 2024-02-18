@@ -1,6 +1,9 @@
 use gdal::DriverManager;
 use optional_struct::{optional_struct, Applyable};
-use std::{path::PathBuf, process};
+use std::{
+    path::PathBuf,
+    process::{self, Command, Output},
+};
 
 #[optional_struct]
 pub struct WarpSettings {
@@ -23,4 +26,20 @@ pub fn list_drivers() -> Vec<String> {
         drivers.push(DriverManager::get_driver(i).unwrap().short_name())
     }
     drivers
+}
+
+pub fn slope_of_dataset(src: PathBuf, dest: PathBuf) -> std::io::Result<Output> {
+    Command::new("gdaldem")
+        .arg("slope")
+        .arg(src)
+        .arg(dest)
+        .output()
+}
+
+pub fn aspect_of_dataset(src: PathBuf, dest: &PathBuf) -> std::io::Result<Output> {
+    Command::new("gdaldem")
+        .arg("aspect")
+        .arg(src)
+        .arg(dest)
+        .output()
 }
