@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "4035715", "name": "Avarua", "ascii_name": "Avarua", "alternate_names": [ "Avaroua", "Avarua", "Avaruo", "Avarúa", "RAR", "a wa lu a", "abalua", "abarua", "avarua", "avaruva", "avharu'a", "awarwa", "awarya", "xa wa raw", "Αβαρούα", "Аваруа", "Ավարուա", "אוורואה", "آواروآ", "آواریا", "अव्हारुआ", "அவாருவா", "อะวารัว", "ཨ་ཝ་རུ་ཨ།", "ავარუა", "アバルア", "阿瓦鲁阿", "아바루아" ], "latitude": "-21.2075", "longitude": "-159.77546", "feature_class": "P", "feature_code": "PPLC", "country_code": "CK", "admin1_code": "11695425", "population": 13373, "dem": 7, "timezone": "Pacific/Rarotonga", "modification_date": "2023-11-08", "country": "Cook Islands" }, "geometry": { "type": "Point", "coordinates": [ -159.77546, -21.2075 ] } }
+]
+}

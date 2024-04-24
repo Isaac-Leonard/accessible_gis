@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "3579132", "name": "Gustavia", "ascii_name": "Gustavia", "alternate_names": [ "Goustavia", "Gustaf", "Gustavi", "Gustavia", "Gustavija", "Gustavio", "Gustávia", "Guthavia", "Qustaviya", "guseutabia", "gustavhiya", "gusutabia", "gwiseutabia", "gwstawya", "ju si ta wei ya", "ku s ta wi ya", "kucutaviya", "Γουσταβία", "Густави", "Густавия", "Густавија", "Густавія", "گوستاویا", "گوسٹاویا", "गुस्ताव्हिया", "குசுதாவியா", "กุสตาวียา", "გუსტავია", "グスタビア", "居斯塔维亚", "구스타비아", "귀스타비아" ], "latitude": "17.89618", "longitude": "-62.84978", "feature_class": "P", "feature_code": "PPLC", "country_code": "BL", "admin1_code": "00", "population": 5988, "dem": 6, "timezone": "America/St_Barthelemy", "modification_date": "2019-09-05", "country": "Saint Barthelemy" }, "geometry": { "type": "Point", "coordinates": [ -62.84978, 17.89618 ] } }
+]
+}

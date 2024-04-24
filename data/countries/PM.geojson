@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "3424934", "name": "Saint-Pierre", "ascii_name": "Saint-Pierre", "alternate_names": [ "FSP", "Saint Pierre", "Saint-Pierre", "St Pierre", "saengpieleu", "생피에르" ], "latitude": "46.77914", "longitude": "-56.1773", "feature_class": "P", "feature_code": "PPLC", "country_code": "PM", "admin1_code": "97502", "population": 6200, "dem": 30, "timezone": "America/Miquelon", "modification_date": "2013-12-22", "country": "Saint Pierre and Miquelon" }, "geometry": { "type": "Point", "coordinates": [ -56.1773, 46.77914 ] } },
+{ "type": "Feature", "properties": { "geoname_id": "3424941", "name": "Miquelon", "ascii_name": "Miquelon", "alternate_names": [ "MQC", "Miquelon" ], "latitude": "47.0975", "longitude": "-56.38139", "feature_class": "P", "feature_code": "PPLA", "country_code": "PM", "admin1_code": "97501", "population": 1141, "dem": 4, "timezone": "America/Miquelon", "modification_date": "2017-01-10", "country": "Saint Pierre and Miquelon" }, "geometry": { "type": "Point", "coordinates": [ -56.38139, 47.0975 ] } }
+]
+}

@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "7304591", "name": "West Island", "ascii_name": "West Island", "alternate_names": [ "weseuteu seom", "웨스트 섬" ], "latitude": "-12.15681", "longitude": "96.82251", "feature_class": "P", "feature_code": "PPLC", "country_code": "CC", "population": 120, "dem": 12, "timezone": "Indian/Cocos", "modification_date": "2018-08-17", "country": "Cocos Islands" }, "geometry": { "type": "Point", "coordinates": [ 96.82251, -12.15681 ] } }
+]
+}

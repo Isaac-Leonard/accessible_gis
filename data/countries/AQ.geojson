@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "6696480", "name": "McMurdo Station", "ascii_name": "McMurdo Station", "alternate_names": [ "Base McMurdo", "Base antarctique McMurdo", "Estacao McMurdo", "Estacio McMurdo", "Estació McMurdo", "Estação McMurdo", "Mak-Merdo", "Makmerdo", "McMurdo", "McMurdo Statschoon", "McMurdo basea", "McMurdo-Station", "McMurdo-stasjonen", "Polarni stanice McMurdo", "Polusa stacio McMurdo", "Polární stanice McMurdo", "Station McMurdo", "Stazione McMurdo", "maegmeodo giji", "mai ke mo duo zhan", "makumado ji de", "thnt mq-mrdw", "Мак-Мердо", "Макмөрдо", "תחנת מק-מרדו", "قاعدة ماك موردو", "マクマード基地", "麥克默多站", "맥머도 기지" ], "latitude": "-77.84632", "longitude": "166.66824", "feature_class": "P", "feature_code": "PPL", "country_code": "AQ", "population": 1258, "elevation": "10", "dem": -9999, "timezone": "Antarctica/McMurdo", "modification_date": "2022-02-04", "country": "Antarctica" }, "geometry": { "type": "Point", "coordinates": [ 166.66824, -77.84632 ] } }
+]
+}

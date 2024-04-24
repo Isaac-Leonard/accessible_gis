@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "6691831", "name": "Vatican City", "ascii_name": "Vatican City", "alternate_names": [ "Citta del Vaticano", "Città del Vaticano", "Ciudad del Vaticano", "Etat de la Cite du Vatican", "Grad Vatikan", "Staat Vatikanstadt", "Staat der Vatikanstadt", "Vatican", "Vatican City", "Vatican City State", "Vaticano", "Vatikan", "Vatikanas", "Vatikanstaden", "Vatikanstadt", "batikan", "batikan si", "État de la Cité du Vatican", "Ватикан", "바티칸", "바티칸 시" ], "latitude": "41.90268", "longitude": "12.45414", "feature_class": "P", "feature_code": "PPLC", "country_code": "VA", "country_code_2": "IT", "population": 829, "elevation": "55", "dem": 61, "timezone": "Europe/Vatican", "modification_date": "2023-12-10", "country": "Vatican" }, "geometry": { "type": "Point", "coordinates": [ 12.45414, 41.90268 ] } }
+]
+}

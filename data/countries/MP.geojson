@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "7828758", "name": "Saipan", "ascii_name": "Saipan", "alternate_names": [ "SPN", "Saipan", "Sajpan", "saipan", "Сайпан", "사이판" ], "latitude": "15.21233", "longitude": "145.7545", "feature_class": "P", "feature_code": "PPLC", "country_code": "MP", "admin1_code": "110", "population": 48220, "elevation": "5", "dem": 211, "timezone": "Pacific/Saipan", "modification_date": "2017-12-07", "country": "Northern Mariana Islands" }, "geometry": { "type": "Point", "coordinates": [ 145.7545, 15.21233 ] } },
+{ "type": "Feature", "properties": { "geoname_id": "7267949", "name": "San Jose Village", "ascii_name": "San Jose Village", "alternate_names": [ "San Jose", "San Jose CDP", "San Khose", "Сан Хосе" ], "latitude": "14.96823", "longitude": "145.61998", "feature_class": "P", "feature_code": "PPLA", "country_code": "MP", "admin1_code": "120", "population": 15000, "elevation": "15", "dem": 9, "timezone": "Pacific/Saipan", "modification_date": "2014-08-19", "country": "Northern Mariana Islands" }, "geometry": { "type": "Point", "coordinates": [ 145.61998, 14.96823 ] } }
+]
+}

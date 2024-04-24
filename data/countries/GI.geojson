@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "2411585", "name": "Gibraltar", "ascii_name": "Gibraltar", "alternate_names": [ "Calpe", "Cebelitarik", "Cebelitarık", "Djibraltar", "GIB", "Gibbilterra", "Gibilterra", "Gibraltar", "Gibraltaras", "Gibraltaro", "Gibraltár", "Gíbraltar", "Kamaka", "Xibraltar", "Xibraltar - Gibraltar", "gybrltr", "jbl tarq", "jibeulolteo", "jiburarutaru", "mhmyt jbl tarq", "zhi bu luo tuo", "Ĝibraltaro", "Γιβραλτάρ", "Гибралтар", "Ґібралтар", "גיברלטר", "جبل طارق", "جبل‌الطارق", "محمية جبل طارق", "ジブラルタル", "直布罗陀", "지브롤터" ], "latitude": "36.14474", "longitude": "-5.35257", "feature_class": "P", "feature_code": "PPLC", "country_code": "GI", "admin1_code": "00", "population": 26544, "dem": 11, "timezone": "Europe/Gibraltar", "modification_date": "2019-11-18", "country": "Gibraltar" }, "geometry": { "type": "Point", "coordinates": [ -5.35257, 36.14474 ] } }
+]
+}

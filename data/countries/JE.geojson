@@ -1,0 +1,9 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "3042089", "name": "Saint John", "ascii_name": "Saint John", "alternate_names": [ "Saint Jean", "Saint John", "Saint John's", "Saint John's Church", "Saint John’s", "Saint John’s Church", "St. John", "St. John's Church", "St. John’s Church" ], "latitude": "49.24556", "longitude": "-2.13861", "feature_class": "P", "feature_code": "PPL", "country_code": "JE", "country_code_2": "GB", "admin1_code": "3237497", "population": 3051, "dem": 105, "timezone": "Europe/Jersey", "modification_date": "2022-07-30", "country": "Jersey" }, "geometry": { "type": "Point", "coordinates": [ -2.13861, 49.24556 ] } },
+{ "type": "Feature", "properties": { "geoname_id": "10942508", "name": "Le Hocq", "ascii_name": "Le Hocq", "latitude": "49.16823", "longitude": "-2.06178", "feature_class": "P", "feature_code": "PPLA", "country_code": "JE", "admin1_code": "3237072", "population": 0, "dem": 11, "timezone": "Europe/Jersey", "modification_date": "2015-11-26", "country": "Jersey" }, "geometry": { "type": "Point", "coordinates": [ -2.06178, 49.16823 ] } },
+{ "type": "Feature", "properties": { "geoname_id": "3042091", "name": "Saint Helier", "ascii_name": "Saint Helier", "alternate_names": [ "JER", "Saint Helier", "Saint-Helier", "Saint-Hélier", "Sankt' Heliero", "Sent-Khel'er", "St Helier", "St. Helier", "seinteuhellieo", "Сент-Хельер", "세인트헬리어" ], "latitude": "49.18804", "longitude": "-2.10491", "feature_class": "P", "feature_code": "PPLC", "country_code": "JE", "country_code_2": "GB", "admin1_code": "3237864", "population": 28000, "dem": 11, "timezone": "Europe/Jersey", "modification_date": "2021-08-01", "country": "Jersey" }, "geometry": { "type": "Point", "coordinates": [ -2.10491, 49.18804 ] } }
+]
+}

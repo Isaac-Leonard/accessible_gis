@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "3578851", "name": "Marigot", "ascii_name": "Marigot", "alternate_names": [ "MSB", "Marigo", "Marigot", "Marigoto", "Marinko", "Mariqo", "Marygo", "XCJ", "ma li ge", "ma ri ko", "maligas", "maligo", "marigo", "marikat", "marygw", "Μαριγκό", "Мариго", "Марыго", "Маріго", "ماریگاٹ", "ماریگو", "मारिगो", "மரிகாட்", "มารีโก", "მარიგო", "マリゴ", "马里戈", "마리갓", "마리고" ], "latitude": "18.06819", "longitude": "-63.08302", "feature_class": "P", "feature_code": "PPLC", "country_code": "MF", "admin1_code": "00", "population": 5700, "dem": 9, "timezone": "America/Marigot", "modification_date": "2019-09-05", "country": "Saint Martin" }, "geometry": { "type": "Point", "coordinates": [ -63.08302, 18.06819 ] } },
+{ "type": "Feature", "properties": { "geoname_id": "3579247", "name": "Grand-Case", "ascii_name": "Grand-Case", "alternate_names": [ "Grand-Case", "Grande Case" ], "latitude": "18.10476", "longitude": "-63.05358", "feature_class": "P", "feature_code": "PPLL", "country_code": "MF", "country_code_2": "FR", "admin1_code": "00", "population": 1000, "dem": 6, "timezone": "America/Marigot", "modification_date": "2016-11-14", "country": "Saint Martin" }, "geometry": { "type": "Point", "coordinates": [ -63.05358, 18.10476 ] } }
+]
+}

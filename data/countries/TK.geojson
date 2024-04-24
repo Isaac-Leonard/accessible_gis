@@ -1,0 +1,9 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "7522183", "name": "Atafu Village", "ascii_name": "Atafu Village", "alternate_names": [ "Atafu", "Atafu Village" ], "latitude": "-8.54212", "longitude": "-172.51591", "feature_class": "P", "feature_code": "PPLA", "country_code": "TK", "country_code_2": "NZ", "admin1_code": "A", "population": 524, "dem": 10, "timezone": "Pacific/Fakaofo", "modification_date": "2018-07-15", "country": "Tokelau" }, "geometry": { "type": "Point", "coordinates": [ -172.51591, -8.54212 ] } },
+{ "type": "Feature", "properties": { "geoname_id": "7522181", "name": "Nukunonu", "ascii_name": "Nukunonu", "alternate_names": [ "Nukunonu Village" ], "latitude": "-9.20045", "longitude": "-171.84804", "feature_class": "P", "feature_code": "PPLA", "country_code": "TK", "country_code_2": "NZ", "admin1_code": "N", "population": 426, "dem": 10, "timezone": "Pacific/Fakaofo", "modification_date": "2018-07-15", "country": "Tokelau" }, "geometry": { "type": "Point", "coordinates": [ -171.84804, -9.20045 ] } },
+{ "type": "Feature", "properties": { "geoname_id": "4031110", "name": "Fale old settlement", "ascii_name": "Fale old settlement", "alternate_names": [ "Fakaofu Village", "Fale" ], "latitude": "-9.38516", "longitude": "-171.24675", "feature_class": "P", "feature_code": "PPLA", "country_code": "TK", "admin1_code": "F", "population": 120, "dem": 7, "timezone": "Pacific/Fakaofo", "modification_date": "2013-08-11", "country": "Tokelau" }, "geometry": { "type": "Point", "coordinates": [ -171.24675, -9.38516 ] } }
+]
+}

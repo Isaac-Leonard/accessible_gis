@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "4036284", "name": "Alofi", "ascii_name": "Alofi", "alternate_names": [ "Alofi", "Alofis", "Alofo", "Pasjolak Alofi", "a luo fei", "alaphi", "allopi", "alophi", "alopi", "alwfy", "arofi", "xalofi", "Αλόφι", "Алофи", "Алофі", "Пасёлак Алофі", "الوفی", "अलोफी", "അലാഫി", "อาโลฟี", "ალოფი", "アロフィ", "阿洛菲", "알로피" ], "latitude": "-19.05294", "longitude": "-169.91957", "feature_class": "P", "feature_code": "PPLC", "country_code": "NU", "admin1_code": "00", "population": 624, "dem": 51, "timezone": "Pacific/Niue", "modification_date": "2023-02-08", "country": "Niue" }, "geometry": { "type": "Point", "coordinates": [ -169.91957, -19.05294 ] } }
+]
+}

@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "4030723", "name": "Adamstown", "ascii_name": "Adamstown", "alternate_names": [ "Adams Town", "Adamstaun", "Adamstaunas", "Adamstauno", "Adamstaŭno", "Adamstown", "Antamstaoun", "adamusutaun", "admztawn", "admztwn  pytkrn ayslnd", "aedeomseutaun", "atamstavun", "ya dang si dui", "Άνταμσταουν", "Адамстаун", "Адамстаўн", "אדמסטאון", "آدمزتاون", "ادمزتون، پیتکرن ایسلند", "ایڈمز ٹاؤن، جزائر پٹکیرن", "ॲडम्सटाउन", "ஆடம்ஸ்டவுன்", "แอดัมส์ทาวน์", "ადამსტაუნი", "アダムスタウン", "亚当斯敦", "애덤스타운" ], "latitude": "-25.06597", "longitude": "-130.10147", "feature_class": "P", "feature_code": "PPLC", "country_code": "PN", "population": 46, "dem": 67, "timezone": "Pacific/Pitcairn", "modification_date": "2021-08-27", "country": "Pitcairn" }, "geometry": { "type": "Point", "coordinates": [ -130.10147, -25.06597 ] } }
+]
+}

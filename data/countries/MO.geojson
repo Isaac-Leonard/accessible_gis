@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "1821274", "name": "Macau", "ascii_name": "Macau", "alternate_names": [ "Aomen", "Aomin'", "Au-mun", "Aumwnz", "Aumyn", "Cidade de Macau", "Cidade do Santo Nome de Deus de Macau", "MFM", "Ma Cao", "Macao", "Macau", "Macaum", "Makaa", "Makaaw", "Makao", "Makaou", "Makau", "Makaw", "Makawo", "Makaó", "Makee", "Makèë", "Màkáù", "O-muong", "ao men", "maka", "maka'o", "maka'u", "makao", "makavu", "makaw", "makayw", "makkavu", "mkaw", "Àu-mûn", "Ó̤-muòng", "Μακάου", "Аоминь", "Аумын", "Макаа", "Макао", "מקאו", "ئاۋمېن", "ماكاو", "ماکائو", "مکاؤ", "މަކާއޫ", "मकाउ", "मकाओ", "মাকাউ", "ਮਕਾਉ", "મકાઉ", "மக்காவு", "మకావు", "ಮಕಾವು", "മകൗ", "เขตบริหารพิเศษมาเก๊า", "မကာအို", "მაკაო", "マカオ", "澳門", "澳门", "마카오" ], "latitude": "22.20056", "longitude": "113.54611", "feature_class": "P", "feature_code": "PPLC", "country_code": "MO", "admin1_code": "02", "population": 649335, "dem": 22, "timezone": "Asia/Macau", "modification_date": "2021-12-13", "country": "Macao" }, "geometry": { "type": "Point", "coordinates": [ 113.54611, 22.20056 ] } },
+{ "type": "Feature", "properties": { "geoname_id": "1821263", "name": "Taipa", "ascii_name": "Taipa", "alternate_names": [ "Dangzai", "Lin-chia-ts'un", "Lin-chia-ts’un", "Taipa", "Vila da Taipa", "YFT", "dang zi", "氹仔" ], "latitude": "22.15583", "longitude": "113.55694", "feature_class": "P", "feature_code": "PPL", "country_code": "MO", "admin1_code": "11875159", "population": 112051, "dem": 5, "timezone": "Asia/Macau", "modification_date": "2023-12-12", "country": "Macao" }, "geometry": { "type": "Point", "coordinates": [ 113.55694, 22.15583 ] } }
+]
+}

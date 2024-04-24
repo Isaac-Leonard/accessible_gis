@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "1546102", "name": "Port-aux-Français", "ascii_name": "Port-aux-Francais", "alternate_names": [ "Port o Franse", "Port o Fransė", "Port-aux-Francais", "Port-aux-Français", "Port-o-Franse", "Port-o-Franseh", "Portofranse", "Portofransē", "fa lan xi gang", "poleutopeulangsye", "porutofuranse", "Порт-о-Франсе", "Порт-о-Франсэ", "ปอโรฟร็องแซ", "ポルトーフランセ", "法兰西港", "포르토프랑셰" ], "latitude": "-49.34916", "longitude": "70.21937", "feature_class": "P", "feature_code": "PPLC", "country_code": "TF", "country_code_2": "FR", "admin1_code": "03", "population": 45, "dem": 11, "timezone": "Indian/Kerguelen", "modification_date": "2018-08-17", "country": "French Southern Territories" }, "geometry": { "type": "Point", "coordinates": [ 70.21937, -49.34916 ] } }
+]
+}

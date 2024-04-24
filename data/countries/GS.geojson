@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "Towns",
+"features": [
+{ "type": "Feature", "properties": { "geoname_id": "3426466", "name": "Grytviken", "ascii_name": "Grytviken", "alternate_names": [ "Gritviken", "Griutvikenas", "Grjutviken", "Grutviken", "Grytviken", "Qryotviken", "geuliteubiken", "gritavikena", "grytwwyqn", "gu li de wei ken", "guritobiken", "krit wi khen", "Грутвикен", "Грутвікен", "Грютвикен", "Грютвікен", "גריטוויקן", "ग्रिटविकेन", "กริตวีเคน", "グリトビケン", "古利德維肯", "그리트비켄" ], "latitude": "-54.28111", "longitude": "-36.5092", "feature_class": "P", "feature_code": "PPLC", "country_code": "GS", "country_code_2": "GB", "admin1_code": "00", "population": 2, "dem": 4, "timezone": "Atlantic/South_Georgia", "modification_date": "2018-07-15", "country": "South Georgia and the South Sandwich Islands" }, "geometry": { "type": "Point", "coordinates": [ -36.5092, -54.28111 ] } }
+]
+}
