@@ -1,14 +1,15 @@
-import { useContext } from "react";
-import { context } from "./context";
 import { ThiessenPolygons } from "./thiessen-polygons-screen";
 import { MainScreen } from "./main-screen";
+import { NewDatasetScreen } from "./new-dataset-screen";
+import { state } from "./api";
 
 export const Router = () => {
-  const { screen } = useContext(context);
-  switch (screen) {
-    case "main":
+  switch (state.value.screen.name) {
+    case "Main":
       return <MainScreen />;
-    case "thiessen_polygons":
+    case "ThiessenPolygons":
       return <ThiessenPolygons />;
+    case "NewDataset":
+      return <NewDatasetScreen drivers={state.value.screen.drivers} />;
   }
 };

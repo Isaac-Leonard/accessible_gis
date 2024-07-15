@@ -154,8 +154,8 @@ impl From<GeoMultiPolygon> for MultiPolygon {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct Line {
-    start: Point,
-    end: Point,
+    pub start: Point,
+    pub end: Point,
 }
 
 impl From<Line> for GeoLine {
@@ -253,6 +253,15 @@ pub enum GeometryType {
     MultiLineString,
     MultiPolygon,
     GeometryCollection,
+}
+
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum SingleGeometryType {
+    Polygon,
+    Point,
+    Line,
+    LineString,
 }
 
 pub trait ToGeometryType {
@@ -398,4 +407,48 @@ impl AsPoint for GeoGeometry {
             _ => None,
         }
     }
+}
+
+pub fn points_to_single_geometry(
+    points: Vec<GeoPoint>,
+    geometry: SingleGeometryType,
+) -> Result<GeoSingleGeometry, (String, Vec<GeoPoint>)> {
+    let res = match geometry {
+        SingleGeometryType::Point => {
+            if points.len() > 1 {
+                Err("Too many points to save as a single point".to_owned())
+            } else {
+                Ok(GeoSingleGeometry::Point(points[0]))
+            }
+        }
+        SingleGeometryType::Line => {
+            if points.len() != 2 {
+                Err(format!("Cannot make line from {} points", points.len()))
+            } else {
+                let start = points[0].clone();
+                let end = points[1].clone();
+                Ok(GeoSingleGeometry::Line(GeoLine::new(start, end)))
+            }
+        }
+        SingleGeometryType::Polygon => {
+            if points.len() < 3 {
+                Err("A polygon needs at least 3 points".to_owned())
+            } else {
+                Ok(GeoSingleGeometry::Polygon(GeoPolygon::new(
+                    points.clone().into(),
+                    Vec::new(),
+                )))
+            }
+        }
+        SingleGeometryType::LineString => {
+            if points.len() < 2 {
+                Err("A line string needs at least 2 points".to_owned())
+            } else {
+                Ok(GeoSingleGeometry::LineString(GeoLineString::from(
+                    points.clone(),
+                )))
+            }
+        }
+    };
+    res.map_err(|e| (e, points))
 }

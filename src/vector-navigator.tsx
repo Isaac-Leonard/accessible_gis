@@ -1,67 +1,28 @@
-import { useDeferredValue, useState } from "react";
-import {
-  FeatureInfo,
-  Field,
-  LayerDescriptor,
-  getFeatureInfo,
-  getFeatureNames,
-  getLayerInfo,
-} from "./bindings";
+import { FeatureInfo, Field, FieldType, Info } from "./bindings";
 import { GeometryViewer } from "./geometry";
-import { suspend } from "suspend-react";
-import { OptionPicker } from "./option-picker";
+import { IndexedOptionPicker, OptionPicker } from "./option-picker";
+import { Drawer, useDrawer } from "./drawer";
+import { FeatureCreator } from "./feature-creator";
+import { useState } from "preact/hooks";
+import { client } from "./api";
+import { Dialog } from "./dialog";
 
-export const VectorNavigator = ({
-  layer,
-}: {
-  layer: Extract<LayerDescriptor, { type: "Vector" }>;
-}) => {
-  layer = useDeferredValue(layer);
-  const overview = suspend(() => getLayerInfo(layer), [layer]);
-  const defaultFieldIndex =
-    overview.field_names.indexOf("name") ??
-    overview.field_names.indexOf("id") ??
-    overview.field_names.findIndex((x) => x.toLowerCase().includes("name"));
-  const [fieldIndex, setFieldIndex] = useState(
-    defaultFieldIndex === -1 ? 0 : defaultFieldIndex
-  );
-  const fieldName: string | null = overview.field_names[fieldIndex] ?? null;
-  const featureNames = useDeferredValue(
-    suspend(
-      async () =>
-        fieldName !== null ? getFeatureNames(fieldName, layer) : null,
-      [layer, fieldName]
-    )
-  );
-  const [featureIndex, setFeatureIndex] = useState(0);
-  const feature = useDeferredValue(
-    suspend(
-      async () =>
-        overview.features > 0
-          ? await getFeatureInfo(featureIndex, layer)
-          : null,
-      [layer, featureIndex, overview.features]
-    )
-  );
+type VectorLayerProp = {
+  layer: Extract<Info, { type: "Vector" }>;
+};
+
+export const VectorNavigator = ({ layer }: VectorLayerProp) => {
   return (
     <div>
-      <OptionPicker
-        options={overview?.field_names}
-        index={fieldIndex}
-        setIndex={setFieldIndex}
-        prompt="Select name fieldd"
-        emptyText="No fields in this layer"
-      />
-      <OptionPicker
-        options={featureNames?.features ?? []}
-        index={featureIndex}
-        setIndex={setFeatureIndex}
-        prompt="Select a feature to examine"
-        emptyText="This layer has no features"
-      />
-      {feature !== null ? (
-        <FeatureViewer info={feature} srs={layer.srs} />
-      ) : null}
+      {layer.editable ? <DatasetEditor layer={layer} /> : <EditDatasetButton />}
+      {layer.display ? (
+        <div>Displayed</div>
+      ) : (
+        <button onClick={client.setDisplay}>Show on screen</button>
+      )}
+      <NameFieldPicker layer={layer} />
+      <FeaturePicker layer={layer} />
+      <FeatureViewer layer={layer} />
     </div>
   );
 };
@@ -179,17 +140,133 @@ function FieldValueViewer({ field }: { field: Field }) {
   }
 }
 
-const FeatureViewer = ({
-  info,
-  srs,
-}: {
+type CurrentFeatureViewerProps = {
   info: FeatureInfo;
   srs: string | null;
-}) => {
+};
+
+const CurrentFeatureViewer = ({ info, srs }: CurrentFeatureViewerProps) => {
   return (
     <div>
       <GeometryViewer geometry={info.geometry} srs={srs} />
       <FieldsTable fields={info.fields} />
+    </div>
+  );
+};
+
+const FeatureViewer = ({ layer }: VectorLayerProp) => {
+  return layer.feature !== null ? (
+    <CurrentFeatureViewer info={layer.feature} srs={layer.srs} />
+  ) : (
+    <div>This layer has no features yet, maybe create some?</div>
+  );
+};
+
+type NameFieldPickerProps = {
+  layer: Extract<Info, { type: "Vector" }>;
+};
+
+const NameFieldPicker = ({ layer }: NameFieldPickerProps) => {
+  const { name_field } = layer;
+  const field_names = layer.field_schema.map((field) => field.name);
+  return (
+    <div>
+      <OptionPicker
+        options={field_names}
+        selectedOption={name_field}
+        setOption={client.setNameField}
+        emptyText=" This layer has no fields"
+        prompt="Set name field"
+      />
+    </div>
+  );
+};
+
+const fieldTypes = [
+  "OFTInteger",
+  "OFTIntegerList",
+  "OFTReal",
+  "OFTRealList",
+  "OFTString",
+  "OFTStringList",
+  "OFTWideString",
+  "OFTWideStringList",
+  "OFTBinary",
+  "OFTDate",
+  "OFTTime",
+  "OFTDateTime",
+  "OFTInteger64",
+  "OFTInteger64List",
+] as const;
+
+const FieldSchemaAdder = () => {
+  const { open, setOpen, innerRef } = useDrawer<HTMLInputElement>();
+  const [name, setName] = useState("");
+  const [fieldType, setFieldType] = useState<FieldType>(fieldTypes[0]);
+  return (
+    <Drawer open={open} setOpen={setOpen} openText="Add field to schema">
+      <div>
+        <label>
+          Field name
+          <input
+            ref={innerRef}
+            value={name}
+            onChange={(e) => setName(e.currentTarget.value)}
+          />
+        </label>
+        <OptionPicker
+          prompt="Field type"
+          emptyText="This shouldn't be empty"
+          selectedOption={fieldType}
+          setOption={setFieldType as any}
+          options={fieldTypes}
+        />
+        <button
+          onClick={async () => {
+            await client.addFieldToSchema(name, fieldType);
+            setOpen(false);
+            setName("");
+          }}
+        >
+          Add
+        </button>
+      </div>
+    </Drawer>
+  );
+};
+
+const FeaturePicker = ({ layer }: VectorLayerProp) => {
+  const { feature_names, feature_idx } = layer;
+  return (
+    <IndexedOptionPicker
+      options={feature_names?.filter((x): x is string => x !== null) ?? []}
+      index={feature_idx}
+      setIndex={client.setFeatureIndex}
+      prompt="Select a feature to examine"
+      emptyText="This layer has no features"
+    />
+  );
+};
+
+const EditDatasetButton = () => {
+  return <button onClick={client.editDataset}>Edit</button>;
+};
+
+const DatasetEditor = ({ layer }: VectorLayerProp) => {
+  const { open, setOpen, innerRef } = useDrawer();
+  return (
+    <div>
+      <FieldSchemaAdder />
+      <Dialog modal={true} open={open} setOpen={setOpen} openText="Add feature">
+        <FeatureCreator
+          schema={layer.field_schema}
+          focusRef={innerRef}
+          setFeature={async (feature) => {
+            await client.addFeatureToLayer(feature);
+            setOpen(false);
+          }}
+        />
+      </Dialog>
     </div>
   );
 };

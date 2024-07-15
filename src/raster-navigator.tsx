@@ -1,94 +1,139 @@
-import { useEffect, useState } from "react";
-import {
-  LayerDescriptor,
-  pointInCountry,
-  nearestTown,
-  getPointOfMaxValue,
-  getPointOfMinValue,
-  getValueAtPoint,
-  Point,
-} from "./bindings";
-import { message } from "@tauri-apps/api/dialog";
+import { Point, Info, Geometry, Classification } from "./bindings";
+import { message, save } from "@tauri-apps/plugin-dialog";
+import { Drawer, useDrawer } from "./drawer";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { client } from "./api";
+import { Dialog } from "./dialog";
+
+const tools = ["None", "Trace geometries"] as const;
 
 export const RasterNavigator = ({
   layer,
 }: {
-  layer: Extract<LayerDescriptor, { type: "Raster" }>;
+  layer: Extract<Info, { type: "Raster" }>;
 }) => {
-  let { width, length } = layer;
+  const { open, innerRef, setOpen } = useDrawer();
+  const [tool, setTool] = useState<(typeof tools)[number]>(tools[0]);
+  return (
+    <div>
+      <Dialog
+        modal={true}
+        open={open}
+        setOpen={setOpen}
+        openText="Classify raster"
+      >
+        <ClassificationScreen onClassify={() => setOpen(false)} />
+      </Dialog>
+      <RasterNavigatorInner layer={layer} savePoints={() => {}} />
+    </div>
+  );
+};
+
+const RasterNavigatorInner = ({
+  layer,
+  savePoints,
+}: {
+  layer: Extract<Info, { type: "Raster" }>;
+  savePoints: (points: Point[]) => void;
+}) => {
+  const [data, setData] = useState<number[]>([]);
+  useMemo(async () => {
+    let img = await client.getImagePixels();
+    setData(img);
+  }, []);
+  const [touchable, setTouchable] = useState(false);
+  let { cols, rows } = layer;
   const [showCoords, setShowCoords] = useState(true);
   const [{ x, y }, setCoords] = useState({ x: 0, y: 0 });
   const [radius, setRadius] = useState(1);
   const [points, setPoints] = useState<Point[]>([]);
+  const [getCountry, setCountry] = useState(false);
+  const [getTown, setTown] = useState(false);
   const [info, setInfo] = useState("");
-
   useEffect(() => {
-    if (x < width && x >= 0 && y < length && y >= 0) {
-      getValueAtPoint({ x, y }, layer)
-        .then((val) =>
+    (async () => {
+      if (x < cols && x >= 0 && y < rows && y >= 0) {
+        if (getTown) {
+          const town = await client.nearestTown({ x, y });
+          setInfo(`${town?.distance ?? 0 / 1000}km from ${town?.name}`);
+        } else if (getCountry) {
+          const info = await client.pointInCountry({ x, y });
           setInfo(
-            showCoords
-              ? `${
-                  typeof val === "number" ? val.toPrecision(4) : val
-                } at ${x}, ${length - y}`
-              : typeof val === "number"
-              ? val.toPrecision(4)
-              : val
-          )
-        )
-        .catch((e) => message(e as string));
-    }
-  }, [width, length, radius, x, y]);
+            `In ${info?.name}, ${info?.distance ?? 0 / 1000}km from boarder`
+          );
+        } else {
+          const val = await client.getValueAtPoint({ x, y });
+          const newVal = typeof val === "number" ? val.toPrecision(4) : val;
+          if (showCoords) {
+            setInfo(`${newVal} at ${x}, ${rows - y}`);
+          } else {
+            setInfo(newVal);
+          }
+        }
+      }
+    })();
+  }, [cols, rows, radius, x, y, showCoords]);
   return (
     <div
       onKeyDown={(e) => {
         if (e.key === "M") {
           e.preventDefault();
-          getPointOfMaxValue(layer).then((p) => setCoords(p));
+          client.getPointOfMaxValue().then((p) => {
+            if (p !== null) {
+              setCoords(p);
+            }
+          });
         }
         if (e.key === "m") {
           e.preventDefault();
-          getPointOfMinValue(layer).then((p) => setCoords(p));
+          client.getPointOfMinValue().then((p) => {
+            if (p !== null) {
+              setCoords(p);
+            }
+          });
         }
         if (e.key === "c") {
           e.preventDefault();
-          pointInCountry(layer, { x, y })
-            .then((x) => {
-              setInfo(
-                `In ${x?.name}, ${x?.distance ?? 0 / 1000}km from boarder`
-              );
-            })
-            .catch((e) => message(e));
+          setCountry(true);
+          setTown(false);
         }
         if (e.key === "t") {
           e.preventDefault();
-          nearestTown(layer, { x, y })
-            .then((x) => {
-              setInfo(`${x?.distance ?? 0 / 1000}km from ${x?.name}`);
-            })
-            .catch((e) => message(e));
+          setTown(true);
+          setCountry(false);
         }
         if (e.key === "p") {
           e.preventDefault();
           setPoints([...points, { x, y }]);
+        }
+        if (e.key === "s" && e.ctrlKey) {
+          savePoints(points);
         }
       }}
     >
       <input
         type="number"
         value={radius}
-        onChange={(e) => setRadius(Number(e.target.value))}
+        onChange={(e) => setRadius(Number(e.currentTarget.value))}
       />
       <label>
         Show coords?{" "}
         <input
           type="checkbox"
           defaultChecked={true}
-          onChange={(e) => setShowCoords(e.target.checked)}
+          onChange={(e) => setShowCoords(e.currentTarget.checked)}
         />
       </label>
+      <button
+        aria-checked={touchable}
+        role="switch"
+        onClick={() => setTouchable(!touchable)}
+      >
+        Touchable
+      </button>
       <div onKeyDown={coordinateArrowHandler(x, y, radius, setCoords)}>
         <CoordinateButtons x={x} y={y} radius={radius} setCoords={setCoords} />
+
         <p role="status">{info}</p>
       </div>
     </div>
@@ -119,7 +164,7 @@ function coordinateArrowHandler(
   radius: number,
   setCoords: (_: { x: number; y: number }) => void
 ) {
-  return (e: React.KeyboardEvent) => {
+  return (e: KeyboardEvent) => {
     if (e.key.startsWith("Arrow")) {
       e.preventDefault();
       switch (e.key) {
@@ -139,3 +184,121 @@ function coordinateArrowHandler(
     }
   };
 }
+
+const SaveScreen = ({
+  points,
+  done,
+  cancel,
+}: {
+  points: Point[];
+  done: () => void;
+  cancel: () => void;
+}) => {
+  return (
+    <div>
+      <button onClick={cancel}>Cancel</button>
+      <button onClick={done}>Done</button>
+    </div>
+  );
+};
+
+type StringClassification = { target: string; min: string; max: string };
+
+const ClassificationScreen = ({ onClassify }: { onClassify: () => void }) => {
+  const [classifications, setClassifications] = useState<
+    StringClassification[]
+  >([]);
+  console.log(classifications);
+  const handleInput =
+    (index: number, key: keyof Classification) => (value: string) => {
+      const newClassifications = [...classifications];
+      newClassifications[index] = {
+        ...newClassifications[index],
+        [key]: Number(value),
+      };
+      setClassifications(newClassifications);
+    };
+
+  return (
+    <div>
+      <table>
+        <thead>
+          <tr>
+            <th>Class</th> <th>Target</th>
+            <th>Min</th>
+            <th>Max</th>
+          </tr>
+        </thead>
+        <tbody>
+          {" "}
+          {classifications.map(({ target, min, max }, i) => (
+            <tr>
+              <td>{i}</td>
+              <td>
+                <ClassificationInput
+                  value={target}
+                  setValue={handleInput(i, "target")}
+                />
+              </td>
+              <td>
+                <ClassificationInput
+                  value={min}
+                  setValue={handleInput(i, "min")}
+                />
+              </td>
+              <td>
+                <ClassificationInput
+                  value={max}
+                  setValue={handleInput(i, "max")}
+                />
+              </td>
+            </tr>
+          ))}
+        </tbody>{" "}
+      </table>
+      <button
+        onClick={() =>
+          setClassifications([
+            ...classifications,
+            { target: "", min: "", max: "" },
+          ])
+        }
+      >
+        Add Classification
+      </button>
+      <button
+        onClick={async () => {
+          const file = await save({ title: "Classified raster destination" });
+          if (file !== null) {
+            await client.classifyCurrentRaster(
+              file,
+              classifications.map(mapClassification)
+            );
+            onClassify();
+          }
+        }}
+      >
+        Save classified raster
+      </button>
+    </div>
+  );
+};
+
+type ClassificationInputProps = {
+  value: string;
+  setValue: (value: string) => void;
+};
+
+const ClassificationInput = ({ value, setValue }: ClassificationInputProps) => {
+  return (
+    <input value={value} onInput={(e) => setValue(e.currentTarget.value)} />
+  );
+};
+
+const mapClassification = (
+  classification: StringClassification
+): Classification => ({
+  target: Number(classification.target),
+  min: Number(classification.min),
+  max: Number(classification.max),
+});

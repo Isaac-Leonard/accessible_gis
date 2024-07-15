@@ -1,22 +1,26 @@
-import { message } from "@tauri-apps/api/dialog";
-import { Suspense, useState } from "react";
-import { suspend } from "suspend-react";
+import { message } from "@tauri-apps/plugin-dialog";
 import { PointsTableView } from "./points-table";
-import { describePolygon, Polygon } from "./bindings";
+import { Polygon, commands } from "./bindings";
+import { useEffect, useState } from "preact/hooks";
+import { useSignal } from "@preact/signals";
 
 function PolygonDescription({
   polygon: { exterior, interior },
 }: {
   polygon: Polygon;
 }) {
-  const description = suspend(
-    () =>
-      describePolygon({ exterior, interior }).catch((e) => {
+  const description = useSignal<null | string>(null);
+  useEffect(() => {
+    commands
+      .describePolygon({ exterior, interior })
+      .then((value) => {
+        description.value = value;
+      })
+      .catch((e) => {
         message(e as string);
         throw e;
-      }),
-    [exterior, interior]
-  );
+      });
+  }, [exterior, interior]);
   return <div>{description}</div>;
 }
 
@@ -39,9 +43,7 @@ export const PolygonViewer = ({ polygon }: { polygon: Polygon }) => {
       {tableView ? (
         <PolygonTableView polygon={polygon} />
       ) : (
-        <Suspense fallback=" Loading">
-          <PolygonDescription polygon={polygon} />
-        </Suspense>
+        <PolygonDescription polygon={polygon} />
       )}
     </div>
   );

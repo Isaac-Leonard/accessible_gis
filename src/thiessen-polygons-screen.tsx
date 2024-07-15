@@ -1,7 +1,7 @@
-import { confirm, message } from "@tauri-apps/api/dialog";
-import { useState } from "react";
-import { getCsv, Point } from "./bindings";
+import { confirm, message } from "@tauri-apps/plugin-dialog";
 import { openFile } from "./files";
+import { useState } from "preact/hooks";
+import { Point, commands } from "./bindings";
 
 type Record = { point: Point; file: string };
 
@@ -66,7 +66,8 @@ export const RecordAdder = ({ add }: { add: (_: Record) => void }) => {
     const file = await openFile("Csv to read data from");
     if (file !== null) {
       setFile(file);
-      await getCsv(file)
+      await commands
+        .getCsv(file)
         .then((csv) => {
           setCsv(csv);
           setSelectingCell(true);
@@ -99,7 +100,7 @@ export const RecordAdder = ({ add }: { add: (_: Record) => void }) => {
         <input
           type=" number"
           value={lat}
-          onChange={(e) => setLat(Number(e.target.value))}
+          onChange={(e) => setLat(Number(e.currentTarget.value))}
         />
       </label>
       <label>
@@ -107,7 +108,7 @@ export const RecordAdder = ({ add }: { add: (_: Record) => void }) => {
         <input
           type=" number"
           value={long}
-          onChange={(e) => setLong(Number(e.target.value))}
+          onChange={(e) => setLong(Number(e.currentTarget.value))}
         />
       </label>
       <button onClick={addHandler}>Add</button>

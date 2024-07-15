@@ -1,103 +1,98 @@
-import { Suspense, useDeferredValue, useState } from "react";
 import { VectorNavigator } from "./vector-navigator";
 import { RasterNavigator } from "./raster-navigator";
-import { LayerDescriptor } from "./bindings";
-import { invoke } from "@tauri-apps/api";
-import { suspend } from "suspend-react";
-import { openFile } from "./files";
-
-// const audioCtx = new AudioContext();
-
-const loadFile = async (name: string): Promise<string> => {
-  return await invoke<string>("load_file", { name }).catch(
-    (e) => e as unknown as string
-  );
-};
+import { Info, LayerDescriptor, UiPayload } from "./bindings";
+import { IndexedOptionPicker } from "./option-picker";
+import { client, state } from "./api";
+import { OpenDatasetDialog } from "./open-screen";
 
 export const MainScreen = () => {
-  const [url, setUrl] = useState<string>("");
-  const [fileStatus, setFileStatus] = useState<null | string>(null);
-  const layersInfo = suspend(
-    async () =>
-      fileStatus?.startsWith("Success")
-        ? invoke<LayerDescriptor[]>("get_app_info")
-        : [],
-    [fileStatus]
+  const value = state.value;
+  return value.type === "Uninitialised" ? (
+    <OpenDatasetDialog />
+  ) : (
+    <InitialisedStateScreen state={value} />
   );
+};
 
-  let [selectedLayerIndex, setSelectedLayerIndex] = useState(0);
-  selectedLayerIndex = useDeferredValue(selectedLayerIndex);
-
-  const selectedLayer: LayerDescriptor | null =
-    layersInfo[selectedLayerIndex] ?? null;
-  async function load() {
-    const file = await openFile();
-    if (file !== null) {
-      setFileStatus(await loadFile(file));
-    }
-  }
+const InitialisedStateScreen = ({
+  state,
+}: {
+  state: Extract<UiPayload, { type: "Initialised" }>;
+}) => {
+  const layersInfo = state.layers;
+  const foundIndex = layersInfo.findIndex(
+    (layer) =>
+      layer.type === state.info?.type &&
+      layer.dataset === state.info.dataset_index &&
+      layer.band.index === state.info.layer_index
+  );
+  const selectedLayerIndex = foundIndex === -1 ? null : foundIndex;
   return (
     <div className="container">
-      <button onClick={load}>Open</button>
-      <label>
-        Load from url:
-        <input value={url} onChange={(e) => setUrl(e.target.value)} />
-      </label>
-      <button onClick={async () => setFileStatus(await loadFile(url))}>
-        Load url
-      </button>
-      <p>{fileStatus ?? "unloaded"}</p>
-      <LayerSelector
-        layers={layersInfo}
-        selectedLayer={selectedLayerIndex}
-        setLayer={setSelectedLayerIndex}
-      />
-      <Suspense fallback="Loading..">
-        {selectedLayer !== null ? (
-          <div>
-            <div>SRS: {selectedLayer.srs}</div>
-            <div>Projection: {selectedLayer.projection}</div>
-            <CoordinateExplorer layer={selectedLayer} />
-          </div>
-        ) : null}
-      </Suspense>
+      <OpenDatasetDialog />
+      <LayerSelector layers={state.layers} selectedIndex={selectedLayerIndex} />
+      <LayerView layer={state.info} />{" "}
     </div>
   );
 };
 
-function LayerSelector({
-  selectedLayer,
-  layers,
-  setLayer,
-}: {
-  selectedLayer: number;
-  setLayer: (layer: number) => void;
+type LayerSelectorProps = {
   layers: LayerDescriptor[];
-}) {
+  selectedIndex: number | null;
+};
+
+function LayerSelector({ layers, selectedIndex }: LayerSelectorProps) {
   return (
     <div>
-      <select
-        value={selectedLayer}
-        onChange={(e) => setLayer(Number(e.target.value))}
-      >
-        {layers.map((layer, index) => (
-          <option value={index.toString()} key={index.toString()}>
-            {layer.dataset_file.split("/").pop()}:{layer.type}
-          </option>
-        ))}
-      </select>
+      <IndexedOptionPicker
+        index={selectedIndex}
+        setIndex={async (index) => {
+          const { dataset, band } = layers[index];
+          // TODO: These should probably be put into a single function
+          client.setDatasetIndex(dataset);
+          client.setLayerIndex(band);
+        }}
+        options={layers.map(
+          (layer) => `${layer.dataset_file.split("/").pop()}: ${layer.type}`
+        )}
+        emptyText="No layers loaded"
+        prompt="Select layer"
+      ></IndexedOptionPicker>
     </div>
   );
 }
 
-function CoordinateExplorer({ layer }: { layer: LayerDescriptor }) {
-  if (layer.type === "Raster") {
-    return <RasterNavigator layer={layer} />;
-  } else {
-    return (
-      <Suspense fallback="loading">
-        <VectorNavigator layer={layer} />
-      </Suspense>
-    );
-  }
+function CoordinateExplorer({ layer }: { layer: Info }) {
+  return layer.type === "Raster" ? (
+    <RasterNavigator layer={layer} />
+  ) : (
+    <VectorNavigator layer={layer} />
+  );
 }
+
+const Metadata = ({ layer }: { layer: Info }) => {
+  return (
+    <div>
+      {" "}
+      <div>SRS: {layer.srs}</div>
+      <div>Projection: {layer.projection}</div>
+    </div>
+  );
+};
+
+const CurrentLayerView = ({ layer }: { layer: Info }) => {
+  return (
+    <div>
+      <Metadata layer={layer} />
+      <CoordinateExplorer layer={layer} />
+    </div>
+  );
+};
+
+const LayerView = ({ layer }: { layer: Info | null }) => {
+  return layer !== null ? (
+    <CurrentLayerView layer={layer} />
+  ) : (
+    <div>No layers selected</div>
+  );
+};

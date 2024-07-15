@@ -1,18 +1,28 @@
-import { useState } from "react";
 import "./App.css";
-import { Provider, Screen } from "./context";
 import { Router } from "./router";
+import { client } from "./api";
+import { load } from "./files";
+
+const globalKeyHandler = (e: KeyboardEvent) => {
+  if (e.metaKey) {
+    switch (e.key) {
+      case "o":
+        e.preventDefault();
+        load();
+        break;
+    }
+  }
+};
 
 function App() {
-  const [screen, setScreen] = useState<Screen>("main");
   return (
-    <Provider value={{ screen, setScreen }}>
-      <button onClick={() => setScreen("main")}>Main</button>
-      <button onClick={() => setScreen("thiessen_polygons")}>
-        Thiessen Polygons
+    <div onKeyDown={globalKeyHandler}>
+      <button onClick={() => client.setScreen("NewDataset")}>
+        New dataset
       </button>
+      <button onClick={() => {}}>Tools</button>
       <Router />
-    </Provider>
+    </div>
   );
 }
 

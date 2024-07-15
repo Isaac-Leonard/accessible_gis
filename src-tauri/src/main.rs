@@ -3,40 +3,52 @@
 #![feature(try_blocks)]
 #![feature(iter_map_windows)]
 
+mod dataset_collection;
 mod files;
 mod gdal_if;
 mod geometry;
 mod math;
+mod server;
 mod state;
 mod stats;
 mod thiessen_polygons;
+mod tools;
 
+use dataset_collection::{StatefulDataset, StatefulVectorInfo};
 use files::get_csv;
-use gdal::{vector::LayerAccess, Dataset};
-use gdal_if::{read_raster_data, Envelope, Field, FieldValue, WrappedDataset};
+use gdal::{
+    spatial_ref::SpatialRef,
+    vector::{LayerAccess, ToGdal},
+    Dataset, DatasetOptions, GdalOpenFlags,
+};
+use gdal_if::{
+    list_drivers, read_raster_data, read_raster_data_enum_as, Envelope, Field, FieldSchema,
+    FieldType, FieldValue, LayerExt, LayerIndex, WrappedDataset,
+};
 use geo::{
     Area, ChamberlainDuquetteArea, Closest, ClosestPoint, Contains, GeodesicArea, GeodesicBearing,
-    GeodesicDistance, GeodesicLength, Intersects, Point as GeoPoint, Within,
+    GeodesicDistance, GeodesicLength, Geometry as GeoGeometry, Intersects, Point as GeoPoint,
+    Within,
 };
 use geo_types::{LineString as GeoLineString, Polygon as GeoPolygon};
-use geometry::{Geometry, LineString, Point, Polygon, SingleGeometry};
+use geometry::{Geometry, LineString, Point, Polygon, SingleGeometry, ToGeometryType};
 use itertools::Itertools;
+use local_ip_address::local_ip;
 use proj::Transform;
 use rstar::{RTree, RTreeObject};
 use serde::{Deserialize, Serialize};
-use specta::{
-    collect_types,
-    ts::{BigIntExportBehavior, ExportConfiguration},
-};
-use state::{AppData, AppState, FeatureNames, LayerOverview};
+use specta::ts::{formatter::prettier, BigIntExportBehavior, ExportConfig};
+use state::{AppData, AppState, Screen};
 use statrs::statistics::Statistics;
-use tauri_specta::ts;
+use tauri::{ipc::Invoke, Manager, Runtime};
+use tauri_specta::{collect_commands, ts};
+use tools::ToolDataDiscriminants;
 
-use std::{cmp::Ordering, sync::MutexGuard};
+use std::{cmp::Ordering, path::Path, process::Command, sync::MutexGuard};
 
 use crate::{
     gdal_if::LocalFeatureInfo,
-    geometry::ToGeometryType,
+    server::run_server,
     state::{AppDataSync, Country, CountryImpl, PreloadedAppData},
     thiessen_polygons::{
         theissen_polygons, theissen_polygons_calculation, theissen_polygons_to_file,
@@ -45,61 +57,150 @@ use crate::{
 
 #[tauri::command]
 #[specta::specta]
-fn load_file(name: &str, state: AppState) -> String {
-    let Ok(dataset) = Dataset::open(name) else {
-        return "Something went wrong".to_owned();
-    };
+fn load_file(name: String, state: AppState) -> Result<(), String> {
     let mut guard = state.data.lock().unwrap();
-    guard.datasets.push(WrappedDataset {
-        raster_data: try { read_raster_data(&dataset.rasterband(1).ok()?) },
-        file_name: name.to_owned(),
-        dataset,
-    });
-    "Success".to_owned() + &guard.datasets.len().to_string()
+    guard.shared.datasets.open(name).map(|_| ())
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type, Default)]
+#[serde(tag = "name")]
+pub enum UiScreen {
+    #[default]
+    Main,
+    ThiessenPolygons,
+    NewDataset {
+        drivers: Vec<String>,
+    },
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+pub struct InitialisedPayload {
+    pub layers: Vec<LayerDescriptor>,
+    pub screen: UiScreen,
+    pub info: Option<Info>,
+}
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+#[serde(tag = "type")]
+pub enum UiToolData {
+    TracingGeometry {
+        points: Vec<Point>,
+        geometrys_count: usize,
+    },
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+#[serde(tag = "type")]
+pub enum Info {
+    Vector {
+        feature_idx: Option<usize>,
+        field_schema: Vec<FieldSchema>,
+        feature_names: Option<Vec<Option<String>>>,
+        feature: Option<FeatureInfo>,
+        srs: Option<String>,
+        editable: bool,
+        layer_index: usize,
+        dataset_index: usize,
+        display: bool,
+        name_field: Option<String>,
+    },
+    Raster {
+        layer_index: usize,
+        dataset_index: usize,
+        cols: usize,
+        rows: usize,
+        srs: Option<String>,
+        tool: Option<UiToolData>,
+        display: bool,
+    },
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+#[serde(tag = "type")]
+pub enum UiPayload {
+    Initialised(InitialisedPayload),
+    Uninitialised { screen: UiScreen },
+}
+
+impl AppData {
+    pub fn get_ui_screen(&self) -> UiScreen {
+        match self.screen {
+            Screen::Main => UiScreen::Main,
+            Screen::ThiessenPolygons => UiScreen::ThiessenPolygons,
+            Screen::NewDataset => UiScreen::NewDataset {
+                drivers: list_drivers(),
+            },
+        }
+    }
 }
 
 #[tauri::command]
 #[specta::specta]
-fn get_app_info(state: AppState) -> Vec<LayerDescriptor> {
-    let guard = state.data.lock().unwrap();
-    guard
-        .datasets
-        .iter()
-        .enumerate()
-        .flat_map(|(ref dataset_idx, dataset)| {
-            let dataset_file = dataset.file_name.clone();
-            dataset
-                .dataset
-                .layers()
-                .enumerate()
-                .map(|(layer_idx, layer)| LayerDescriptor {
-                    kind: LayerInfo::Vector,
-                    dataset_file: dataset_file.clone(),
-                    dataset: *dataset_idx,
-                    band: layer_idx,
-                    srs: try { layer.spatial_ref()?.to_wkt().ok()? },
-                    projection: dataset.dataset.projection(),
+fn get_app_info(state: AppState) -> UiPayload {
+    let mut guard = state.data.lock().unwrap();
+    let state = &mut guard.shared;
+    let info = state
+        .with_current_dataset_mut(|ds, ds_index| match ds.layer_index {
+            Some(LayerIndex::Vector(index)) => {
+                let feature = ds.get_current_feature();
+                let mut layer = {
+                    ds.get_vector(index)
+                        .expect("Tried to get non existant vector layer")
+                };
+                let feature_names = Some(
+                    layer
+                        .layer
+                        .layer
+                        .features()
+                        .map(|feature| {
+                            feature
+                                .field(layer.info.primary_field_name.as_ref()?)
+                                .unwrap()
+                                .map(|x| FieldValue::from(x).to_string())
+                        })
+                        .collect_vec(),
+                );
+                Some(Info::Vector {
+                    name_field: layer.info.primary_field_name.clone(),
+                    display: layer.info.shared.display,
+                    dataset_index: ds_index,
+                    srs: try { layer.layer.layer.spatial_ref()?.to_wkt().ok()? },
+                    feature_idx: layer.info.selected_feature,
+                    field_schema: layer.layer.get_field_schema(),
+                    feature_names,
+                    feature,
+                    editable: ds.dataset.editable,
+                    layer_index: index,
                 })
-                .chain((1..=dataset.dataset.raster_count()).map(|band_idx| {
-                    let band = dataset.dataset.rasterband(band_idx).unwrap();
-                    let (width, length) = band.size();
-                    LayerDescriptor {
-                        kind: LayerInfo::Raster { width, length },
-                        dataset: *dataset_idx,
-                        band: band_idx as usize,
-                        dataset_file: dataset.file_name.clone(),
-                        srs: try { dataset.dataset.spatial_ref().ok()?.to_wkt().ok()? },
-                        projection: dataset.dataset.projection(),
-                    }
-                }))
-                .collect::<Vec<_>>()
+            }
+            Some(LayerIndex::Raster(index)) => {
+                let band = ds.get_raster(index).unwrap();
+                let (cols, rows) = band.band.band().size();
+                Some(Info::Raster {
+                    dataset_index: ds_index,
+                    layer_index: index,
+                    cols,
+                    rows,
+                    srs: band.band.srs.clone(),
+                    tool: None,
+                    display: band.shared.display,
+                })
+            }
+            None => None,
         })
-        .collect()
+        .flatten();
+    let layers = state.datasets.get_all_layers();
+    UiPayload::Initialised(InitialisedPayload {
+        layers: layers.into_iter().map_into().collect(),
+        screen: guard.get_ui_screen(),
+        info,
+    })
 }
 
-fn main() {
-    ts::export_with_cfg(
-        collect_types![
+fn generate_handlers<R: Runtime>(
+    s: impl AsRef<Path>,
+) -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static {
+    ts::builder()
+        .commands(collect_commands![
             load_file,
             get_app_info,
             get_band_sizes,
@@ -107,9 +208,6 @@ fn main() {
             get_point_of_max_value,
             get_point_of_min_value,
             get_polygons_around_point,
-            get_layer_info,
-            get_feature_info,
-            get_feature_names,
             describe_line,
             describe_polygon,
             point_in_country,
@@ -118,12 +216,33 @@ fn main() {
             theissen_polygons,
             get_csv,
             theissen_polygons_to_file,
-        ]
-        .unwrap(),
-        ExportConfiguration::default().bigint(BigIntExportBehavior::Number),
-        "../src/bindings.ts",
-    )
-    .unwrap();
+            set_screen,
+            set_layer_index,
+            set_dataset_index,
+            set_feature_index,
+            create_new_dataset,
+            add_field_to_schema,
+            edit_dataset,
+            add_feature_to_layer,
+            set_epsg_srs_for_layer,
+            select_tool_for_current_index,
+            get_image_pixels,
+            set_display,
+            set_name_field,
+            classify_current_raster,
+        ])
+        .path(s)
+        .config(
+            ExportConfig::new()
+                .bigint(BigIntExportBehavior::Number)
+                .formatter(prettier),
+        )
+        .build()
+        .unwrap()
+}
+
+fn main() {
+    let handlers = generate_handlers("../src/bindings.ts");
     let countries_path = std::env::current_dir()
         .unwrap()
         .parent()
@@ -145,35 +264,32 @@ fn main() {
             .collect::<Vec<_>>(),
     );
     tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .manage(AppDataSync {
             data: Default::default(),
             default_data: PreloadedAppData { countries },
         })
-        .invoke_handler(tauri::generate_handler![
-            load_file,
-            get_app_info,
-            get_band_sizes,
-            get_value_at_point,
-            get_point_of_max_value,
-            get_point_of_min_value,
-            get_polygons_around_point,
-            get_layer_info,
-            get_feature_info,
-            get_feature_names,
-            describe_line,
-            describe_polygon,
-            point_in_country,
-            nearest_town,
-            theissen_polygons_calculation,
-            theissen_polygons,
-            get_csv,
-            theissen_polygons_to_file,
-        ])
+        .invoke_handler(handlers)
+        .setup(|app| {
+            let window = app.get_webview_window("main").unwrap();
+            window.open_devtools();
+            let state = (*app.state::<AppDataSync>()).clone();
+            tauri::async_runtime::spawn(run_server(state));
+            let local_ip = local_ip().expect("Unable to retrieve local IP address");
+
+            // Print the IP address and port
+            let port = 80;
+            println!("Server running at http://{}:{}/", local_ip, port);
+
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
 
-#[derive(Serialize, specta::Type)]
+#[derive(Serialize, Deserialize, specta::Type)]
 pub struct RasterSize {
     width: usize,
     length: usize,
@@ -183,101 +299,84 @@ pub struct RasterSize {
 #[tauri::command]
 #[specta::specta]
 fn get_band_sizes(state: AppState) -> Vec<RasterSize> {
-    let guard = state.data.lock().unwrap();
-    guard
-        .datasets
-        .iter()
-        .map(|wrapped| {
-            let dataset = &wrapped.dataset;
-            let (width, length) = dataset.raster_size();
-            let bands = dataset.raster_count() as usize;
+    state.with_lock(|state| {
+        state
+            .datasets
+            .iter_mut()
+            .map(|wrapped| {
+                let dataset = &wrapped.dataset;
+                let (width, length) = dataset.dataset.raster_size();
+                let bands = dataset.dataset.raster_count();
 
-            RasterSize {
-                width,
-                length,
-                bands,
+                RasterSize {
+                    width,
+                    length,
+                    bands,
+                }
+            })
+            .collect()
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_value_at_point(point: Point, state: AppState) -> Option<f64> {
+    state
+        .with_current_raster_band(|band| {
+            let val = read_raster_data_enum_as(
+                &band.band,
+                (point.x.round() as isize, point.y.round() as isize),
+                (1, 1),
+                (1, 1),
+                None,
+            )?
+            .to_f64()[0];
+            if band.no_data_value().is_some_and(|ndv| val == ndv) {
+                None
+            } else {
+                Some(val)
             }
         })
-        .collect()
+        .expect("Tried to get raster band and couldn't find it")
 }
 
 #[tauri::command]
 #[specta::specta]
-fn get_value_at_point(point: Point, layer: LayerDescriptor, state: AppState) -> ValueType {
-    let guard = state.data.lock().unwrap();
-    let dataset = &guard.datasets[layer.dataset];
-    match layer.kind {
-        LayerInfo::Raster { .. } => {
-            let val = dataset.raster_data.as_ref().unwrap()[point.to_2d_index()];
-
-            let band = dataset.dataset.rasterband(1).unwrap();
-            if band
-                .no_data_value()
-                .is_some_and(|no_data_value| val == no_data_value)
-            {
-                ValueType::Err("NoData".to_owned())
-            } else {
-                ValueType::Value(val)
+fn get_point_of_max_value(state: AppState) -> Option<Point> {
+    state
+        .with_current_raster_band(|band| {
+            let data = read_raster_data(&band.band);
+            let data_iter = data.indexed_iter();
+            match band.no_data_value() {
+                Some(no_data_value) => itertools::Either::Left(data_iter.filter(move |x| {
+                    x.1.total_cmp(&no_data_value) != Ordering::Equal && !x.1.is_nan()
+                })),
+                _ => itertools::Either::Right(data_iter.filter(|x| !x.1.is_nan())),
             }
-        }
-        LayerInfo::Vector => ValueType::Err("Not implemented for Vector data yet".to_owned()),
-    }
+            .max_by(|a, b| a.1.total_cmp(b.1))
+            .map(|(index, _)| Point::from_2d_index(index))
+        })
+        .unwrap()
 }
 
 #[tauri::command]
 #[specta::specta]
-fn get_point_of_max_value(layer: LayerDescriptor, state: AppState) -> Point {
-    let guard = state.data.lock().unwrap();
-    let dataset = &guard.datasets[layer.dataset];
-    let data_iter = dataset.raster_data.as_ref().unwrap().indexed_iter();
-
-    if let Some(no_data_value) = dataset
-        .dataset
-        .rasterband(layer.band as isize)
+fn get_point_of_min_value(state: AppState) -> Option<Point> {
+    let mut guard = state.data.lock().unwrap();
+    guard
+        .with_current_raster_band(|band| {
+            let data = read_raster_data(&band.band.band);
+            let data_iter = data.indexed_iter();
+            match band.band.no_data_value() {
+                Some(no_data_value) => itertools::Either::Left(data_iter.filter(move |x| {
+                    x.1.total_cmp(&no_data_value) != Ordering::Equal && !x.1.is_nan()
+                })),
+                _ => itertools::Either::Right(data_iter.filter(|x| !x.1.is_nan())),
+            }
+            .min_by(|a, b| a.1.total_cmp(b.1))
+            .map(|(index, _)| Point::from_2d_index(index))
+        })
         .unwrap()
-        .no_data_value()
-    {
-        data_iter
-            .filter(|x| x.1.total_cmp(&no_data_value) != Ordering::Equal && !x.1.is_nan())
-            .max_by(|a, b| a.1.total_cmp(b.1))
-    } else {
-        data_iter
-            .filter(|x| !x.1.is_nan())
-            .max_by(|a, b| a.1.total_cmp(b.1))
-    }
-    .map(|(index, _)| Point::from_2d_index(index))
-    .unwrap()
-}
-
-#[tauri::command]
-#[specta::specta]
-fn get_point_of_min_value(layer: LayerDescriptor, state: AppState) -> Point {
-    let guard = state.data.lock().unwrap();
-    let dataset = &guard.datasets[0];
-    let data_iter = dataset.raster_data.as_ref().unwrap().indexed_iter();
-
-    match dataset
-        .dataset
-        .rasterband(layer.band as isize)
-        .unwrap()
-        .no_data_value()
-    {
-        Some(no_data_value) => data_iter
-            .filter(|x| x.1.total_cmp(&no_data_value) != Ordering::Equal && !x.1.is_nan())
-            .min_by(|a, b| a.1.total_cmp(b.1)),
-        _ => data_iter
-            .filter(|x| !x.1.is_nan())
-            .max_by(|a, b| a.1.total_cmp(b.1)),
-    }
-    .map(|(index, _)| Point::from_2d_index(index))
-    .unwrap()
-}
-
-#[derive(Serialize, specta::Type)]
-#[serde(untagged)]
-enum ValueType {
-    Value(f64),
-    Err(String),
 }
 
 /*
@@ -376,10 +475,8 @@ pub struct LayerDescriptor {
     #[serde(flatten)]
     kind: LayerInfo,
     dataset: usize,
-    band: usize,
+    band: LayerIndex,
     dataset_file: String,
-    srs: Option<String>,
-    projection: String,
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, specta::Type)]
@@ -391,67 +488,46 @@ pub enum LayerInfo {
 
 #[tauri::command]
 #[specta::specta]
-fn get_polygons_around_point(
-    point: Point,
-    layer: LayerDescriptor,
-    state: AppState,
-) -> Vec<PolygonInfo> {
-    let guard = state.data.lock().unwrap();
-    let dataset = &guard.datasets[layer.dataset];
-    let srs = dataset.dataset.spatial_ref().unwrap().to_wkt().unwrap();
-    let mut layer = dataset.dataset.layer(layer.band as isize).unwrap();
-    let features = layer.features();
-    features
-        .flat_map(|feature| match feature.geometry() {
-            Some(geometry) => match geometry.to_geo().unwrap() {
-                geo_types::Geometry::Polygon(mut polygon) => {
-                    if polygon.contains(&GeoPoint::from(point)) {
-                        polygon
-                            .transform_crs_to_crs(&srs, "UTM 32N (EPSG:25832)")
-                            .unwrap();
-                        let area = polygon.unsigned_area();
-                        let fields = feature
-                            .fields()
-                            .map(|(name, value)| Field {
-                                name,
-                                value: value.into(),
-                            })
-                            .collect::<Vec<_>>();
-                        Some(PolygonInfo { area, fields })
-                    } else {
-                        None
-                    }
-                }
-                _ => None,
-            },
-            None => None,
+fn get_polygons_around_point(point: Point, layer: usize, state: AppState) -> Vec<PolygonInfo> {
+    state
+        .with_current_dataset_mut(|dataset, _| {
+            let srs = dataset
+                .dataset
+                .dataset
+                .spatial_ref()
+                .unwrap()
+                .to_wkt()
+                .unwrap();
+            let mut layer = dataset.dataset.get_vector(layer).unwrap();
+            let features = layer.layer().features();
+            features
+                .flat_map(|feature| match feature.geometry() {
+                    Some(geometry) => match geometry.to_geo().unwrap() {
+                        geo_types::Geometry::Polygon(mut polygon) => {
+                            if polygon.contains(&GeoPoint::from(point)) {
+                                polygon
+                                    .transform_crs_to_crs(&srs, "UTM 32N (EPSG:25832)")
+                                    .unwrap();
+                                let area = polygon.unsigned_area();
+                                let fields = feature
+                                    .fields()
+                                    .map(|(name, value)| Field {
+                                        name,
+                                        value: value.into(),
+                                    })
+                                    .collect::<Vec<_>>();
+                                Some(PolygonInfo { area, fields })
+                            } else {
+                                None
+                            }
+                        }
+                        _ => None,
+                    },
+                    None => None,
+                })
+                .collect()
         })
-        .collect()
-}
-
-#[tauri::command]
-#[specta::specta]
-fn get_feature_info(
-    feature: usize,
-    layer: LayerDescriptor,
-    state: AppState,
-) -> Option<FeatureInfo> {
-    let guard = state.data.lock().unwrap();
-    let dataset = &guard.datasets[layer.dataset];
-    let layer = dataset.dataset.layer(layer.band as isize).unwrap();
-    let feature = layer.feature(feature as u64)?;
-
-    let fields = feature
-        .fields()
-        .map(|(name, value)| Field {
-            name,
-            value: value.into(),
-        })
-        .collect::<Vec<_>>();
-    Some(FeatureInfo {
-        fields,
-        geometry: feature.geometry().unwrap().to_geo().unwrap().into(),
-    })
+        .unwrap_or_else(Vec::new)
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, specta::Type)]
@@ -460,53 +536,16 @@ pub struct PolygonInfo {
     fields: Vec<Field>,
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, specta::Type)]
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
 pub struct FeatureInfo {
     fields: Vec<Field>,
     geometry: Geometry,
 }
 
-#[tauri::command]
-#[specta::specta]
-fn get_layer_info(layer: LayerDescriptor, state: AppState) -> LayerOverview {
-    let guard = state.data.lock().unwrap();
-    let dataset = &guard.datasets[layer.dataset];
-    let mut layer = dataset.dataset.layer(layer.band as isize).unwrap();
-    let extent: Option<Envelope> = layer.get_extent().ok().map(Into::into);
-    LayerOverview {
-        name: layer.name(),
-        extent,
-        features: layer.feature_count() as usize,
-        field_names: layer
-            .features()
-            .flat_map(|feature| {
-                feature
-                    .fields()
-                    .map(|field| field.0)
-                    .collect::<Vec<String>>()
-            })
-            .unique()
-            .collect(),
+impl FeatureInfo {
+    fn new(geometry: Geometry, fields: Vec<Field>) -> Self {
+        Self { geometry, fields }
     }
-}
-
-#[tauri::command]
-#[specta::specta]
-fn get_feature_names(
-    name_field: String,
-    layer: LayerDescriptor,
-    state: AppState,
-) -> Option<FeatureNames> {
-    let guard = state.data.lock().unwrap();
-    let dataset = &guard.datasets[layer.dataset];
-    let mut layer = dataset.dataset.layer(layer.band as isize).unwrap();
-    Some(FeatureNames {
-        features: layer
-            .features()
-            .map(|feature| Some(FieldValue::from(feature.field(&name_field).ok()?).to_string()))
-            .collect::<Option<_>>()?,
-        field: name_field,
-    })
 }
 
 fn describe_polygon_internal(
@@ -650,8 +689,8 @@ fn _analyse_geom(line: LineString, mut guard: MutexGuard<'_, AppData>) {
     let mut contains = Vec::new();
     let mut contained_by = Vec::new();
     let mut crosses = Vec::new();
-    for (dataset_idx, dataset) in guard.datasets.iter_mut().enumerate() {
-        for (layer_idx, mut layer) in &mut dataset.dataset.layers().enumerate() {
+    for (dataset_idx, dataset) in guard.shared.datasets.iter_mut().enumerate() {
+        for (layer_idx, mut layer) in &mut dataset.dataset.dataset.layers().enumerate() {
             for (feature_idx, feature) in layer.features().enumerate() {
                 let geom = feature.geometry().expect("Feature has no geometry");
                 let geom = geom
@@ -737,14 +776,9 @@ pub struct DistanceFromBoarder {
 
 #[tauri::command]
 #[specta::specta]
-fn point_in_country(
-    layer: LayerDescriptor,
-    point: Point,
-    state: AppState,
-) -> Option<DistanceFromBoarder> {
-    let guard = state.data.lock().unwrap();
-    let point = guard.point_to_wgs84(point.into(), layer).unwrap();
-    eprintln!("Point: {:?}", point);
+fn point_in_country(point: Point, state: AppState) -> Option<DistanceFromBoarder> {
+    let mut guard = state.data.lock().unwrap();
+    let point = guard.raster_point_to_wgs84(point.into());
     let country = state.default_data.find_country(&point)?;
     let closest_point = country.geom().exterior().closest_point(&point);
     let distance = match closest_point {
@@ -760,14 +794,9 @@ fn point_in_country(
 
 #[tauri::command]
 #[specta::specta]
-fn nearest_town(
-    layer: LayerDescriptor,
-    point: Point,
-    state: AppState,
-) -> Option<DistanceFromBoarder> {
+fn nearest_town(point: Point, state: AppState) -> Option<DistanceFromBoarder> {
     let mut guard = state.data.lock().unwrap();
-    let point = guard.point_to_wgs84(point.into(), layer).unwrap();
-    eprintln!("Point: {:?}", point);
+    let point = guard.raster_point_to_wgs84(point.into());
     let country = state.default_data.find_country(&point)?;
     let code = country.get_code();
     let towns = guard.get_towns_by_code(code);
@@ -779,4 +808,231 @@ fn nearest_town(
             name: town.get_name().unwrap(),
             distance: distance.round(),
         })
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_screen(screen: Screen, state: AppState) {
+    let mut guard = state.data.lock().unwrap();
+    guard.screen = screen;
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_dataset_index(index: usize, state: AppState) {
+    let mut guard = state.data.lock().unwrap();
+    guard.shared.datasets.set_index(index).unwrap();
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_layer_index(index: LayerIndex, state: AppState) {
+    state
+        .with_current_dataset_mut(|ds, _| {
+            ds.layer_index = Some(index);
+        })
+        .expect("Tried to set layer index on nonexistant dataset");
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+pub struct FeatureIndex {
+    layer: LayerIndex,
+    feature: usize,
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_feature_index(index: usize, state: AppState) -> Result<(), String> {
+    state
+        .with_current_vector_layer(|layer| layer.info.selected_feature = Some(index))
+        .ok_or_else(|| "error".to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn create_new_dataset(driver_name: String, file: String, state: AppState) -> Result<(), String> {
+    let mut guard = state.data.lock().unwrap();
+    let mut dataset = WrappedDataset::new_vector(file, driver_name)?;
+    dataset.add_layer()?;
+    guard.shared.datasets.add(StatefulDataset {
+        dataset,
+        layer_index: Some(LayerIndex::Vector(0)),
+        layer_info: vec![StatefulVectorInfo::default()],
+        band_info: vec![],
+    });
+    guard.screen = Screen::Main;
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn add_field_to_schema(name: String, field_type: FieldType, state: AppState) -> Result<(), String> {
+    state
+        .with_current_vector_layer(move |layer| {
+            layer
+                .layer
+                .layer()
+                .create_defn_fields(&[(&name, field_type as u32)])
+                .inspect_err(|e| eprintln!("{:?}", e))
+                .map_err(|_| "Failed to add fields to schema".to_string())
+        })
+        .ok_or_else(|| "Tried to add field to schema when state is uninitialised".to_string())?
+}
+
+#[tauri::command]
+#[specta::specta]
+fn edit_dataset(state: AppState) -> Result<(), String> {
+    eprintln!("here");
+    state
+        .with_current_dataset_mut(|dataset, _| {
+            dataset.dataset.dataset = Dataset::open_ex(
+                &dataset.dataset.file_name,
+                DatasetOptions {
+                    open_flags: GdalOpenFlags::GDAL_OF_UPDATE,
+                    ..Default::default()
+                },
+            )
+            .inspect_err(|e| eprintln!("Err: {:?}", e))
+            .map_err(|_| {
+                format!(
+                    "Could not open dataset {} in update mode",
+                    &dataset.dataset.file_name
+                )
+            })?;
+            dataset.dataset.editable = true;
+            Ok(())
+        })
+        .expect("No dataset selected")
+}
+
+#[tauri::command]
+#[specta::specta]
+fn add_feature_to_layer(feature: FeatureInfo, state: AppState) -> Result<(), String> {
+    let mut guard = state.data.lock().unwrap();
+    guard
+        .with_current_vector_layer(move |mut layer| {
+            let geom = GeoGeometry::from(feature.geometry)
+                .to_gdal()
+                .map_err(|_| "Failed to convert geometry to gdal geometry")?;
+            let fields = feature
+                .fields
+                .iter()
+                .flat_map(|field| {
+                    Some((
+                        field.name.as_str(),
+                        gdal::vector::FieldValue::from(field.value.clone()),
+                    ))
+                })
+                .unzip::<_, _, Vec<_>, Vec<_>>();
+
+            layer
+                .layer
+                .layer()
+                .create_feature_fields(geom, &fields.0, &fields.1)
+                .inspect_err(|e| eprintln!("{:?}", e))
+                .map_err(|_| "Failed to add fields to schema".to_string())?;
+            eprintln!(
+                "{:?}",
+                FeatureInfo::from(layer.layer.layer().features().last().unwrap())
+            );
+            Ok(())
+        })
+        .ok_or_else(|| "Tried to add feature to layer when state is uninitialised".to_string())?
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_epsg_srs_for_layer(epsg_code: u32, state: AppState) -> Result<(), String> {
+    let srs = SpatialRef::from_epsg(epsg_code)
+        .map_err(|_| "Failed to get srs from epsg code".to_owned())?;
+    let mut guard = state.data.lock().unwrap();
+    guard
+        .with_current_dataset_mut(move |dataset, _| {
+            dataset
+                .dataset
+                .set_spatial_ref(&srs)
+                .expect("Failed to set srs on dataset")
+        })
+        .ok_or_else(|| "Tried to add feature to layer when state is uninitialised".to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn select_tool_for_current_index(tool: ToolDataDiscriminants, state: AppState) {
+    state.with_lock(|state| state.tools_data.add_tool(tool))
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_image_pixels(state: AppState) -> Result<Vec<u8>, String> {
+    state
+        .with_current_raster_band(|band| {
+            band.band()
+                .read_band_as::<u8>()
+                .expect("Not u8 data")
+                .into_shape_and_vec()
+                .1
+        })
+        .ok_or_else(|| "Couldn't read band data".to_owned())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_display(state: AppState) {
+    state
+        .with_current_layer_mut(|mut layer| {
+            layer.shared_mut().display = true;
+        })
+        .expect("Tried to edit nonexistant dataset");
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_name_field(field: String, state: AppState) {
+    state
+        .with_current_vector_layer(|layer| {
+            layer.info.primary_field_name = Some(field);
+        })
+        .expect("Tried to edit nonexistant dataset");
+}
+
+#[tauri::command]
+#[specta::specta]
+fn classify_current_raster(dest: String, classifications: Vec<Classification>, state: AppState) {
+    let classifications = classifications
+        .into_iter()
+        .map(Classification::to_calc_string)
+        .join("+");
+    state.with_current_dataset_mut(|dataset, _| {
+        let mut cmd = Command::new("gdal_calc.py");
+        cmd.arg("-A")
+            .arg(&dataset.dataset.file_name)
+            .arg(format!("--outfile={}", dest))
+            .arg(format!("--calc=\"{}\"", classifications))
+            .arg(format!(
+                "--NoDataValue={}",
+                dataset
+                    .dataset
+                    .dataset
+                    .rasterband(1)
+                    .unwrap()
+                    .no_data_value()
+                    .unwrap()
+            ));
+        let output = cmd.output().expect("Failed to classify raster");
+        eprint!("{:?}", output);
+    });
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+pub struct Classification {
+    pub min: f64,
+    pub max: f64,
+    pub target: f64,
+}
+
+impl Classification {
+    fn to_calc_string(self) -> String {
+        format!("{}*(A>{})*(A<={})", self.target, self.min, self.max)
+    }
 }

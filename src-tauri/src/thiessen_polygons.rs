@@ -12,6 +12,7 @@ use proj::Transform;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    dataset_collection::{StatefulDataset, StatefulVectorInfo},
     gdal_if::{get_driver_for_file, WrappedDataset},
     geometry::{MultiPoint, Point, Polygon},
     state::AppState,
@@ -39,7 +40,7 @@ pub fn theissen_polygons_calculation(records: Vec<ThiessenPolygonRecord>, srs: S
     let points = records
         .iter()
         .map(|r| {
-            GeoPoint::from(r.point.clone())
+            GeoPoint::from(r.point)
                 .transformed_crs_to_crs("Wgs84", &srs)
                 .unwrap()
         })
@@ -89,12 +90,7 @@ pub struct ThiessenPolygonRecord {
 
 #[tauri::command]
 #[specta::specta]
-pub fn theissen_polygons_to_file(
-    points: MultiPoint,
-    srs: String,
-    file: PathBuf,
-    state: AppState,
-) -> String {
+pub fn theissen_polygons_to_file(points: MultiPoint, srs: String, file: PathBuf, state: AppState) {
     let points = GeoMultiPoint::from(points);
     let points = points.transformed_crs_to_crs("Wgs84", &srs).unwrap();
     let polygons = geos::compute_voronoi(&points.0, None, 0.0, false).unwrap();
@@ -109,10 +105,15 @@ pub fn theissen_polygons_to_file(
     layer.create_feature(polygons.to_gdal().unwrap()).unwrap();
     dataset.flush_cache().unwrap();
     let mut guard = state.data.lock().unwrap();
-    guard.datasets.push(WrappedDataset {
+    let wrapped_dataset = WrappedDataset {
         file_name: file.to_string_lossy().to_string(),
         dataset,
-        raster_data: None,
+        editable: true,
+    };
+    guard.shared.datasets.add(StatefulDataset {
+        dataset: wrapped_dataset,
+        layer_index: None,
+        layer_info: vec![StatefulVectorInfo::default()],
+        band_info: vec![],
     });
-    "Success".to_owned() + &guard.datasets.len().to_string()
 }

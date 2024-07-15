@@ -1,15 +1,19 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import prefresh from "@prefresh/vite";
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
+  esbuild: {
+    jsxFactory: "h",
+    jsxFragment: "Fragment",
+    jsxInject: `import { h, Fragment } from 'preact'`,
+  },
+  plugins: [prefresh()],
   resolve: {
     alias: {
-      "react-windowed-select": "react-windowed-select/dist/main.js",
+      react: "preact/compat",
     },
   },
-  plugins: [react()],
-
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent vite from obscuring rust errors
@@ -20,7 +24,7 @@ export default defineConfig(async () => ({
     strictPort: true,
     watch: {
       // 3. tell vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
+      ignored: ["**/src-tauri/**", "**/static/**"],
     },
   },
 }));

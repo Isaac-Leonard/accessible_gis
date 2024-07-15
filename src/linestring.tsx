@@ -1,8 +1,8 @@
-import { message } from "@tauri-apps/api/dialog";
-import { suspend } from "suspend-react";
-import { LineString, describeLine } from "./bindings";
-import { Suspense, useDeferredValue, useState } from "react";
+import { message } from "@tauri-apps/plugin-dialog";
+import { LineDescription, LineString, commands } from "./bindings";
 import { PointsTableView } from "./points-table";
+import { useDrawer, Drawer } from "./drawer";
+import { useEffect, useState } from "preact/hooks";
 
 export const LineStringView = ({
   line,
@@ -21,9 +21,7 @@ export const LineStringView = ({
       {tableView ? (
         <PointsTableView line={line} />
       ) : (
-        <Suspense fallback=" Loading">
-          <LineStringDescription line={line} srs={srs} />
-        </Suspense>
+        <LineStringDescription line={line} srs={srs} />
       )}
     </div>
   );
@@ -36,30 +34,48 @@ export const LineStringDescription = ({
   line: LineString;
   srs: string | null;
 }) => {
-  let [distance, setDistance] = useState("20000");
-  let [towns, setTowns] = useState("20");
-  towns = useDeferredValue(towns);
-  distance = useDeferredValue(distance);
-  const description = useDeferredValue(
-    suspend(
-      () =>
-        describeLine(line, srs, Number(distance), Number(towns)).catch((e) => {
-          message(e as string);
-          throw e;
-        }),
-      [line, distance, srs, towns]
-    )
+  const [distance, setDistance] = useState("20000");
+  const [towns, setTowns] = useState("20");
+  const [description, setDescription] = useState<LineDescription | null>(null);
+  useEffect(() => {
+    commands
+      .describeLine(line, srs, Number(distance), Number(towns))
+      .then(setDescription)
+      .catch((e) => {
+        message(e as string);
+        throw e;
+      });
+  }, [line, distance, srs, towns]);
+  const [descriptionParser, setDescriptionParser] = useState(
+    '(description)=>{return `A ${description.type.toLowerCase()} line that intersects ${description.countries.join(", ")}`}'
   );
+
+  const getDescription = () => {
+    if (description === null) {
+      return "loading";
+    } else return eval(descriptionParser)(description);
+  };
+  const parsedDescription = () => {
+    try {
+      return getDescription();
+    } catch (e) {
+      return "An error occured evaluating the description";
+    }
+  };
   return (
     <div>
-      <div>{JSON.stringify(description)}</div>
+      <div>{parsedDescription}</div>
+      <DescriptionParserEditor
+        description={descriptionParser}
+        setDescription={setDescriptionParser}
+      />
       <div>
         <label>
           Distance to towns:
           <input
             type="number"
             value={distance}
-            onChange={(e) => setDistance(e.target.value)}
+            onChange={(e) => setDistance(e.currentTarget.value)}
           />
         </label>
         <label>
@@ -67,10 +83,42 @@ export const LineStringDescription = ({
           <input
             type="number"
             value={towns}
-            onChange={(e) => setTowns(e.target.value)}
+            onChange={(e) => setTowns(e.currentTarget.value)}
           />
         </label>
       </div>
     </div>
+  );
+};
+
+const DescriptionParserEditor = ({
+  description,
+  setDescription,
+}: {
+  description: string;
+  setDescription: (description: string) => void;
+}) => {
+  const { open, setOpen, innerRef } = useDrawer();
+  const [internalDescription, setInternalDescription] = useState(description);
+  return (
+    <Drawer openText="Open description editor" open={open} setOpen={setOpen}>
+      <label>
+        Function for description
+        <textarea
+          ref={innerRef}
+          value={internalDescription}
+          onChange={(e) => setInternalDescription(e.currentTarget.value)}
+        />
+      </label>
+      <button
+        onClick={() => {
+          setDescription(internalDescription);
+          setOpen(false);
+          console.log("hello");
+        }}
+      >
+        Update description
+      </button>
+    </Drawer>
   );
 };
