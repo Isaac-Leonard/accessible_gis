@@ -13,8 +13,9 @@ mod state;
 mod stats;
 mod thiessen_polygons;
 mod tools;
+mod ui;
 
-use dataset_collection::{StatefulDataset, StatefulVectorInfo};
+use dataset_collection::{StatefulDataset, StatefulLayerEnum, StatefulVectorInfo};
 use files::get_csv;
 use gdal::{
     spatial_ref::SpatialRef,
@@ -22,8 +23,8 @@ use gdal::{
     Dataset, DatasetOptions, GdalOpenFlags,
 };
 use gdal_if::{
-    list_drivers, read_raster_data, read_raster_data_enum_as, Envelope, Field, FieldSchema,
-    FieldType, FieldValue, LayerExt, LayerIndex, WrappedDataset,
+    list_drivers, read_raster_data, read_raster_data_enum_as, Field, FieldType, LayerIndex,
+    WrappedDataset,
 };
 use geo::{
     Area, ChamberlainDuquetteArea, Closest, ClosestPoint, Contains, GeodesicArea, GeodesicBearing,
@@ -40,11 +41,18 @@ use serde::{Deserialize, Serialize};
 use specta::ts::{formatter::prettier, BigIntExportBehavior, ExportConfig};
 use state::{AppData, AppState, Screen};
 use statrs::statistics::Statistics;
+use strum::{EnumDiscriminants, EnumIter, IntoEnumIterator};
 use tauri::{ipc::Invoke, Manager, Runtime};
 use tauri_specta::{collect_commands, ts};
 use tools::ToolDataDiscriminants;
+use ui::{NewDatasetScreenData, UiScreen};
 
-use std::{cmp::Ordering, path::Path, process::Command, sync::MutexGuard};
+use std::{
+    cmp::Ordering,
+    path::{Path, PathBuf},
+    process::Command,
+    sync::MutexGuard,
+};
 
 use crate::{
     gdal_if::LocalFeatureInfo,
@@ -62,137 +70,14 @@ fn load_file(name: String, state: AppState) -> Result<(), String> {
     guard.shared.datasets.open(name).map(|_| ())
 }
 
-#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type, Default)]
-#[serde(tag = "name")]
-pub enum UiScreen {
-    #[default]
-    Main,
-    ThiessenPolygons,
-    NewDataset {
-        drivers: Vec<String>,
-    },
-}
-
-#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
-pub struct InitialisedPayload {
-    pub layers: Vec<LayerDescriptor>,
-    pub screen: UiScreen,
-    pub info: Option<Info>,
-}
-#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
-#[serde(tag = "type")]
-pub enum UiToolData {
-    TracingGeometry {
-        points: Vec<Point>,
-        geometrys_count: usize,
-    },
-}
-
-#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
-#[serde(tag = "type")]
-pub enum Info {
-    Vector {
-        feature_idx: Option<usize>,
-        field_schema: Vec<FieldSchema>,
-        feature_names: Option<Vec<Option<String>>>,
-        feature: Option<FeatureInfo>,
-        srs: Option<String>,
-        editable: bool,
-        layer_index: usize,
-        dataset_index: usize,
-        display: bool,
-        name_field: Option<String>,
-    },
-    Raster {
-        layer_index: usize,
-        dataset_index: usize,
-        cols: usize,
-        rows: usize,
-        srs: Option<String>,
-        tool: Option<UiToolData>,
-        display: bool,
-    },
-}
-
-#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
-#[serde(tag = "type")]
-pub enum UiPayload {
-    Initialised(InitialisedPayload),
-    Uninitialised { screen: UiScreen },
-}
-
-impl AppData {
-    pub fn get_ui_screen(&self) -> UiScreen {
-        match self.screen {
-            Screen::Main => UiScreen::Main,
-            Screen::ThiessenPolygons => UiScreen::ThiessenPolygons,
-            Screen::NewDataset => UiScreen::NewDataset {
-                drivers: list_drivers(),
-            },
-        }
-    }
-}
-
 #[tauri::command]
 #[specta::specta]
-fn get_app_info(state: AppState) -> UiPayload {
-    let mut guard = state.data.lock().unwrap();
-    let state = &mut guard.shared;
-    let info = state
-        .with_current_dataset_mut(|ds, ds_index| match ds.layer_index {
-            Some(LayerIndex::Vector(index)) => {
-                let feature = ds.get_current_feature();
-                let mut layer = {
-                    ds.get_vector(index)
-                        .expect("Tried to get non existant vector layer")
-                };
-                let feature_names = Some(
-                    layer
-                        .layer
-                        .layer
-                        .features()
-                        .map(|feature| {
-                            feature
-                                .field(layer.info.primary_field_name.as_ref()?)
-                                .unwrap()
-                                .map(|x| FieldValue::from(x).to_string())
-                        })
-                        .collect_vec(),
-                );
-                Some(Info::Vector {
-                    name_field: layer.info.primary_field_name.clone(),
-                    display: layer.info.shared.display,
-                    dataset_index: ds_index,
-                    srs: try { layer.layer.layer.spatial_ref()?.to_wkt().ok()? },
-                    feature_idx: layer.info.selected_feature,
-                    field_schema: layer.layer.get_field_schema(),
-                    feature_names,
-                    feature,
-                    editable: ds.dataset.editable,
-                    layer_index: index,
-                })
-            }
-            Some(LayerIndex::Raster(index)) => {
-                let band = ds.get_raster(index).unwrap();
-                let (cols, rows) = band.band.band().size();
-                Some(Info::Raster {
-                    dataset_index: ds_index,
-                    layer_index: index,
-                    cols,
-                    rows,
-                    srs: band.band.srs.clone(),
-                    tool: None,
-                    display: band.shared.display,
-                })
-            }
-            None => None,
-        })
-        .flatten();
-    let layers = state.datasets.get_all_layers();
-    UiPayload::Initialised(InitialisedPayload {
-        layers: layers.into_iter().map_into().collect(),
-        screen: guard.get_ui_screen(),
-        info,
+fn get_app_info(state: AppState) -> UiScreen {
+    state.with_lock(|state| match state.screen {
+        Screen::Main => UiScreen::Layers(state.get_layers_screen()),
+        Screen::NewDataset => UiScreen::NewDataset(NewDatasetScreenData {
+            drivers: list_drivers(),
+        }),
     })
 }
 
@@ -230,6 +115,8 @@ fn generate_handlers<R: Runtime>(
             set_display,
             set_name_field,
             classify_current_raster,
+            set_srs,
+            reproject_layer,
         ])
         .path(s)
         .config(
@@ -301,6 +188,7 @@ pub struct RasterSize {
 fn get_band_sizes(state: AppState) -> Vec<RasterSize> {
     state.with_lock(|state| {
         state
+            .shared
             .datasets
             .iter_mut()
             .map(|wrapped| {
@@ -472,9 +360,8 @@ impl FromIndex for Point {
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, specta::Type)]
 pub struct LayerDescriptor {
-    #[serde(flatten)]
-    kind: LayerInfo,
     dataset: usize,
+    #[serde(flatten)]
     band: LayerIndex,
     dataset_file: String,
 }
@@ -959,7 +846,7 @@ fn set_epsg_srs_for_layer(epsg_code: u32, state: AppState) -> Result<(), String>
 #[tauri::command]
 #[specta::specta]
 fn select_tool_for_current_index(tool: ToolDataDiscriminants, state: AppState) {
-    state.with_lock(|state| state.tools_data.add_tool(tool))
+    state.with_lock(|state| state.shared.tools_data.add_tool(tool))
 }
 
 #[tauri::command]
@@ -1035,4 +922,64 @@ impl Classification {
     fn to_calc_string(self) -> String {
         format!("{}*(A>{})*(A<={})", self.target, self.min, self.max)
     }
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type, EnumDiscriminants)]
+#[strum_discriminants(derive(EnumIter, Deserialize, Serialize, specta::Type,))]
+#[serde(tag = "type", content = "value")]
+pub enum Srs {
+    Proj(String),
+    Wkt(String),
+    Esri(String),
+    Epsg(u32),
+}
+
+fn list_projection_types() -> Vec<SrsDiscriminants> {
+    SrsDiscriminants::iter().collect_vec()
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_srs(srs: Srs, state: AppState) {
+    let srs = match srs {
+        Srs::Proj(proj_string) => SpatialRef::from_proj4(&proj_string),
+        Srs::Wkt(wkt_string) => SpatialRef::from_wkt(&wkt_string),
+        Srs::Esri(esri_wkt) => SpatialRef::from_esri(&esri_wkt),
+        Srs::Epsg(epsg_code) => SpatialRef::from_epsg(epsg_code),
+    }
+    .unwrap();
+    state.with_current_dataset_mut(|ds, _| ds.dataset.dataset.set_spatial_ref(&srs).unwrap());
+}
+
+#[tauri::command]
+#[specta::specta]
+fn reproject_layer(srs: Srs, name: &str, state: AppState) {
+    let srs = match srs {
+        Srs::Proj(proj_string) => SpatialRef::from_proj4(&proj_string),
+        Srs::Wkt(wkt_string) => SpatialRef::from_wkt(&wkt_string),
+        Srs::Esri(esri_wkt) => SpatialRef::from_esri(&esri_wkt),
+        Srs::Epsg(epsg_code) => SpatialRef::from_epsg(epsg_code),
+    }
+    .unwrap();
+    // We've validated that the spatial reference system is valid
+    let srs = srs.to_wkt().unwrap();
+    state.with_current_dataset_mut(|ds, _| {
+        let input_name = ds.dataset.file_name.clone();
+        let layer = ds.get_current_layer();
+        match layer {
+            Some(StatefulLayerEnum::Vector(layer)) => {
+                let mut command = Command::new("ogrtogr");
+                command.arg("-t_srs").arg(&srs);
+                command.arg(name).arg(&input_name);
+                let output = command.output().unwrap();
+                eprint!("{:?}", output)
+            }
+            Some(StatefulLayerEnum::Raster(band)) => {
+                let mut command = Command::new("gdal_warp");
+                let output = command.output().unwrap();
+                eprint!("{:?}", output)
+            }
+            None => eprint!("No layer available"),
+        }
+    });
 }

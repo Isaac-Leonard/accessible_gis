@@ -1,5 +1,6 @@
 mod loaded;
 mod preloaded;
+mod ui_state;
 mod user_state;
 
 use std::sync::{Arc, Mutex};
@@ -9,8 +10,7 @@ use tauri::State;
 
 use crate::{
     dataset_collection::{StatefulDataset, StatefulLayerEnum, StatefulVectorLayer},
-    gdal_if::WrappedRasterBand,
-    Envelope,
+    gdal_if::{Envelope, WrappedRasterBand},
 };
 
 pub use loaded::*;
@@ -28,11 +28,11 @@ pub struct AppDataSync {
 impl AppDataSync {
     pub fn with_lock<T, F>(&self, f: F) -> T
     where
-        F: FnOnce(&mut UserState) -> T,
+        F: FnOnce(&mut AppData) -> T,
     {
         // If this panics then something has gone wrong elsewhere.
         let mut guard = self.data.lock().unwrap();
-        f(&mut guard.shared)
+        f(&mut guard)
     }
 
     pub fn with_current_layer_mut<T, F>(&self, f: F) -> Option<T>
@@ -95,6 +95,5 @@ pub struct FeatureNames {
 pub enum Screen {
     #[default]
     Main,
-    ThiessenPolygons,
     NewDataset,
 }

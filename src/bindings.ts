@@ -9,7 +9,7 @@ export const commands = {
       else return { status: "error", error: e as any };
     }
   },
-  async getAppInfo(): Promise<UiPayload> {
+  async getAppInfo(): Promise<UiScreen> {
     return await TAURI_INVOKE("get_app_info");
   },
   async getBandSizes(): Promise<RasterSize[]> {
@@ -170,6 +170,12 @@ export const commands = {
   ): Promise<void> {
     await TAURI_INVOKE("classify_current_raster", { dest, classifications });
   },
+  async setSrs(srs: Srs): Promise<void> {
+    await TAURI_INVOKE("set_srs", { srs });
+  },
+  async reprojectLayer(srs: Srs, name: string): Promise<void> {
+    await TAURI_INVOKE("reproject_layer", { srs, name });
+  },
 };
 
 /** user-defined types **/
@@ -269,42 +275,20 @@ export type Geometry =
   | ({ type: "MultiPolygon" } & MultiPolygon)
   | ({ type: "GeometryCollection" } & GeometryCollection);
 export type GeometryCollection = { geometries: Geometry[] };
-export type Info =
-  | {
-      type: "Vector";
-      feature_idx: number | null;
-      field_schema: FieldSchema[];
-      feature_names: (string | null)[] | null;
-      feature: FeatureInfo | null;
-      srs: string | null;
-      editable: boolean;
-      layer_index: number;
-      dataset_index: number;
-      display: boolean;
-      name_field: string | null;
-    }
-  | {
-      type: "Raster";
-      layer_index: number;
-      dataset_index: number;
-      cols: number;
-      rows: number;
-      srs: string | null;
-      tool: UiToolData | null;
-      display: boolean;
-    };
-export type InitialisedPayload = {
-  layers: LayerDescriptor[];
-  screen: UiScreen;
-  info: Info | null;
-};
 export type LayerDescriptor = (
-  | { type: "Raster"; width: number; length: number }
-  | { type: "Vector" }
-) & { dataset: number; band: LayerIndex; dataset_file: string };
+  | { type: "Vector"; index: number }
+  | { type: "Raster"; index: number }
+) & { dataset: number; dataset_file: string };
 export type LayerIndex =
   | { type: "Vector"; index: number }
   | { type: "Raster"; index: number };
+export type LayerScreen = {
+  layers: LayerDescriptor[];
+  layer_info: LayerScreenInfo | null;
+};
+export type LayerScreenInfo =
+  | ({ type: "Vector" } & VectorScreenData)
+  | ({ type: "Raster" } & RasterScreenData);
 export type Line = { start: Point; end: Point };
 export type LineDescription =
   | ({ type: "Closed" } & ClosedLineDescription)
@@ -313,6 +297,7 @@ export type LineString = { points: Point[] };
 export type MultiLineString = { lines: LineString[] };
 export type MultiPoint = { points: Point[] };
 export type MultiPolygon = { polygons: Polygon[] };
+export type NewDatasetScreenData = { drivers: string[] };
 export type OpenLineDescription = {
   x: number;
   y: number;
@@ -328,8 +313,22 @@ export type OpenLineDescription = {
 export type Point = { x: number; y: number };
 export type Polygon = { exterior: LineString; interior: LineString[] };
 export type PolygonInfo = { area: number; fields: Field[] };
+export type RasterScreenData = {
+  layer_index: number;
+  dataset_index: number;
+  cols: number;
+  rows: number;
+  srs: string | null;
+  tool: UiToolData | null;
+  display: boolean;
+};
 export type RasterSize = { width: number; length: number; bands: number };
-export type Screen = "Main" | "ThiessenPolygons" | "NewDataset";
+export type Screen = "Main" | "NewDataset";
+export type Srs =
+  | { type: "Proj"; value: string }
+  | { type: "Wkt"; value: string }
+  | { type: "Esri"; value: string }
+  | { type: "Epsg"; value: number };
 export type ThiessenPolygonRecord = {
   point: Point;
   file: string;
@@ -340,17 +339,26 @@ export type ThiessenPolygonRecord = {
  * Auto-generated discriminant enum variants
  */
 export type ToolDataDiscriminants = "TraceGeometries";
-export type UiPayload =
-  | ({ type: "Initialised" } & InitialisedPayload)
-  | { type: "Uninitialised"; screen: UiScreen };
 export type UiScreen =
-  | { name: "Main" }
+  | ({ name: "Layers" } & LayerScreen)
   | { name: "ThiessenPolygons" }
-  | { name: "NewDataset"; drivers: string[] };
+  | ({ name: "NewDataset" } & NewDatasetScreenData);
 export type UiToolData = {
   type: "TracingGeometry";
   points: Point[];
   geometrys_count: number;
+};
+export type VectorScreenData = {
+  feature_idx: number | null;
+  field_schema: FieldSchema[];
+  feature_names: (string | null)[] | null;
+  feature: FeatureInfo | null;
+  srs: string | null;
+  editable: boolean;
+  layer_index: number;
+  dataset_index: number;
+  display: boolean;
+  name_field: string | null;
 };
 
 /** tauri-specta globals **/

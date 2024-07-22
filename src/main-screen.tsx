@@ -1,37 +1,24 @@
 import { VectorNavigator } from "./vector-navigator";
 import { RasterNavigator } from "./raster-navigator";
-import { Info, LayerDescriptor, UiPayload } from "./bindings";
+import { LayerDescriptor, LayerScreen, LayerScreenInfo } from "./bindings";
 import { IndexedOptionPicker } from "./option-picker";
 import { client, state } from "./api";
 import { OpenDatasetDialog } from "./open-screen";
 
-export const MainScreen = () => {
-  const value = state.value;
-  return value.type === "Uninitialised" ? (
-    <OpenDatasetDialog />
-  ) : (
-    <InitialisedStateScreen state={value} />
-  );
-};
-
-const InitialisedStateScreen = ({
-  state,
-}: {
-  state: Extract<UiPayload, { type: "Initialised" }>;
-}) => {
+export const MainScreen = ({ state }: { state: LayerScreen }) => {
   const layersInfo = state.layers;
   const foundIndex = layersInfo.findIndex(
     (layer) =>
-      layer.type === state.info?.type &&
-      layer.dataset === state.info.dataset_index &&
-      layer.band.index === state.info.layer_index
+      layer.type === state.layer_info?.type &&
+      layer.dataset === state.layer_info.dataset_index &&
+      layer.index === state.layer_info.layer_index
   );
   const selectedLayerIndex = foundIndex === -1 ? null : foundIndex;
   return (
     <div className="container">
       <OpenDatasetDialog />
       <LayerSelector layers={state.layers} selectedIndex={selectedLayerIndex} />
-      <LayerView layer={state.info} />{" "}
+      <LayerView layer={state.layer_info} />
     </div>
   );
 };
@@ -46,11 +33,11 @@ function LayerSelector({ layers, selectedIndex }: LayerSelectorProps) {
     <div>
       <IndexedOptionPicker
         index={selectedIndex}
-        setIndex={async (index) => {
-          const { dataset, band } = layers[index];
+        setIndex={async (layer_index) => {
+          const { dataset, type, index } = layers[layer_index];
           // TODO: These should probably be put into a single function
           client.setDatasetIndex(dataset);
-          client.setLayerIndex(band);
+          client.setLayerIndex({ type, index });
         }}
         options={layers.map(
           (layer) => `${layer.dataset_file.split("/").pop()}: ${layer.type}`
@@ -62,7 +49,7 @@ function LayerSelector({ layers, selectedIndex }: LayerSelectorProps) {
   );
 }
 
-function CoordinateExplorer({ layer }: { layer: Info }) {
+function CoordinateExplorer({ layer }: { layer: LayerScreenInfo }) {
   return layer.type === "Raster" ? (
     <RasterNavigator layer={layer} />
   ) : (
@@ -70,7 +57,7 @@ function CoordinateExplorer({ layer }: { layer: Info }) {
   );
 }
 
-const Metadata = ({ layer }: { layer: Info }) => {
+const Metadata = ({ layer }: { layer: LayerScreenInfo }) => {
   return (
     <div>
       {" "}
@@ -80,7 +67,7 @@ const Metadata = ({ layer }: { layer: Info }) => {
   );
 };
 
-const CurrentLayerView = ({ layer }: { layer: Info }) => {
+const CurrentLayerView = ({ layer }: { layer: LayerScreenInfo }) => {
   return (
     <div>
       <Metadata layer={layer} />
@@ -89,7 +76,7 @@ const CurrentLayerView = ({ layer }: { layer: Info }) => {
   );
 };
 
-const LayerView = ({ layer }: { layer: Info | null }) => {
+const LayerView = ({ layer }: { layer: LayerScreenInfo | null }) => {
   return layer !== null ? (
     <CurrentLayerView layer={layer} />
   ) : (

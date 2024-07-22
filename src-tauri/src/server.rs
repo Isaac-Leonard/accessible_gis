@@ -83,5 +83,5 @@ pub async fn run_server(state: AppDataSync) -> std::io::Result<Server> {
 
 #[get("/get_image")]
 async fn get_vector(state: Data<AppDataSync>) -> Json<Vec<FeatureInfo>> {
-    Json(state.with_lock(|state| state.get_vectors_for_display()))
+    Json(state.with_lock(|state| state.shared.get_vectors_for_display()))
 }

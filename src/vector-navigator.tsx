@@ -1,14 +1,20 @@
-import { FeatureInfo, Field, FieldType, Info } from "./bindings";
+import {
+  FeatureInfo,
+  Field,
+  FieldType,
+  LayerScreenInfo,
+  VectorScreenData,
+} from "./bindings";
 import { GeometryViewer } from "./geometry";
 import { IndexedOptionPicker, OptionPicker } from "./option-picker";
 import { Drawer, useDrawer } from "./drawer";
 import { FeatureCreator } from "./feature-creator";
 import { useState } from "preact/hooks";
 import { client } from "./api";
-import { Dialog } from "./dialog";
+import { Dialog, useDialog } from "./dialog";
 
 type VectorLayerProp = {
-  layer: Extract<Info, { type: "Vector" }>;
+  layer: Extract<LayerScreenInfo, { type: "Vector" }>;
 };
 
 export const VectorNavigator = ({ layer }: VectorLayerProp) => {
@@ -163,7 +169,7 @@ const FeatureViewer = ({ layer }: VectorLayerProp) => {
 };
 
 type NameFieldPickerProps = {
-  layer: Extract<Info, { type: "Vector" }>;
+  layer: VectorScreenData;
 };
 
 const NameFieldPicker = ({ layer }: NameFieldPickerProps) => {
@@ -269,4 +275,10 @@ const DatasetEditor = ({ layer }: VectorLayerProp) => {
       </Dialog>
     </div>
   );
+};
+
+const ReprojectionDialog = () => {
+  const { open, setOpen, innerRef } = useDialog();
+  const [srs, setSrs] = useState();
+  return <Dialog open="Reproject dataset"></Dialog>;
 };

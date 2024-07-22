@@ -1,18 +1,13 @@
-import { Point, Info, Geometry, Classification } from "./bindings";
-import { message, save } from "@tauri-apps/plugin-dialog";
-import { Drawer, useDrawer } from "./drawer";
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { Point, Classification, RasterScreenData } from "./bindings";
+import { save } from "@tauri-apps/plugin-dialog";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import { client } from "./api";
-import { Dialog } from "./dialog";
+import { Dialog, useDialog } from "./dialog";
 
 const tools = ["None", "Trace geometries"] as const;
 
-export const RasterNavigator = ({
-  layer,
-}: {
-  layer: Extract<Info, { type: "Raster" }>;
-}) => {
-  const { open, innerRef, setOpen } = useDrawer();
+export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
+  const { open, innerRef, setOpen } = useDialog();
   const [tool, setTool] = useState<(typeof tools)[number]>(tools[0]);
   return (
     <div>
@@ -33,7 +28,7 @@ const RasterNavigatorInner = ({
   layer,
   savePoints,
 }: {
-  layer: Extract<Info, { type: "Raster" }>;
+  layer: RasterScreenData;
   savePoints: (points: Point[]) => void;
 }) => {
   const [data, setData] = useState<number[]>([]);

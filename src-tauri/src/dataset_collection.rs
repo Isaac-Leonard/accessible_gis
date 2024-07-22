@@ -5,10 +5,11 @@ use gdal::{
     vector::{Layer, LayerAccess, LayerIterator},
 };
 use itertools::Itertools;
+use strum::{EnumIter, IntoEnumIterator};
 
 use crate::{
     gdal_if::{LayerEnum, LayerExt, LayerIndex, WrappedDataset, WrappedLayer, WrappedRasterBand},
-    FeatureInfo, LayerDescriptor, LayerInfo,
+    FeatureInfo, LayerDescriptor,
 };
 
 #[derive(Clone, Default, Debug, PartialEq)]
@@ -30,9 +31,49 @@ pub struct StatefulVectorLayer<'a> {
     pub info: &'a mut StatefulVectorInfo,
 }
 
+pub struct AudioSettings {
+    pub min_freq: f64,
+    pub max_freq: f64,
+    pub volume: f64,
+    no_data_value_sound: AudioIndicator,
+    border_sound: AudioIndicator,
+}
+
+impl Default for AudioSettings {
+    fn default() -> Self {
+        Self {
+            min_freq: 220.0,
+            max_freq: 880.0,
+            volume: 1.0,
+            no_data_value_sound: AudioIndicator::Different,
+            border_sound: AudioIndicator::MinFreq,
+        }
+    }
+}
+
+#[derive(EnumIter)]
+pub enum AudioIndicator {
+    Silence,
+    MinFreq,
+    MaxFreq,
+    Verbal,
+    Different,
+}
+
+impl AudioIndicator {
+    fn get_all_options() -> Vec<Self> {
+        Self::iter().collect_vec()
+    }
+}
+
+pub struct StatefulRasterInfo {
+    pub audio_settings: AudioSettings,
+    pub shared: SharedInfo,
+}
+
 pub struct StatefulRasterBand<'a> {
     pub band: WrappedRasterBand<'a>,
-    pub shared: &'a mut SharedInfo,
+    pub info: &'a mut StatefulRasterInfo,
 }
 
 pub enum StatefulLayerEnum<'a> {
@@ -56,7 +97,7 @@ impl<'a> StatefulLayerEnum<'a> {
     pub fn shared_mut(&mut self) -> &mut SharedInfo {
         match self {
             Self::Vector(layer) => &mut layer.info.shared,
-            Self::Raster(band) => &mut band.shared,
+            Self::Raster(band) => &mut band.info.shared,
         }
     }
 
@@ -97,7 +138,7 @@ pub struct StatefulDataset {
     pub dataset: WrappedDataset,
     pub layer_index: Option<LayerIndex>,
     pub layer_info: Vec<StatefulVectorInfo>,
-    pub band_info: Vec<SharedInfo>,
+    pub band_info: Vec<StatefulRasterInfo>,
 }
 
 impl StatefulDataset {
@@ -135,7 +176,7 @@ impl StatefulDataset {
         let band = self.dataset.get_raster(idx);
         let info = self.band_info.get_mut(idx - 1);
         match (band, info) {
-            (Some(band), Some(shared)) => Some(StatefulRasterBand { band, shared }),
+            (Some(band), Some(info)) => Some(StatefulRasterBand { band, info }),
             (None, None) => None,
             _ => panic!("Mismatch in gdal layers and stateful layer info"),
         }
@@ -232,7 +273,10 @@ impl DatasetCollection {
         let band_info = dataset
             .dataset
             .rasterbands()
-            .map(|_| SharedInfo { display: false })
+            .map(|_| StatefulRasterInfo {
+                audio_settings: AudioSettings::default(),
+                shared: SharedInfo { display: false },
+            })
             .collect_vec();
 
         let layer_index = if layer_count > 0 {
@@ -320,7 +364,6 @@ impl From<IndexedDatasetLayer<'_>> for LayerDescriptor {
     fn from(value: IndexedDatasetLayer) -> Self {
         match value.layer.layer {
             LayerEnum::Layer(_layer) => Self {
-                kind: LayerInfo::Vector,
                 dataset: value.dataset_index,
                 band: LayerIndex::Vector(value.layer.layer_index),
                 dataset_file: value.ds_file,
@@ -328,7 +371,6 @@ impl From<IndexedDatasetLayer<'_>> for LayerDescriptor {
             LayerEnum::Band(band) => {
                 let (width, length) = band.band().size();
                 Self {
-                    kind: LayerInfo::Raster { width, length },
                     dataset: value.dataset_index,
                     band: LayerIndex::Raster(value.layer.layer_index),
                     dataset_file: value.ds_file,
@@ -338,7 +380,7 @@ impl From<IndexedDatasetLayer<'_>> for LayerDescriptor {
     }
 }
 
-fn get_default_field_name<'a>(layer: &Layer<'a>) -> Option<String> {
+fn get_default_field_name(layer: &Layer) -> Option<String> {
     let names = layer.get_field_names();
     let id = names.iter().find(|f| f.to_lowercase() == "id");
     if let Some(id) = id {
