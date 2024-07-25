@@ -1,6 +1,5 @@
 use actix_files::{self as fs, NamedFile};
 use actix_web::{
-    dev::Server,
     get,
     web::{Data, Json, Query},
     App, HttpServer, Responder,
@@ -65,8 +64,8 @@ pub struct ImageSize {
     pub bands: Option<usize>,
 }
 
-pub async fn run_server(state: AppDataSync) -> std::io::Result<Server> {
-    Ok(HttpServer::new(move || {
+pub async fn run_server(state: AppDataSync) {
+    HttpServer::new(move || {
         App::new()
             .app_data(Data::new(state.clone()))
             .service(get_image)
@@ -77,8 +76,11 @@ pub async fn run_server(state: AppDataSync) -> std::io::Result<Server> {
                     .index_file("index.html"),
             )
     })
-    .bind(("0.0.0.0", 80))?
-    .run())
+    .bind(("0.0.0.0", 80))
+    .unwrap()
+    .run()
+    .await
+    .unwrap();
 }
 
 #[get("/get_image")]

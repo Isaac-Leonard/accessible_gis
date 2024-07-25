@@ -15,6 +15,7 @@ mod thiessen_polygons;
 mod tools;
 mod ui;
 
+use core::cmp::Ordering;
 use dataset_collection::{StatefulDataset, StatefulLayerEnum, StatefulVectorInfo};
 use files::get_csv;
 use gdal::{
@@ -41,18 +42,13 @@ use serde::{Deserialize, Serialize};
 use specta::ts::{formatter::prettier, BigIntExportBehavior, ExportConfig};
 use state::{AppData, AppState, Screen};
 use statrs::statistics::Statistics;
-use strum::{EnumDiscriminants, EnumIter, IntoEnumIterator};
+use strum::{EnumDiscriminants, EnumIter};
 use tauri::{ipc::Invoke, Manager, Runtime};
 use tauri_specta::{collect_commands, ts};
 use tools::ToolDataDiscriminants;
 use ui::{NewDatasetScreenData, UiScreen};
 
-use std::{
-    cmp::Ordering,
-    path::{Path, PathBuf},
-    process::Command,
-    sync::MutexGuard,
-};
+use std::{path::Path, process::Command, sync::MutexGuard};
 
 use crate::{
     gdal_if::LocalFeatureInfo,
@@ -163,7 +159,8 @@ fn main() {
             let window = app.get_webview_window("main").unwrap();
             window.open_devtools();
             let state = (*app.state::<AppDataSync>()).clone();
-            tauri::async_runtime::spawn(run_server(state));
+            let handle = app.handle();
+            handle.manage(tauri::async_runtime::spawn(run_server(state)));
             let local_ip = local_ip().expect("Unable to retrieve local IP address");
 
             // Print the IP address and port
