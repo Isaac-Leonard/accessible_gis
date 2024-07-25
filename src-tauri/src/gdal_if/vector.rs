@@ -50,11 +50,14 @@ impl<'a> LayerExt for Layer<'a> {
     }
 }
 
-fn get_layer_name(layer: &Layer) -> String {
+fn get_layer_name(layer: &Layer) -> Option<String> {
     unsafe {
         let defn = layer.defn().c_defn();
-        CStr::from_ptr(gdal_sys::OGR_FD_GetName(defn))
-            .to_string_lossy()
-            .to_string()
+        let ptr = gdal_sys::OGR_FD_GetName(defn);
+        if ptr.is_null() {
+            None
+        } else {
+            Some(CStr::from_ptr(ptr).to_string_lossy().to_string())
+        }
     }
 }

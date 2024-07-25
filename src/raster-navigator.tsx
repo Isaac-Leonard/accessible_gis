@@ -3,6 +3,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { client } from "./api";
 import { Dialog, useDialog } from "./dialog";
+import { ReprojectionDialog } from "./reprojection-dialog";
 
 const tools = ["None", "Trace geometries"] as const;
 
@@ -11,6 +12,7 @@ export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
   const [tool, setTool] = useState<(typeof tools)[number]>(tools[0]);
   return (
     <div>
+      <ReprojectionDialog />{" "}
       <Dialog
         modal={true}
         open={open}

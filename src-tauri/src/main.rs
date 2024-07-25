@@ -113,6 +113,7 @@ fn generate_handlers<R: Runtime>(
             classify_current_raster,
             set_srs,
             reproject_layer,
+            copy_features,
         ])
         .path(s)
         .config(
@@ -931,10 +932,6 @@ pub enum Srs {
     Epsg(u32),
 }
 
-fn list_projection_types() -> Vec<SrsDiscriminants> {
-    SrsDiscriminants::iter().collect_vec()
-}
-
 #[tauri::command]
 #[specta::specta]
 fn set_srs(srs: Srs, state: AppState) {
@@ -964,19 +961,37 @@ fn reproject_layer(srs: Srs, name: &str, state: AppState) {
         let input_name = ds.dataset.file_name.clone();
         let layer = ds.get_current_layer();
         match layer {
-            Some(StatefulLayerEnum::Vector(layer)) => {
-                let mut command = Command::new("ogrtogr");
+            Some(StatefulLayerEnum::Vector(_layer)) => {
+                let mut command = Command::new("ogr2ogr");
                 command.arg("-t_srs").arg(&srs);
                 command.arg(name).arg(&input_name);
                 let output = command.output().unwrap();
                 eprint!("{:?}", output)
             }
-            Some(StatefulLayerEnum::Raster(band)) => {
-                let mut command = Command::new("gdal_warp");
+            Some(StatefulLayerEnum::Raster(_band)) => {
+                let mut command = Command::new("gdalwarp");
+                command.arg("-t_srs").arg(&srs);
+                command.arg(&input_name).arg(name);
                 let output = command.output().unwrap();
                 eprint!("{:?}", output)
             }
             None => eprint!("No layer available"),
         }
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
+fn copy_features(features: Vec<usize>, name: &str, state: AppState) {
+    state.with_current_dataset_mut(|ds, _| {
+        let input_name = ds.dataset.file_name.clone();
+
+        let mut command = Command::new("ogr2ogr");
+        command
+            .arg("-where")
+            .arg(format!("fid in ({})", features.into_iter().join(", ")));
+        command.arg(name).arg(&input_name);
+        let output = command.output().unwrap();
+        eprint!("{:?}", output)
     });
 }

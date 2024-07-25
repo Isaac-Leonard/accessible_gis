@@ -1,25 +1,22 @@
-import {
-  FeatureInfo,
-  Field,
-  FieldType,
-  LayerScreenInfo,
-  VectorScreenData,
-} from "./bindings";
+import { FeatureInfo, Field, FieldType, VectorScreenData } from "./bindings";
 import { GeometryViewer } from "./geometry";
-import { IndexedOptionPicker, OptionPicker } from "./option-picker";
+import { OptionPicker } from "./option-picker";
 import { Drawer, useDrawer } from "./drawer";
 import { FeatureCreator } from "./feature-creator";
 import { useState } from "preact/hooks";
 import { client } from "./api";
 import { Dialog, useDialog } from "./dialog";
+import { ReprojectionDialog } from "./reprojection-dialog";
+import { FeaturePicker } from "./feature-picker";
 
 type VectorLayerProp = {
-  layer: Extract<LayerScreenInfo, { type: "Vector" }>;
+  layer: VectorScreenData;
 };
 
 export const VectorNavigator = ({ layer }: VectorLayerProp) => {
   return (
     <div>
+      <ReprojectionDialog />
       {layer.editable ? <DatasetEditor layer={layer} /> : <EditDatasetButton />}
       {layer.display ? (
         <div>Displayed</div>
@@ -33,7 +30,9 @@ export const VectorNavigator = ({ layer }: VectorLayerProp) => {
   );
 };
 
-function FieldsTable({ fields }: { fields: Field[] }) {
+export type FieldsTableProps = { fields: Field[] };
+
+function FieldsTable({ fields }: FieldsTableProps) {
   return (
     <table>
       <thead>
@@ -152,10 +151,26 @@ type CurrentFeatureViewerProps = {
 };
 
 const CurrentFeatureViewer = ({ info, srs }: CurrentFeatureViewerProps) => {
+  const { open: pointsOpen, setOpen: setPointsOpen } = useDialog();
+  const { open: fieldsOpen, setOpen: setFieldsOpen } = useDialog();
   return (
     <div>
-      <GeometryViewer geometry={info.geometry} srs={srs} />
-      <FieldsTable fields={info.fields} />
+      <Dialog
+        modal={true}
+        open={pointsOpen}
+        setOpen={setPointsOpen}
+        openText="Examine points"
+      >
+        <GeometryViewer geometry={info.geometry} srs={srs} />
+      </Dialog>
+      <Dialog
+        modal={true}
+        open={fieldsOpen}
+        setOpen={setFieldsOpen}
+        openText="Open fields table"
+      >
+        <FieldsTable fields={info.fields} />
+      </Dialog>
     </div>
   );
 };
@@ -241,25 +256,12 @@ const FieldSchemaAdder = () => {
   );
 };
 
-const FeaturePicker = ({ layer }: VectorLayerProp) => {
-  const { feature_names, feature_idx } = layer;
-  return (
-    <IndexedOptionPicker
-      options={feature_names?.filter((x): x is string => x !== null) ?? []}
-      index={feature_idx}
-      setIndex={client.setFeatureIndex}
-      prompt="Select a feature to examine"
-      emptyText="This layer has no features"
-    />
-  );
-};
-
 const EditDatasetButton = () => {
   return <button onClick={client.editDataset}>Edit</button>;
 };
 
 const DatasetEditor = ({ layer }: VectorLayerProp) => {
-  const { open, setOpen, innerRef } = useDrawer();
+  const { open, setOpen, innerRef } = useDialog();
   return (
     <div>
       <FieldSchemaAdder />
@@ -275,10 +277,4 @@ const DatasetEditor = ({ layer }: VectorLayerProp) => {
       </Dialog>
     </div>
   );
-};
-
-const ReprojectionDialog = () => {
-  const { open, setOpen, innerRef } = useDialog();
-  const [srs, setSrs] = useState();
-  return <Dialog open="Reproject dataset"></Dialog>;
 };
