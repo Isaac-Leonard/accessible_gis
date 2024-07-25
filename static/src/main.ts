@@ -11,6 +11,7 @@ const root = document.getElementById("image");
 const createButton = () => {
   const btn = document.createElement("button");
   btn.onclick = () => {
+    // Speech needs to be ran on a explicit button click to allow it to work for other interactions to work on certain browsers
     speak("This is a test string");
     createCanvas();
     btn.remove();
