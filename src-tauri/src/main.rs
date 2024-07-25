@@ -424,12 +424,17 @@ pub struct PolygonInfo {
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
 pub struct FeatureInfo {
     fields: Vec<Field>,
-    geometry: Geometry,
+    geometry: Option<Geometry>,
+    fid: Option<u64>,
 }
 
 impl FeatureInfo {
     fn new(geometry: Geometry, fields: Vec<Field>) -> Self {
-        Self { geometry, fields }
+        Self {
+            geometry: Some(geometry),
+            fields,
+            fid: None,
+        }
     }
 }
 
@@ -793,10 +798,12 @@ fn edit_dataset(state: AppState) -> Result<(), String> {
 #[tauri::command]
 #[specta::specta]
 fn add_feature_to_layer(feature: FeatureInfo, state: AppState) -> Result<(), String> {
-    let mut guard = state.data.lock().unwrap();
-    guard
-        .with_current_vector_layer(move |mut layer| {
-            let geom = GeoGeometry::from(feature.geometry)
+    state
+        .with_current_vector_layer(|layer| {
+            let geometry = feature
+                .geometry
+                .ok_or("Cannot create feature with null geometry")?;
+            let geom = GeoGeometry::from(geometry)
                 .to_gdal()
                 .map_err(|_| "Failed to convert geometry to gdal geometry")?;
             let fields = feature

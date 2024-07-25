@@ -15,7 +15,8 @@ impl<'a> From<Feature<'a>> for FeatureInfo {
     fn from(value: Feature<'a>) -> Self {
         Self {
             fields: get_fields(&value),
-            geometry: value.geometry().unwrap().to_geo().unwrap().into(),
+            geometry: value.geometry().map(|x| x.to_geo().unwrap().into()),
+            fid: value.fid(),
         }
     }
 }
