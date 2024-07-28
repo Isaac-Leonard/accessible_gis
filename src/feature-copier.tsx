@@ -1,9 +1,11 @@
 import { useState } from "preact/hooks";
-import { VectorScreenData } from "./bindings";
+import { FeatureIdentifier, VectorScreenData } from "./bindings";
 import { SaveButton } from "./save-button";
+import { client } from "./api";
+import { Dialog, useDialog } from "./dialog";
 
-export const FeatureCopyier = ({ layer }: { layer: VectorScreenData }) => {
-  const features = layer.feature_names as string[];
+export const FeatureCoppier = ({ layer }: { layer: VectorScreenData }) => {
+  const features = layer.features;
   const [selectedFeatures, setSelectedFeatures] = useState<number[]>([]);
   return (
     <div>
@@ -12,15 +14,15 @@ export const FeatureCopyier = ({ layer }: { layer: VectorScreenData }) => {
         selectedFeatures={selectedFeatures}
         setSelectedFeatures={setSelectedFeatures}
       />
-      <SaveButton />
+      <SaveButton
+        onSave={(name) => client.copyFeatures(selectedFeatures, name)}
+      />
     </div>
   );
 };
 
-// Note that selected features must be numbers as there can be many features with the same name and so we must keep track of their indexes
-
 type MultiFeaturePickerProps = {
-  features: string[];
+  features: FeatureIdentifier[];
   selectedFeatures: number[];
   setSelectedFeatures: (features: number[]) => void;
 };
@@ -30,27 +32,49 @@ const MultiFeaturePicker = ({
   selectedFeatures,
   setSelectedFeatures,
 }: MultiFeaturePickerProps) => {
+  const handleChange = (fid: number) => {
+    if (selectedFeatures.includes(fid)) {
+      setSelectedFeatures(
+        selectedFeatures.filter((feature) => feature !== fid)
+      );
+    } else {
+      setSelectedFeatures([...selectedFeatures, fid]);
+    }
+  };
+
   return (
     <div>
-      {features.map((feature, index) => {
-        const selectedIndex = selectedFeatures.indexOf(index);
+      {features.map(({ name, fid }) => {
         return (
-          <input
-            type="checkbox"
-            value={feature}
-            checked={selectedIndex !== -1}
-            onInput={() => {
-              if (selectedIndex === -1) {
-                setSelectedFeatures([...selectedFeatures, index]);
-              } else {
-                const newSelectedFeatures = [...selectedFeatures];
-                newSelectedFeatures.splice(selectedIndex, 1);
-                setSelectedFeatures(newSelectedFeatures);
-              }
-            }}
-          />
+          <label>
+            {name}
+            <input
+              key={fid}
+              type="checkbox"
+              checked={selectedFeatures.includes(fid)}
+              onChange={() => handleChange(fid)}
+            />
+          </label>
         );
       })}
     </div>
+  );
+};
+
+export const FeatureCoppierDialog = ({
+  layer,
+}: {
+  layer: VectorScreenData;
+}) => {
+  const { open, setOpen, innerRef } = useDialog();
+  return (
+    <Dialog
+      modal={true}
+      openText="Copy features to new dataset"
+      open={open}
+      setOpen={setOpen}
+    >
+      <FeatureCoppier layer={layer} />
+    </Dialog>
   );
 };

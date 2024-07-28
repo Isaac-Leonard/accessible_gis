@@ -8,6 +8,8 @@ import { client } from "./api";
 import { Dialog, useDialog } from "./dialog";
 import { ReprojectionDialog } from "./reprojection-dialog";
 import { FeaturePicker } from "./feature-picker";
+import { FeatureCoppierDialog } from "./feature-copier";
+import { LayerSimplifierDialog } from "./layer_simplifier";
 
 type VectorLayerProp = {
   layer: VectorScreenData;
@@ -17,6 +19,8 @@ export const VectorNavigator = ({ layer }: VectorLayerProp) => {
   return (
     <div>
       <ReprojectionDialog />
+      <FeatureCoppierDialog layer={layer} />
+      <LayerSimplifierDialog />
       {layer.editable ? <DatasetEditor layer={layer} /> : <EditDatasetButton />}
       {layer.display ? (
         <div>Displayed</div>

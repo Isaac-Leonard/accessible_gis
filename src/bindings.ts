@@ -176,6 +176,12 @@ export const commands = {
   async reprojectLayer(srs: Srs, name: string): Promise<void> {
     await TAURI_INVOKE("reproject_layer", { srs, name });
   },
+  async copyFeatures(features: number[], name: string): Promise<void> {
+    await TAURI_INVOKE("copy_features", { features, name });
+  },
+  async simplifyLayer(tolerance: number, name: string): Promise<void> {
+    await TAURI_INVOKE("simplify_layer", { tolerance, name });
+  },
 };
 
 /** user-defined types **/
@@ -193,7 +199,12 @@ export type ClosedLineDescription = {
   number_of_points: number;
 };
 export type DistanceFromBoarder = { name: string; distance: number };
-export type FeatureInfo = { fields: Field[]; geometry: Geometry };
+export type FeatureIdentifier = { name: string | null; fid: number };
+export type FeatureInfo = {
+  fields: Field[];
+  geometry: Geometry | null;
+  fid: number | null;
+};
 export type Field = (
   | { type: "Integer"; value: number }
   | { type: "IntegerList"; value: number[] }
@@ -349,9 +360,8 @@ export type UiToolData = {
   geometrys_count: number;
 };
 export type VectorScreenData = {
-  feature_idx: number | null;
   field_schema: FieldSchema[];
-  feature_names: (string | null)[] | null;
+  features: FeatureIdentifier[];
   feature: FeatureInfo | null;
   srs: string | null;
   editable: boolean;

@@ -7,12 +7,16 @@ type FeaturePickerProps = {
 };
 
 export const FeaturePicker = ({ layer }: FeaturePickerProps) => {
-  const { feature_names, feature_idx } = layer;
+  const fid = layer.feature?.fid ?? null;
   return (
     <IndexedOptionPicker
-      options={feature_names?.filter((x): x is string => x !== null) ?? []}
-      index={feature_idx}
-      setIndex={client.setFeatureIndex}
+      options={
+        layer.features
+          .map((x) => x.name)
+          .filter((x): x is string => x !== null) ?? []
+      }
+      index={layer.features.findIndex((x) => x.fid === fid)}
+      setIndex={(idx) => client.setFeatureIndex(layer.features[idx].fid)}
       prompt="Select a feature to examine"
       emptyText="This layer has no features"
     />

@@ -24,8 +24,8 @@ use gdal::{
     Dataset, DatasetOptions, GdalOpenFlags,
 };
 use gdal_if::{
-    list_drivers, read_raster_data, read_raster_data_enum_as, Field, FieldType, LayerIndex,
-    WrappedDataset,
+    get_driver_for_file, list_drivers, read_raster_data, read_raster_data_enum_as, Field,
+    FieldType, LayerIndex, WrappedDataset,
 };
 use geo::{
     Area, ChamberlainDuquetteArea, Closest, ClosestPoint, Contains, GeodesicArea, GeodesicBearing,
@@ -48,7 +48,7 @@ use tauri_specta::{collect_commands, ts};
 use tools::ToolDataDiscriminants;
 use ui::{NewDatasetScreenData, UiScreen};
 
-use std::{path::Path, process::Command, sync::MutexGuard};
+use std::{ffi::CString, path::Path, process::Command, sync::MutexGuard};
 
 use crate::{
     gdal_if::LocalFeatureInfo,
@@ -114,6 +114,7 @@ fn generate_handlers<R: Runtime>(
             set_srs,
             reproject_layer,
             copy_features,
+            simplify_layer,
         ])
         .path(s)
         .config(
@@ -581,14 +582,15 @@ fn _analyse_geom(line: LineString, mut guard: MutexGuard<'_, AppData>) {
     let mut crosses = Vec::new();
     for (dataset_idx, dataset) in guard.shared.datasets.iter_mut().enumerate() {
         for (layer_idx, mut layer) in &mut dataset.dataset.dataset.layers().enumerate() {
-            for (feature_idx, feature) in layer.features().enumerate() {
+            for feature in layer.features() {
+                let fid = feature.fid().unwrap();
                 let geom = feature.geometry().expect("Feature has no geometry");
                 let geom = geom
                     .to_geo()
                     .expect("Could not convert gdal geometry to geo geometry");
                 //let line = Geometry::LineString { points: line }.into();
                 let geom_type = geom.to_type();
-                let info = (geom_type, dataset_idx, layer_idx, feature_idx);
+                let info = (geom_type, dataset_idx, layer_idx, fid);
                 if geom.is_within(&line) {
                     contained_by.push(info);
                 } else if geom.contains(&line) {
@@ -997,6 +999,22 @@ fn copy_features(features: Vec<usize>, name: &str, state: AppState) {
         command
             .arg("-where")
             .arg(format!("fid in ({})", features.into_iter().join(", ")));
+        command.arg(name).arg(&input_name);
+        let output = command.output().unwrap();
+        eprint!("{:?}", output)
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
+fn simplify_layer(tolerance: f64, name: String, state: AppState) {
+    let tolerance_str = CString::new(tolerance.to_string()).unwrap();
+    eprintln!("{}", unsafe { gdal_sys::CPLAtof(tolerance_str.as_ptr()) });
+    eprintln!("{}", tolerance);
+    state.with_current_dataset_mut(|ds, _| {
+        let input_name = ds.dataset.file_name.clone();
+        let mut command = Command::new("ogr2ogr");
+        command.arg("-simplify").arg(tolerance.to_string());
         command.arg(name).arg(&input_name);
         let output = command.output().unwrap();
         eprint!("{:?}", output)

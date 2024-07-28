@@ -46,9 +46,8 @@ pub enum LayerScreenInfo {
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
 pub struct VectorScreenData {
-    pub feature_idx: Option<usize>,
     pub field_schema: Vec<FieldSchema>,
-    pub feature_names: Option<Vec<Option<String>>>,
+    pub features: Vec<FeatureIdentifier>,
     pub feature: Option<FeatureInfo>,
     pub srs: Option<String>,
     pub editable: bool,
@@ -56,6 +55,12 @@ pub struct VectorScreenData {
     pub dataset_index: usize,
     pub display: bool,
     pub name_field: Option<String>,
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+pub struct FeatureIdentifier {
+    pub name: Option<String>,
+    fid: u64,
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -83,31 +88,26 @@ impl AppData {
             .with_current_dataset_mut(|ds, ds_index| match ds.layer_index {
                 Some(LayerIndex::Vector(index)) => {
                     let feature = ds.get_current_feature();
-                    let mut layer = {
-                        ds.get_vector(index)
-                            .expect("Tried to get non existant vector layer")
-                    };
-                    let feature_names = Some(
-                        layer
-                            .layer
-                            .layer
-                            .features()
-                            .map(|feature| {
-                                feature
-                                    .field(layer.info.primary_field_name.as_ref()?)
-                                    .unwrap()
-                                    .map(|x| FieldValue::from(x).to_string())
-                            })
-                            .collect_vec(),
-                    );
+                    let mut layer = ds.get_vector(index).expect("Failed to get vector layer");
+                    let primary_field_name = layer.info.primary_field_name.as_ref();
+                    let features = layer
+                        .layer
+                        .layer
+                        .features()
+                        .map(move |feature| FeatureIdentifier {
+                            name: primary_field_name
+                                .and_then(|name| feature.field(name).unwrap())
+                                .map(|x| FieldValue::from(x).to_string()),
+                            fid: feature.fid().unwrap(),
+                        })
+                        .collect_vec();
                     Some(LayerScreenInfo::Vector(VectorScreenData {
-                        name_field: layer.info.primary_field_name.clone(),
+                        name_field: primary_field_name.cloned(),
                         display: layer.info.shared.display,
                         dataset_index: ds_index,
                         srs: try { layer.layer.layer.spatial_ref()?.to_wkt().ok()? },
-                        feature_idx: layer.info.selected_feature,
                         field_schema: layer.layer.get_field_schema(),
-                        feature_names,
+                        features,
                         feature,
                         editable: ds.dataset.editable,
                         layer_index: index,
