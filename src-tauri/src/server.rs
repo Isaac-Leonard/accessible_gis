@@ -1,14 +1,17 @@
 use actix_files::{self as fs, NamedFile};
 use actix_web::{
     get,
-    web::{Data, Json, Query},
-    App, HttpServer, Responder,
+    web::{self, Data, Json, Query},
+    App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use serde::{Deserialize, Serialize};
+use tauri::AppHandle;
+use tokio::task::spawn_local;
 
 use crate::{
     gdal_if::{read_raster_data_enum_as, RasterData},
     state::AppDataSync,
+    web_socket::{ws_handle, WsServerHandle},
     FeatureInfo,
 };
 
@@ -64,12 +67,14 @@ pub struct ImageSize {
     pub bands: Option<usize>,
 }
 
-pub async fn run_server(state: AppDataSync) {
+pub async fn run_server(state: AppDataSync, handle: WsServerHandle) {
     HttpServer::new(move || {
         App::new()
             .app_data(Data::new(state.clone()))
+            .app_data(Data::new(handle.clone()))
             .service(get_image)
             .service(get_file)
+            .service(web::resource("/ws").route(web::get().to(ws)))
             .service(
                 fs::Files::new("/", "../static/dist/")
                     .show_files_listing()
@@ -86,4 +91,24 @@ pub async fn run_server(state: AppDataSync) {
 #[get("/get_image")]
 async fn get_vector(state: Data<AppDataSync>) -> Json<Vec<FeatureInfo>> {
     Json(state.with_lock(|state| state.shared.get_vectors_for_display()))
+}
+
+/// Handshake and start WebSocket handler with heartbeats.
+async fn ws(
+    req: HttpRequest,
+    stream: web::Payload,
+    server: web::Data<WsServerHandle>,
+    app_handle: web::Data<AppHandle>,
+) -> Result<HttpResponse, Error> {
+    let (res, session, msg_stream) = actix_ws::handle(&req, stream)?;
+
+    // spawn websocket handler (and don't await it) so that the response is returned immediately
+    spawn_local(ws_handle(
+        (**server).clone(),
+        (**app_handle).clone(),
+        session,
+        msg_stream,
+    ));
+
+    Ok(res)
 }

@@ -182,6 +182,9 @@ export const commands = {
   async simplifyLayer(tolerance: number, name: string): Promise<void> {
     await TAURI_INVOKE("simplify_layer", { tolerance, name });
   },
+  async messageSocket(): Promise<void> {
+    await TAURI_INVOKE("message_socket");
+  },
 };
 
 /** user-defined types **/

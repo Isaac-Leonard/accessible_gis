@@ -14,6 +14,7 @@ mod stats;
 mod thiessen_polygons;
 mod tools;
 mod ui;
+mod web_socket;
 
 use core::cmp::Ordering;
 use dataset_collection::{StatefulDataset, StatefulLayerEnum, StatefulVectorInfo};
@@ -24,8 +25,8 @@ use gdal::{
     Dataset, DatasetOptions, GdalOpenFlags,
 };
 use gdal_if::{
-    get_driver_for_file, list_drivers, read_raster_data, read_raster_data_enum_as, Field,
-    FieldType, LayerIndex, WrappedDataset,
+    list_drivers, read_raster_data, read_raster_data_enum_as, Field, FieldType, LayerIndex,
+    WrappedDataset,
 };
 use geo::{
     Area, ChamberlainDuquetteArea, Closest, ClosestPoint, Contains, GeodesicArea, GeodesicBearing,
@@ -43,10 +44,12 @@ use specta::ts::{formatter::prettier, BigIntExportBehavior, ExportConfig};
 use state::{AppData, AppState, Screen};
 use statrs::statistics::Statistics;
 use strum::{EnumDiscriminants, EnumIter};
-use tauri::{ipc::Invoke, Manager, Runtime};
+use tauri::{ipc::Invoke, Manager, Runtime, State};
 use tauri_specta::{collect_commands, ts};
+use tokio::spawn;
 use tools::ToolDataDiscriminants;
 use ui::{NewDatasetScreenData, UiScreen};
+use web_socket::{Command as WsCommand, WsServerHandle};
 
 use std::{ffi::CString, path::Path, process::Command, sync::MutexGuard};
 
@@ -115,6 +118,7 @@ fn generate_handlers<R: Runtime>(
             reproject_layer,
             copy_features,
             simplify_layer,
+            message_socket,
         ])
         .path(s)
         .config(
@@ -158,11 +162,16 @@ fn main() {
         })
         .invoke_handler(handlers)
         .setup(|app| {
-            let window = app.get_webview_window("main").unwrap();
-            window.open_devtools();
+            //            let window = app.get_webview_window("main").unwrap();
+            //            window.open_devtools();
             let state = (*app.state::<AppDataSync>()).clone();
             let handle = app.handle();
-            handle.manage(tauri::async_runtime::spawn(run_server(state)));
+            let ws_handler = WsServerHandle::new();
+            handle.manage(tauri::async_runtime::spawn(run_server(
+                state.clone(),
+                ws_handler.clone(),
+            )));
+            handle.manage(ws_handler);
             let local_ip = local_ip().expect("Unable to retrieve local IP address");
 
             // Print the IP address and port
@@ -1019,4 +1028,10 @@ fn simplify_layer(tolerance: f64, name: String, state: AppState) {
         let output = command.output().unwrap();
         eprint!("{:?}", output)
     });
+}
+
+#[tauri::command]
+#[specta::specta]
+fn message_socket(handle: State<WsServerHandle>) {
+    handle.send(());
 }
