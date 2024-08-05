@@ -67,11 +67,12 @@ pub struct ImageSize {
     pub bands: Option<usize>,
 }
 
-pub async fn run_server(state: AppDataSync, handle: WsServerHandle) {
+pub async fn run_server(state: AppDataSync, handle: WsServerHandle, app_handle: AppHandle) {
     HttpServer::new(move || {
         App::new()
             .app_data(Data::new(state.clone()))
             .app_data(Data::new(handle.clone()))
+            .app_data(Data::new(app_handle.clone()))
             .service(get_image)
             .service(get_file)
             .service(web::resource("/ws").route(web::get().to(ws)))
@@ -109,6 +110,5 @@ async fn ws(
         session,
         msg_stream,
     ));
-
     Ok(res)
 }

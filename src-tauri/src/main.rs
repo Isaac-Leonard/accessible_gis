@@ -170,6 +170,7 @@ fn main() {
             handle.manage(tauri::async_runtime::spawn(run_server(
                 state.clone(),
                 ws_handler.clone(),
+                handle.clone(),
             )));
             handle.manage(ws_handler);
             let local_ip = local_ip().expect("Unable to retrieve local IP address");
