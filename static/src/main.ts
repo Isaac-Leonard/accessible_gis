@@ -262,3 +262,25 @@ const manager = (canvas: HTMLCanvasElement) => {
   };
 };
 createButton();
+const host = window.location.host;
+const wsUrl = `ws://${host}/ws`;
+const socket = new WebSocket(wsUrl);
+
+socket.addEventListener("open", () => {
+  console.log("Opened web socket");
+});
+
+socket.addEventListener("error", (e) => {
+  console.log("Error in websocket");
+  console.log(e);
+});
+
+socket.addEventListener("message", (e) => {
+  console.log("Message recieved");
+  console.log(e.data);
+});
+
+socket.addEventListener("close", (e) => {
+  console.log("Closed socket");
+  console.log(e);
+});
