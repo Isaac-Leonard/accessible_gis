@@ -261,26 +261,46 @@ const manager = (canvas: HTMLCanvasElement) => {
     canvas.removeEventListener("touchcancel", cancelHandler);
   };
 };
+
 createButton();
+
 const host = window.location.host;
 const wsUrl = `ws://${host}/ws`;
-const socket = new WebSocket(wsUrl);
 
-socket.addEventListener("open", () => {
-  console.log("Opened web socket");
-});
+let socket: WebSocket | null = null;
 
-socket.addEventListener("error", (e) => {
-  console.log("Error in websocket");
-  console.log(e);
-});
+const connect = () => {
+  socket = new WebSocket(wsUrl);
 
-socket.addEventListener("message", (e) => {
-  console.log("Message recieved");
-  console.log(e.data);
-});
+  socket.addEventListener("open", () => {
+    console.log("Opened web socket");
+  });
 
-socket.addEventListener("close", (e) => {
-  console.log("Closed socket");
-  console.log(e);
+  socket.addEventListener("error", (e) => {
+    console.log("Error in websocket");
+    console.log(e);
+    connect();
+  });
+
+  socket.addEventListener("message", (e) => {
+    console.log("Message recieved");
+    console.log(e.data);
+  });
+
+  socket.addEventListener("close", (e) => {
+    console.log("Closed socket");
+    console.log(e);
+    connect();
+  });
+};
+
+connect();
+
+document.addEventListener("visibilitychange", () => {
+  if (
+    document.visibilityState === "visible" &&
+    socket?.readyState === WebSocket.CLOSED
+  ) {
+    connect();
+  }
 });
