@@ -2,7 +2,7 @@ use gdal::vector::LayerAccess;
 
 use crate::{
     dataset_collection::{DatasetCollection, StatefulDataset},
-    gdal_if::get_fields,
+    gdal_if::{get_fields, WrappedDataset},
     tools::ToolList,
     FeatureInfo,
 };
@@ -35,6 +35,16 @@ impl UserState {
                     .collect::<Vec<_>>()
             })
             .collect()
+    }
+
+    pub fn create_from_current_dataset<E, F>(
+        &mut self,
+        f: F,
+    ) -> Option<Result<&mut StatefulDataset, E>>
+    where
+        F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, E>,
+    {
+        self.datasets.create_from_current_dataset(f)
     }
 
     pub fn with_current_dataset_mut<T, F>(&mut self, f: F) -> Option<T>

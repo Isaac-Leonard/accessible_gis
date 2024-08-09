@@ -82,6 +82,16 @@ impl WrappedDataset {
         })
     }
 
+    /// Sometimes we need to manually open or create a dataset and need a way to wrap it
+    /// We assume for now that it is not editable
+    pub fn wrap_existing(dataset: Dataset, file_name: String) -> Self {
+        Self {
+            file_name,
+            dataset,
+            editable: false,
+        }
+    }
+
     pub fn new_vector(name: String, driver: String) -> Result<Self, String> {
         let driver = DriverManager::get_driver_by_name(&driver)
             .map_err(|_| format!("Failed to get driver for {driver}"))?;

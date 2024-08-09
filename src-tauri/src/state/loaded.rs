@@ -9,7 +9,7 @@ use crate::{
     dataset_collection::{
         DatasetCollection, StatefulDataset, StatefulRasterBand, StatefulVectorLayer,
     },
-    gdal_if::LocalFeatureInfo,
+    gdal_if::{LocalFeatureInfo, WrappedDataset},
     geometry::AsPoint,
 };
 
@@ -23,6 +23,16 @@ pub struct AppData {
 }
 
 impl AppData {
+    pub fn create_from_current_dataset<E, F>(
+        &mut self,
+        f: F,
+    ) -> Option<Result<&mut StatefulDataset, E>>
+    where
+        F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, E>,
+    {
+        self.shared.create_from_current_dataset(f)
+    }
+
     pub fn with_current_vector_layer<T, F>(&mut self, f: F) -> Option<T>
     where
         F: FnOnce(StatefulVectorLayer) -> T,

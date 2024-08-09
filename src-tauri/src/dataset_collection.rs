@@ -3,6 +3,7 @@ use std::slice::{Iter, IterMut};
 use gdal::{
     raster::RasterBand,
     vector::{Layer, LayerAccess, LayerIterator},
+    Dataset,
 };
 use itertools::Itertools;
 use strum::{EnumIter, IntoEnumIterator};
@@ -142,6 +143,52 @@ pub struct StatefulDataset {
 }
 
 impl StatefulDataset {
+    fn open(name: String) -> Result<Self, String> {
+        Ok(Self::new(WrappedDataset::open(name)?))
+    }
+
+    fn new(dataset: WrappedDataset) -> Self {
+        let layer_count = dataset.dataset.layer_count();
+        let band_count = dataset.dataset.rasterbands().count();
+
+        let layer_info = dataset
+            .dataset
+            .layers()
+            .map(|layer| StatefulVectorInfo {
+                selected_feature: layer.feature(0).map(|_| 0),
+                primary_field_name: get_default_field_name(&layer),
+                shared: SharedInfo { display: false },
+            })
+            .collect_vec();
+
+        let band_info = dataset
+            .dataset
+            .rasterbands()
+            .map(|_| StatefulRasterInfo {
+                audio_settings: AudioSettings::default(),
+                shared: SharedInfo { display: false },
+            })
+            .collect_vec();
+
+        let layer_index = if layer_count > 0 {
+            Some(LayerIndex::Vector(0))
+        } else if band_count > 0 {
+            Some(LayerIndex::Raster(1))
+        } else {
+            None
+        };
+        Self {
+            dataset,
+            layer_index,
+            layer_info,
+            band_info,
+        }
+    }
+
+    fn from_raw(dataset: Dataset, name: String) -> Self {
+        Self::new(WrappedDataset::wrap_existing(dataset, name))
+    }
+
     pub fn get_all_layers(&mut self) -> Vec<IndexedLayer> {
         self.dataset.get_all_layers()
     }
@@ -203,6 +250,10 @@ impl NonEmptyDatasetCollection {
         self.datasets.push(dataset)
     }
 
+    pub fn add_gdal(&mut self, dataset: WrappedDataset) {
+        self.datasets.push(StatefulDataset::new(dataset))
+    }
+
     pub fn new(dataset: StatefulDataset) -> Self {
         Self {
             datasets: vec![dataset],
@@ -223,6 +274,20 @@ impl NonEmptyDatasetCollection {
         res
     }
 
+    pub fn create_from_current_dataset<E, F>(&mut self, f: F) -> Result<&mut StatefulDataset, E>
+    where
+        F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, E>,
+    {
+        let dataset = &mut self.datasets[self.index];
+        let res = f(dataset)?;
+        dataset
+            .dataset
+            .save_changes()
+            .expect("Could not flush changes to disc");
+        self.add(StatefulDataset::new(res));
+        Ok(self.datasets.last_mut().unwrap())
+    }
+
     pub fn iter(&mut self) -> std::slice::Iter<'_, StatefulDataset> {
         self.datasets.iter()
     }
@@ -240,6 +305,19 @@ pub enum DatasetCollection {
 }
 
 impl DatasetCollection {
+    pub fn create_from_current_dataset<E, F>(
+        &mut self,
+        f: F,
+    ) -> Option<Result<&mut StatefulDataset, E>>
+    where
+        F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, E>,
+    {
+        match self {
+            Self::Empty => None,
+            Self::NonEmpty(datasets) => Some(datasets.create_from_current_dataset(f)),
+        }
+    }
+
     pub fn get_all_layers(&mut self) -> Vec<IndexedDatasetLayer> {
         let mut layers = Vec::new();
         for (ds_idx, dataset) in self.iter_mut().enumerate() {
@@ -257,41 +335,7 @@ impl DatasetCollection {
 
     pub fn open(&mut self, name: String) -> Result<&mut StatefulDataset, String> {
         let dataset = WrappedDataset::open(name)?;
-        let layer_count = dataset.dataset.layer_count();
-        let band_count = dataset.dataset.rasterbands().count();
-
-        let layer_info = dataset
-            .dataset
-            .layers()
-            .map(|layer| StatefulVectorInfo {
-                selected_feature: layer.feature(0).map(|_| 0),
-                primary_field_name: get_default_field_name(&layer),
-                shared: SharedInfo { display: false },
-            })
-            .collect_vec();
-
-        let band_info = dataset
-            .dataset
-            .rasterbands()
-            .map(|_| StatefulRasterInfo {
-                audio_settings: AudioSettings::default(),
-                shared: SharedInfo { display: false },
-            })
-            .collect_vec();
-
-        let layer_index = if layer_count > 0 {
-            Some(LayerIndex::Vector(0))
-        } else if band_count > 0 {
-            Some(LayerIndex::Raster(1))
-        } else {
-            None
-        };
-        Ok(self.add(StatefulDataset {
-            dataset,
-            layer_index,
-            layer_info,
-            band_info,
-        }))
+        Ok(self.add(StatefulDataset::new(dataset)))
     }
 
     pub fn set_index(&mut self, index: usize) -> Result<(), ()> {
@@ -369,7 +413,7 @@ impl From<IndexedDatasetLayer<'_>> for LayerDescriptor {
                 dataset_file: value.ds_file,
             },
             LayerEnum::Band(band) => {
-                let (width, length) = band.band().size();
+                let (_width, _length) = band.band().size();
                 Self {
                     dataset: value.dataset_index,
                     band: LayerIndex::Raster(value.layer.layer_index),
