@@ -3,8 +3,9 @@ mod field_schema;
 mod fields;
 mod layer;
 mod local_feature;
+pub mod processing;
 mod raster;
-mod vector;
+pub mod vector;
 
 pub use dataset::*;
 pub use field_schema::*;
@@ -16,7 +17,6 @@ pub use raster::*;
 use gdal::{vector::Envelope as GdalEnvelope, Driver, DriverManager, Metadata};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-pub use vector::*;
 pub use vector::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, specta::Type)]
