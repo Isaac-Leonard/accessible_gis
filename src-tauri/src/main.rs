@@ -20,13 +20,15 @@ use core::cmp::Ordering;
 use dataset_collection::{StatefulDataset, StatefulLayerEnum, StatefulVectorInfo};
 use files::get_csv;
 use gdal::{
+    errors::GdalError,
     spatial_ref::SpatialRef,
     vector::{LayerAccess, ToGdal},
     Dataset, DatasetOptions, GdalOpenFlags,
 };
 use gdal_if::{
-    list_drivers, read_raster_data, read_raster_data_enum_as, Field, FieldType, LayerIndex,
-    WrappedDataset,
+    list_drivers,
+    processing::{aspect, roughness, slope},
+    read_raster_data, read_raster_data_enum_as, Field, FieldType, LayerIndex, WrappedDataset,
 };
 use geo::{
     Area, ChamberlainDuquetteArea, Closest, ClosestPoint, Contains, GeodesicArea, GeodesicBearing,
@@ -119,6 +121,9 @@ fn generate_handlers<R: Runtime>(
             copy_features,
             simplify_layer,
             message_socket,
+            calc_slope,
+            calc_aspect,
+            calc_roughness,
         ])
         .path(s)
         .config(
@@ -1035,4 +1040,31 @@ fn simplify_layer(tolerance: f64, name: String, state: AppState) {
 #[specta::specta]
 fn message_socket(handle: State<WsServerHandle>) {
     handle.send(());
+}
+
+#[tauri::command]
+#[specta::specta]
+fn calc_slope(name: String, state: AppState) {
+    state.with_lock(|state| {
+        let res =
+            state.create_from_current_dataset(|ds| slope(&ds.dataset, name, &Default::default()));
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
+fn calc_aspect(name: String, state: AppState) {
+    state.with_lock(|state| {
+        let res =
+            state.create_from_current_dataset(|ds| aspect(&ds.dataset, name, &Default::default()));
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
+fn calc_roughness(name: String, state: AppState) {
+    state.with_lock(|state| {
+        let res = state
+            .create_from_current_dataset(|ds| roughness(&ds.dataset, name, &Default::default()));
+    })
 }

@@ -185,6 +185,15 @@ export const commands = {
   async messageSocket(): Promise<void> {
     await TAURI_INVOKE("message_socket");
   },
+  async calcSlope(name: string): Promise<void> {
+    await TAURI_INVOKE("calc_slope", { name });
+  },
+  async calcAspect(name: string): Promise<void> {
+    await TAURI_INVOKE("calc_aspect", { name });
+  },
+  async calcRoughness(name: string): Promise<void> {
+    await TAURI_INVOKE("calc_roughness", { name });
+  },
 };
 
 /** user-defined types **/
