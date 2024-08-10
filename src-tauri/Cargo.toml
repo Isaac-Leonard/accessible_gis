@@ -45,6 +45,7 @@ futures-util = "0.3.30"
 assert_no_alloc = "1.1.2"
 cpal = "0.15.2"
 fundsp = "0.15.0"
+clap = { version = "4.5.11", features = ["derive"] }
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

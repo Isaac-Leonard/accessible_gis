@@ -4,6 +4,7 @@
 #![feature(iter_map_windows)]
 
 mod audio;
+mod commandline;
 mod dataset_collection;
 mod files;
 mod gdal_if;
