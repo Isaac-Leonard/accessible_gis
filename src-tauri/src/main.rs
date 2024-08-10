@@ -18,6 +18,7 @@ mod tools;
 mod ui;
 mod web_socket;
 
+use clap::Parser;
 use core::cmp::Ordering;
 use dataset_collection::{StatefulDataset, StatefulLayerEnum, StatefulVectorInfo};
 use files::get_csv;
@@ -138,6 +139,16 @@ fn generate_handlers<R: Runtime>(
 }
 
 fn main() {
+    match commandline::Input::try_parse() {
+        Ok(args) => commandline::launch_commandline_app(args),
+        Err(err) => {
+            eprintln!("{err}");
+            launch_gui();
+        }
+    };
+}
+
+fn launch_gui() {
     let handlers = generate_handlers("../src/bindings.ts");
     let countries_path = std::env::current_dir()
         .unwrap()
