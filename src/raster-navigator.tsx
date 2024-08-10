@@ -9,20 +9,12 @@ import { DemMethodsDialog } from "./dem_methods";
 const tools = ["None", "Trace geometries"] as const;
 
 export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
-  const { open, innerRef, setOpen } = useDialog();
   const [tool, setTool] = useState<(typeof tools)[number]>(tools[0]);
   return (
     <div>
       <ReprojectionDialog />
       <DemMethodsDialog />
-      <Dialog
-        modal={true}
-        open={open}
-        setOpen={setOpen}
-        openText="Classify raster"
-      >
-        <ClassificationScreen onClassify={() => setOpen(false)} />
-      </Dialog>
+      <ClassificationDialog />
       <RasterNavigatorInner layer={layer} savePoints={() => {}} />
     </div>
   );
@@ -40,7 +32,6 @@ const RasterNavigatorInner = ({
     let img = await client.getImagePixels();
     setData(img);
   }, []);
-  const [touchable, setTouchable] = useState(false);
   let { cols, rows } = layer;
   const [showCoords, setShowCoords] = useState(true);
   const [{ x, y }, setCoords] = useState({ x: 0, y: 0 });
@@ -124,11 +115,11 @@ const RasterNavigatorInner = ({
         />
       </label>
       <button
-        aria-checked={touchable}
+        aria-checked={layer.display}
         role="switch"
-        onClick={() => setTouchable(!touchable)}
+        onClick={() => client.setDisplay()}
       >
-        Touchable
+        Display
       </button>
       <div onKeyDown={coordinateArrowHandler(x, y, radius, setCoords)}>
         <CoordinateButtons x={x} y={y} radius={radius} setCoords={setCoords} />
@@ -201,6 +192,20 @@ const SaveScreen = ({
   );
 };
 
+const ClassificationDialog = () => {
+  const { open, innerRef, setOpen } = useDialog();
+
+  return (
+    <Dialog
+      modal={true}
+      open={open}
+      setOpen={setOpen}
+      openText="Classify raster"
+    >
+      <ClassificationScreen onClassify={() => setOpen(false)} />
+    </Dialog>
+  );
+};
 type StringClassification = { target: string; min: string; max: string };
 
 const ClassificationScreen = ({ onClassify }: { onClassify: () => void }) => {
