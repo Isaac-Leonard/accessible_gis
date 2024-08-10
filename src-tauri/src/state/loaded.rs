@@ -20,6 +20,7 @@ pub struct AppData {
     pub towns: HashMap<String, Vec<LocalFeatureInfo>>,
     pub screen: Screen,
     pub shared: UserState,
+    pub errors: Vec<String>,
 }
 
 impl AppData {
