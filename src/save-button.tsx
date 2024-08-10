@@ -1,12 +1,21 @@
 import { save } from "@tauri-apps/plugin-dialog";
 
-export const SaveButton = ({ onSave }: { onSave: (name: string) => void }) => {
+type SaveButtonProps = {
+  text?: string;
+  onSave: (name: string) => void;
+  prompt?: string;
+};
+
+export const SaveButton = ({ onSave, text, prompt }: SaveButtonProps) => {
+  if (typeof text !== "string") {
+    text = "Save";
+  }
   const clickHandler = async () => {
-    const name = await save();
+    const name = await save({ title: prompt });
     if (name !== null) {
       onSave(name);
     }
   };
 
-  return <button onClick={clickHandler}>Save</button>;
+  return <button onClick={clickHandler}>{text}</button>;
 };
