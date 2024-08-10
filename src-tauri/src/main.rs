@@ -1042,29 +1042,26 @@ fn message_socket(handle: State<WsServerHandle>) {
     handle.send(());
 }
 
-#[tauri::command]
-#[specta::specta]
-fn calc_slope(name: String, state: AppState) {
-    state.with_lock(|state| {
-        let res =
-            state.create_from_current_dataset(|ds| slope(&ds.dataset, name, &Default::default()));
-    })
+macro_rules! gen_processing_command {
+    ($command_name:ident, $processing_name:ident) => {
+        #[tauri::command]
+        #[specta::specta]
+        fn $command_name(name: String, state: AppState) {
+            state.with_lock(|state| {
+                let res = state
+        					.create_from_current_dataset(|ds| $processing_name(&ds.dataset, name, &Default::default()))
+        					.expect(
+        						"Attempted to operate on current dataset but there is no current dataset selected",
+        					);
+                match res {
+                    Err(e) => state.errors.push(e.to_string()),
+                    _ => {}
+                }
+            })
+        }
+    };
 }
 
-#[tauri::command]
-#[specta::specta]
-fn calc_aspect(name: String, state: AppState) {
-    state.with_lock(|state| {
-        let res =
-            state.create_from_current_dataset(|ds| aspect(&ds.dataset, name, &Default::default()));
-    })
-}
-
-#[tauri::command]
-#[specta::specta]
-fn calc_roughness(name: String, state: AppState) {
-    state.with_lock(|state| {
-        let res = state
-            .create_from_current_dataset(|ds| roughness(&ds.dataset, name, &Default::default()));
-    })
-}
+gen_processing_command!(calc_slope, slope);
+gen_processing_command!(calc_aspect, aspect);
+gen_processing_command!(calc_roughness, roughness);
