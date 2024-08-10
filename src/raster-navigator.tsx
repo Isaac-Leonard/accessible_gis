@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "preact/hooks";
 import { client } from "./api";
 import { Dialog, useDialog } from "./dialog";
 import { ReprojectionDialog } from "./reprojection-dialog";
+import { DemMethodsDialog } from "./dem_methods";
 
 const tools = ["None", "Trace geometries"] as const;
 
@@ -12,7 +13,8 @@ export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
   const [tool, setTool] = useState<(typeof tools)[number]>(tools[0]);
   return (
     <div>
-      <ReprojectionDialog />{" "}
+      <ReprojectionDialog />
+      <DemMethodsDialog />
       <Dialog
         modal={true}
         open={open}
