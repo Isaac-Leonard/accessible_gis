@@ -3,6 +3,7 @@
 #![feature(try_blocks)]
 #![feature(iter_map_windows)]
 
+mod audio;
 mod dataset_collection;
 mod files;
 mod gdal_if;
