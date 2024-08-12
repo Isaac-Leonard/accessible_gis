@@ -3,7 +3,6 @@ use std::str::FromStr;
 use std::{path::PathBuf, process::exit, time::Duration};
 
 use clap::{Args, Parser, Subcommand};
-use gdal::raster::GdalDataType;
 use gdal::{raster::StatisticsMinMax, Dataset};
 use itertools::Itertools;
 use ndarray::Array2;
@@ -11,10 +10,7 @@ use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::audio::graph::{play_rasta, RasterGraphSettings};
-use crate::audio::{
-    histogram::{generate_image_histogram, play_histogram},
-    Waveform,
-};
+use crate::audio::{histogram::play_histogram, Waveform};
 use crate::gdal_if::read_raster_data;
 
 #[derive(Parser, Debug)]
@@ -247,19 +243,16 @@ fn run_histogram(args: HistogramArgs) {
         );
         exit(-1)
     };
-    let wave: Waveform = args.wave.into();
-    let data = match band.band_type() {
-        GdalDataType::UInt8 => band
-            .read_as::<u8>((0, 0), band.size(), band.size(), None)
-            .unwrap()
-            .to_array()
-            .unwrap(),
-        _ => {
-            eprint!("Currently we can only generate histograms for byte data");
-            exit(-1);
-        }
+    let Ok(StatisticsMinMax { min, max }) = band.compute_raster_min_max(false) else {
+        eprint!("Failed to get min max of raster");
+        exit(-1);
     };
-    let counts = generate_image_histogram(data.into_raw_vec());
+    let Ok(histogram) = band.histogram(min, max, 256, true, false) else {
+        eprintln!("Failed to get histogram of raster");
+        exit(-1);
+    };
+    let wave: Waveform = args.wave.into();
+    let counts = histogram.counts().iter().map(|x| (*x) as f64).collect_vec();
     play_histogram(counts, Default::default(), wave);
 }
 
