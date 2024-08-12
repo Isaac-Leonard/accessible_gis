@@ -18,12 +18,14 @@ mod tools;
 mod ui;
 mod web_socket;
 
+use audio::{graph::play_rasta, AudioMessage};
 use clap::Parser;
 use core::cmp::Ordering;
 use dataset_collection::{StatefulDataset, StatefulLayerEnum, StatefulVectorInfo};
 use files::get_csv;
 use gdal::{
     errors::GdalError,
+    raster::StatisticsMinMax,
     spatial_ref::SpatialRef,
     vector::{LayerAccess, ToGdal},
     Dataset, DatasetOptions, GdalOpenFlags,
@@ -56,9 +58,15 @@ use tools::ToolDataDiscriminants;
 use ui::{NewDatasetScreenData, UiScreen};
 use web_socket::{Command as WsCommand, WsServerHandle};
 
-use std::{ffi::CString, path::Path, process::Command, sync::MutexGuard};
+use std::{
+    ffi::CString,
+    path::Path,
+    process::Command,
+    sync::{mpsc::SyncSender, MutexGuard},
+};
 
 use crate::{
+    audio::get_audio,
     gdal_if::LocalFeatureInfo,
     server::run_server,
     state::{AppDataSync, Country, CountryImpl, PreloadedAppData},
@@ -127,6 +135,7 @@ fn generate_handlers<R: Runtime>(
             calc_slope,
             calc_aspect,
             calc_roughness,
+            play_as_sound,
         ])
         .path(s)
         .config(
@@ -182,6 +191,8 @@ fn launch_gui() {
         .setup(|app| {
             //            let window = app.get_webview_window("main").unwrap();
             //            window.open_devtools();
+            let audio = get_audio();
+            app.manage(audio);
             let state = (*app.state::<AppDataSync>()).clone();
             let handle = app.handle();
             let ws_handler = WsServerHandle::new();
@@ -322,42 +333,6 @@ fn is_left_of_3x3(p: (usize, usize)) -> bool {
 
 fn is_center_of_3x3(p: (usize, usize)) -> bool {
     p == (1, 1)
-}
-
-/// Calculates the slope in degrees of a raster then calculates the tan of each value as we want actual slope values, not degrees
-pub fn derivative_of_dataset(src: PathBuf, dest: PathBuf) -> std::io::Result<Output> {
-    let tmp_path = "/tmp/tmp.tiff";
-    Command::new("gdaldem")
-        .arg("slope")
-        .arg(src)
-        .arg(tmp_path)
-        .output();
-    Command::new("gdal_calc.py")
-        .arg("-A")
-        .arg(tmp_path)
-        .arg("--outfile")
-        .arg(dest)
-        .arg("--calc")
-        .arg("'tan(A)'")
-        .arg("--NoDataValue=-9999")
-}
-
-/// Calculates the slope in degrees of a raster then calculates the tan of each value as we want actual slope values, not degrees
-pub fn aspect_of_dataset(src: PathBuf, dest: PathBuf) -> std::io::Result<Output> {
-    let tmp_path = "/tmp/tmp.tiff";
-    Command::new("gdaldem")
-        .arg("aspect")
-        .arg(src)
-        .arg(tmp_path)
-        .output();
-    Command::new("gdal_calc.py")
-        .arg("-A")
-        .arg(tmp_path)
-        .arg("--outfile")
-        .arg(dest)
-        .arg("--calc")
-        .arg("'tan(A)'")
-        .arg("--NoDataValue=-9999")
 }
 */
 
@@ -1078,3 +1053,26 @@ macro_rules! gen_processing_command {
 gen_processing_command!(calc_slope, slope);
 gen_processing_command!(calc_aspect, aspect);
 gen_processing_command!(calc_roughness, roughness);
+
+#[tauri::command]
+#[specta::specta]
+fn play_as_sound(state: AppState, audio: State<SyncSender<AudioMessage>>) {
+    state
+        .with_current_raster_band(|band| {
+            let Ok(StatisticsMinMax { min, max }) = band.band.compute_raster_min_max(false) else {
+                eprint!("Failed to ge min max for raster");
+                return;
+            };
+            let data = read_raster_data(&band.band);
+            audio
+                .send(AudioMessage::PlayRaster(
+                    data,
+                    min,
+                    max,
+                    band.no_data_value(),
+                    Default::default(),
+                ))
+                .unwrap();
+        })
+        .expect("Not a raster band");
+}

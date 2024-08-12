@@ -194,6 +194,9 @@ export const commands = {
   async calcRoughness(name: string): Promise<void> {
     await TAURI_INVOKE("calc_roughness", { name });
   },
+  async playAsSound(): Promise<void> {
+    await TAURI_INVOKE("play_as_sound");
+  },
 };
 
 /** user-defined types **/

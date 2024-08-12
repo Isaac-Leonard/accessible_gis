@@ -15,6 +15,7 @@ export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
       <ReprojectionDialog />
       <DemMethodsDialog />
       <ClassificationDialog />
+      <button onClick={() => client.playAsSound()}>Play audio</button>
       <RasterNavigatorInner layer={layer} savePoints={() => {}} />
     </div>
   );
