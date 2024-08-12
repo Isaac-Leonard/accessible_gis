@@ -16,6 +16,9 @@ export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
       <DemMethodsDialog />
       <ClassificationDialog />
       <button onClick={() => client.playAsSound()}>Play audio</button>
+      <button onClick={() => client.playHistogram()}>
+        Play audio Histogram
+      </button>
       <RasterNavigatorInner layer={layer} savePoints={() => {}} />
     </div>
   );
@@ -207,6 +210,7 @@ const ClassificationDialog = () => {
     </Dialog>
   );
 };
+
 type StringClassification = { target: string; min: string; max: string };
 
 const ClassificationScreen = ({ onClassify }: { onClassify: () => void }) => {

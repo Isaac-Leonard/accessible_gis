@@ -18,7 +18,7 @@ mod tools;
 mod ui;
 mod web_socket;
 
-use audio::{graph::play_rasta, AudioMessage};
+use audio::AudioMessage;
 use clap::Parser;
 use core::cmp::Ordering;
 use dataset_collection::{StatefulDataset, StatefulLayerEnum, StatefulVectorInfo};
@@ -136,6 +136,7 @@ fn generate_handlers<R: Runtime>(
             calc_aspect,
             calc_roughness,
             play_as_sound,
+            play_histogram,
         ])
         .path(s)
         .config(
@@ -1070,6 +1071,30 @@ fn play_as_sound(state: AppState, audio: State<SyncSender<AudioMessage>>) {
                     min,
                     max,
                     band.no_data_value(),
+                    Default::default(),
+                ))
+                .unwrap();
+        })
+        .expect("Not a raster band");
+}
+
+#[tauri::command]
+#[specta::specta]
+fn play_histogram(state: AppState, audio: State<SyncSender<AudioMessage>>) {
+    state
+        .with_current_raster_band(|band| {
+            let Ok(StatisticsMinMax { min, max }) = band.band.compute_raster_min_max(false) else {
+                eprint!("Failed to ge min max for raster");
+                return;
+            };
+            let Ok(histogram) = band.band.histogram(min, max, 256, true, false) else {
+                eprint!("Failed to get histogram");
+                return;
+            };
+            audio
+                .send(AudioMessage::PlayHistogram(
+                    histogram.counts().iter().map(|x| (*x) as f64).collect_vec(),
+                    Default::default(),
                     Default::default(),
                 ))
                 .unwrap();

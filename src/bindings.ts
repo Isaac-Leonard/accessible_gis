@@ -197,6 +197,9 @@ export const commands = {
   async playAsSound(): Promise<void> {
     await TAURI_INVOKE("play_as_sound");
   },
+  async playHistogram(): Promise<void> {
+    await TAURI_INVOKE("play_histogram");
+  },
 };
 
 /** user-defined types **/
