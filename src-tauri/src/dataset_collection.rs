@@ -67,9 +67,21 @@ impl AudioIndicator {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub enum ImageType {
+    Dem,
+    Red,
+    Green,
+    Blue,
+    FarRed,
+    #[default]
+    fUnknown,
+}
+
 pub struct StatefulRasterInfo {
     pub audio_settings: AudioSettings,
     pub shared: SharedInfo,
+    pub image_type: ImageType,
 }
 
 pub struct StatefulRasterBand<'a> {
@@ -167,6 +179,7 @@ impl StatefulDataset {
             .map(|_| StatefulRasterInfo {
                 audio_settings: AudioSettings::default(),
                 shared: SharedInfo { display: false },
+                image_type: ImageType::default(),
             })
             .collect_vec();
 
