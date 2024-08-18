@@ -75,7 +75,7 @@ pub enum ImageType {
     Blue,
     FarRed,
     #[default]
-    fUnknown,
+    Unknown,
 }
 
 pub struct StatefulRasterInfo {
