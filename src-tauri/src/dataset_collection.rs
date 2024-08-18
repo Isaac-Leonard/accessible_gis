@@ -1,4 +1,7 @@
-use std::slice::{Iter, IterMut};
+use std::{
+    cmp::Ordering,
+    slice::{Iter, IterMut},
+};
 
 use gdal::{
     raster::RasterBand,
@@ -6,10 +9,15 @@ use gdal::{
     Dataset,
 };
 use itertools::Itertools;
+use ndarray::Zip;
+use statrs::statistics::Statistics;
 use strum::{EnumIter, IntoEnumIterator};
 
 use crate::{
-    gdal_if::{LayerEnum, LayerExt, LayerIndex, WrappedDataset, WrappedLayer, WrappedRasterBand},
+    gdal_if::{
+        read_raster_data, LayerEnum, LayerExt, LayerIndex, WrappedDataset, WrappedLayer,
+        WrappedRasterBand,
+    },
     FeatureInfo, LayerDescriptor,
 };
 
@@ -452,4 +460,233 @@ fn get_default_field_name(layer: &Layer) -> Option<String> {
         return Some(possible_name.clone());
     }
     return names.first().cloned();
+}
+
+fn describe_dem(band: &mut WrappedRasterBand) -> String {
+    let mut data = read_raster_data(&band.band);
+    let chunks = data.exact_chunks((data.nrows() / 3, data.ncols() / 3));
+    let averages = Zip::from(chunks).map_collect(|x| x.into_iter().mean());
+    let north_west = averages[(0, 0)];
+    let north = averages[(0, 1)];
+    let north_east = averages[(0, 2)];
+    let east = averages[(1, 0)];
+    let center = averages[(1, 1)];
+    let west = averages[(1, 2)];
+    let south_west = averages[(2, 0)];
+    let south = averages[(2, 1)];
+    let south_east = averages[(2, 2)];
+    let cell = Cell::new(
+        north_west, north, north_east, west, center, east, south_west, south, south_east,
+    );
+    cell.describe()
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Cell {
+    north_west: f64,
+    north: f64,
+    north_east: f64,
+    west: f64,
+    center: f64,
+    east: f64,
+    south_west: f64,
+    south: f64,
+    south_east: f64,
+}
+
+impl Cell {
+    fn get(&self, index: Direction) -> &f64 {
+        match index {
+            Direction::NorthWest => &self.north_west,
+            Direction::North => &self.north,
+            Direction::NorthEast => &self.north_east,
+            Direction::East => &self.east,
+            Direction::SouthEast => &self.south_east,
+            Direction::South => &self.south,
+            Direction::SouthWest => &self.south_west,
+            Direction::West => &self.west,
+        }
+    }
+}
+
+impl Cell {
+    pub fn rotate_by_45_deg(self) -> Self {
+        Self {
+            center: self.center,
+            north_west: self.west,
+            north: self.north_west,
+            north_east: self.north,
+            east: self.north_east,
+            south_east: self.east,
+            south: self.south_east,
+            south_west: self.south,
+            west: self.south_west,
+        }
+    }
+
+    pub fn flip_east_west(self) -> Self {
+        Self {
+            north_west: self.north_east,
+            west: self.east,
+            south_west: self.south_east,
+            north: self.north,
+            center: self.center,
+            south: self.south,
+            north_east: self.north_west,
+            east: self.west,
+            south_east: self.south_west,
+        }
+    }
+
+    pub fn flip_north_south(self) -> Self {
+        Self {
+            north_west: self.south_west,
+            north: self.south,
+            north_east: self.south_east,
+            west: self.west,
+            center: self.center,
+            east: self.east,
+            south_west: self.north_west,
+            south: self.north,
+            south_east: self.north_east,
+        }
+    }
+
+    pub fn new(
+        north_west: f64,
+        north: f64,
+        north_east: f64,
+        west: f64,
+        center: f64,
+        east: f64,
+        south_west: f64,
+        south: f64,
+        south_east: f64,
+    ) -> Self {
+        Self {
+            north_west,
+            north,
+            north_east,
+            west,
+            center,
+            east,
+            south_west,
+            south,
+            south_east,
+        }
+    }
+
+    fn outer_ring(self) -> [(f64, Direction); 8] {
+        [
+            (self.north_west, Direction::NorthWest),
+            (self.north, Direction::North),
+            (self.north_east, Direction::NorthEast),
+            (self.east, Direction::East),
+            (self.south_east, Direction::SouthEast),
+            (self.south, Direction::South),
+            (self.south_west, Direction::SouthWest),
+            (self.west, Direction::West),
+        ]
+    }
+
+    /// Compares the center cell to each cell around it
+    pub fn compare_to_center(&self) -> [(Ordering, Direction); 8] {
+        self.outer_ring()
+            .map(|(val, dir)| (self.center.partial_cmp(&val).unwrap(), dir))
+    }
+
+    pub fn describe(self) -> String {
+        let initial_description = self.compare_to_center();
+        let north_west = initial_description[0];
+        if initial_description
+            .iter()
+            .all(|(val, _)| *val == north_west.0)
+        {
+            match north_west.0 {
+                Ordering::Equal => return "It seems to be relatively flat".to_string(),
+                Ordering::Greater => {
+                    return "A relatively flat ring around a higher point in the center".to_string()
+                }
+                Ordering::Less => {
+                    return "A relatively flat ring around a lower point in the center".to_string()
+                }
+            }
+        }
+        let wrapping = [initial_description, initial_description].concat();
+        let mut indexs = vec![];
+        let mut current_len = 0;
+        // We iterate over overlapping pairs of values
+        // We want to start checking for the longest set of continuous values at the start of the set, not half way through
+        for [current, next] in wrapping.array_windows().skip_while(|[a, b]| a.0 == b.0) {
+            if current.0 == next.0 {
+                current_len += 1;
+            } else {
+                indexs.push((current.1.turn_by(-current_len), current.1));
+                current_len = 0;
+            }
+        }
+        indexs.sort_by(|a, b| a.0.calc_turns(a.1).cmp(&b.0.calc_turns(b.1)));
+        return "other".to_string();
+    }
+}
+
+#[derive(Clone, Copy, Debug, EnumIter)]
+pub enum Direction {
+    NorthWest = 0,
+    North = 1,
+    NorthEast = 2,
+    East = 3,
+    SouthEast = 4,
+    South = 5,
+    SouthWest = 6,
+    West = 7,
+}
+
+impl Direction {
+    pub fn clockwise_turn_45(self) -> Self {
+        match self {
+            Direction::NorthWest => Direction::North,
+            Direction::North => Direction::NorthEast,
+            Direction::NorthEast => Direction::East,
+            Direction::East => Direction::SouthEast,
+            Direction::SouthEast => Direction::South,
+            Direction::South => Direction::SouthWest,
+            Direction::SouthWest => Direction::West,
+            Direction::West => Direction::NorthWest,
+        }
+    }
+
+    pub fn anticlockwise_turn_45(self) -> Self {
+        match self {
+            Direction::NorthWest => Direction::West,
+            Direction::North => Direction::NorthWest,
+            Direction::NorthEast => Direction::North,
+            Direction::East => Direction::NorthEast,
+            Direction::SouthEast => Direction::East,
+            Direction::South => Direction::SouthEast,
+            Direction::SouthWest => Direction::South,
+            Direction::West => Direction::SouthWest,
+        }
+    }
+
+    pub fn turn_by(self, turns: isize) -> Self {
+        let mut direction = self;
+        if turns > 0 {
+            for _ in 0..turns {
+                direction = self.clockwise_turn_45();
+            }
+            direction
+        } else if turns < 0 {
+            for _ in 0..(-turns) {
+                direction = self.anticlockwise_turn_45();
+            }
+            direction
+        } else {
+            direction
+        }
+    }
+
+    fn calc_turns(self, other: Self) -> usize {
+        (((self as isize - other as isize) + 8) % 8) as usize
+    }
 }

@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![feature(try_blocks)]
 #![feature(iter_map_windows)]
+#![feature(array_windows)]
 
 mod audio;
 mod commandline;
