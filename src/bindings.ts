@@ -200,6 +200,9 @@ export const commands = {
   async playHistogram(): Promise<void> {
     await TAURI_INVOKE("play_histogram");
   },
+  async generateCountsReport(name: string): Promise<void> {
+    await TAURI_INVOKE("generate_counts_report", { name });
+  },
 };
 
 /** user-defined types **/

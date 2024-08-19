@@ -1,11 +1,10 @@
 import { Point, Classification, RasterScreenData } from "./bindings";
-import { save } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { client } from "./api";
-import { Dialog, useDialog } from "./dialog";
 import { ReprojectionDialog } from "./reprojection-dialog";
 import { DemMethodsDialog } from "./dem_methods";
 import { ClassificationDialog } from "./classification";
+import { SaveButton } from "./save-button";
 
 const tools = ["None", "Trace geometries"] as const;
 
@@ -16,6 +15,12 @@ export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
       <ReprojectionDialog />
       <DemMethodsDialog />
       <ClassificationDialog />
+      <SaveButton
+        text="Generate pixel counts report"
+        prompt="Counts report file"
+        filters={[{ name: "csv", extensions: ["csv"] }]}
+        onSave={client.generateCountsReport}
+      />
       <button onClick={() => client.playAsSound()}>Play audio</button>
       <button onClick={() => client.playHistogram()}>
         Play audio Histogram

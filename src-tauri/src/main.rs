@@ -137,6 +137,7 @@ fn generate_handlers<R: Runtime>(
             calc_roughness,
             play_as_sound,
             play_histogram,
+            generate_counts_report
         ])
         .path(s)
         .config(
@@ -1100,4 +1101,39 @@ fn play_histogram(state: AppState, audio: State<SyncSender<AudioMessage>>) {
                 .unwrap();
         })
         .expect("Not a raster band");
+}
+
+#[tauri::command]
+#[specta::specta]
+fn generate_counts_report(name: String, state: AppState) {
+    let pixels = state
+        .with_current_raster_band(|band| read_raster_data(&band.band))
+        .unwrap();
+    let counts = pixels.into_iter().counts_by(|x| x.to_le_bytes());
+    let total: f64 = counts.values().sum::<usize>() as f64;
+    let mut report = counts
+        .into_iter()
+        .map(|(pixel, occurences)| {
+            (
+                f64::from_le_bytes(pixel),
+                occurences,
+                occurences as f64 / total * 100.0,
+            )
+        })
+        .collect_vec();
+    report.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let mut output = csv::Writer::from_path(name).unwrap();
+    output
+        .write_record(["value", "count", "percentage"])
+        .unwrap();
+
+    report.iter().for_each(|(pixel, count, percentage)| {
+        output
+            .write_record([
+                pixel.to_string(),
+                count.to_string(),
+                format!("{:.2}", percentage),
+            ])
+            .unwrap();
+    })
 }
