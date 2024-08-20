@@ -5,7 +5,6 @@
 
 mod audio;
 mod commandline;
-mod dataset_collection;
 mod files;
 mod gdal_if;
 mod geometry;
@@ -17,6 +16,8 @@ mod thiessen_polygons;
 mod tools;
 mod ui;
 mod web_socket;
+
+pub use state::dataset_collection;
 
 use audio::AudioMessage;
 use clap::Parser;

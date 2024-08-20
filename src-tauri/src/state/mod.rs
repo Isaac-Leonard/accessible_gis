@@ -1,3 +1,4 @@
+pub mod dataset_collection;
 mod loaded;
 mod preloaded;
 mod ui_state;
