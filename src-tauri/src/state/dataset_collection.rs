@@ -94,6 +94,27 @@ pub enum DatasetCollection {
 }
 
 impl DatasetCollection {
+    fn get_layer(&mut self, index: DatasetLayerIndex) -> Option<StatefulLayerEnum> {
+        match self {
+            Self::Empty => None,
+            Self::NonEmpty(ref mut datasets) => datasets.get(index),
+        }
+    }
+
+    pub fn get_vector(&mut self, index: VectorIndex) -> Option<StatefulVectorLayer> {
+        match self {
+            Self::Empty => None,
+            Self::NonEmpty(ref mut datasets) => datasets.get_vector(index),
+        }
+    }
+
+    pub fn get_raster(&mut self, index: RasterIndex) -> Option<StatefulRasterBand> {
+        match self {
+            Self::Empty => None,
+            Self::NonEmpty(ref mut datasets) => datasets.get_raster(index),
+        }
+    }
+
     pub fn create_from_current_dataset<E, F>(
         &mut self,
         f: F,

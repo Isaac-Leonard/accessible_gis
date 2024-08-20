@@ -61,11 +61,13 @@ impl<'a> StatefulLayerEnum<'a> {
 }
 
 /// Layer in this case refering to either a raster band or vector layer
+#[derive(Clone, Copy, Debug)]
 pub struct DatasetLayerIndex {
     pub dataset: usize,
     pub layer: LayerIndex,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct RasterIndex {
     pub dataset: usize,
     pub band: usize,
@@ -80,6 +82,7 @@ impl From<RasterIndex> for DatasetLayerIndex {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct VectorIndex {
     pub dataset: usize,
     pub layer: usize,

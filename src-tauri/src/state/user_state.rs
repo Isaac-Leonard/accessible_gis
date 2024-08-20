@@ -7,7 +7,7 @@ use crate::{
     FeatureInfo,
 };
 
-use super::gis::{combined::RasterIndex, dataset::StatefulDataset};
+use super::gis::{combined::RasterIndex, dataset::StatefulDataset, raster::StatefulRasterBand};
 
 #[derive(Default)]
 pub struct UserState {
@@ -17,6 +17,10 @@ pub struct UserState {
 }
 
 impl UserState {
+    pub fn get_raster_to_display(&mut self) -> Option<StatefulRasterBand> {
+        self.datasets.get_raster(self.raster_to_display?)
+    }
+
     pub fn get_vectors_for_display(&mut self) -> Vec<FeatureInfo> {
         let main_srs = self
             .with_current_dataset_mut(|ds, _| ds.dataset.dataset.spatial_ref().unwrap())
