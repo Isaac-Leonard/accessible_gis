@@ -66,6 +66,18 @@ pub trait NonEmptyDelegatorImpl: NonEmptyDelegator {
         let dataset = self.get_non_empty_mut()?.datasets.get_mut(index.dataset)?;
         dataset.get_raster(index.band)
     }
+
+    fn iter(&self) -> Iter<'_, StatefulDataset> {
+        self.get_non_empty()
+            .map(|x| x.datasets.iter())
+            .unwrap_or_default()
+    }
+
+    fn iter_mut(&mut self) -> IterMut<'_, StatefulDataset> {
+        self.get_non_empty_mut()
+            .map(|x| x.datasets.iter_mut())
+            .unwrap_or_default()
+    }
 }
 
 impl<T: NonEmptyDelegator> NonEmptyDelegatorImpl for T {}
@@ -120,14 +132,6 @@ impl NonEmptyDatasetCollection {
             .expect("Could not flush changes to disc");
         self.add(StatefulDataset::new(res));
         Ok(self.datasets.last_mut().unwrap())
-    }
-
-    pub fn iter(&mut self) -> std::slice::Iter<'_, StatefulDataset> {
-        self.datasets.iter()
-    }
-
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, StatefulDataset> {
-        self.datasets.iter_mut()
     }
 }
 
@@ -225,20 +229,6 @@ impl DatasetCollection {
                 Some(res)
             }
             Self::Empty => None,
-        }
-    }
-
-    pub fn iter(&mut self) -> Iter<'_, StatefulDataset> {
-        match self {
-            Self::NonEmpty(datasets) => datasets.iter(),
-            Self::Empty => Iter::default(),
-        }
-    }
-
-    pub fn iter_mut(&mut self) -> IterMut<'_, StatefulDataset> {
-        match self {
-            Self::NonEmpty(datasets) => datasets.iter_mut(),
-            Self::Empty => IterMut::default(),
         }
     }
 }

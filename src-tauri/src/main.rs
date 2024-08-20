@@ -48,6 +48,7 @@ use rstar::{RTree, RTreeObject};
 use serde::{Deserialize, Serialize};
 use specta::ts::{formatter::prettier, BigIntExportBehavior, ExportConfig};
 use state::{
+    dataset_collection::NonEmptyDelegatorImpl,
     gis::{combined::StatefulLayerEnum, dataset::StatefulDataset, vector::StatefulVectorInfo},
     AppData, AppState, Screen,
 };
