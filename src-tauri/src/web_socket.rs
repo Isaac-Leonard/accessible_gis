@@ -1,6 +1,5 @@
 use std::{
     pin::pin,
-    sync::Arc,
     time::{Duration, Instant},
 };
 
@@ -9,19 +8,13 @@ use futures_util::{
     future::{select, Either},
     StreamExt,
 };
-use gdal::vector::{Geometry, LayerAccess, ToGdal};
+use gdal::vector::{LayerAccess, ToGdal};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
-use tokio::{
-    sync::{
-        mpsc::{unbounded_channel, UnboundedSender},
-        oneshot, Mutex,
-    },
-    time::interval,
-};
+use tokio::{sync::mpsc::unbounded_channel, time::interval};
 
-use crate::{gdal_if::LocalFeatureInfo, geometry::Point, state::AppState};
+use crate::{geometry::Point, state::AppState};
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);

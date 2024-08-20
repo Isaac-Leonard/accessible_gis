@@ -1,6 +1,8 @@
 pub mod dataset_collection;
+pub mod gis;
 mod loaded;
 mod preloaded;
+pub mod settings;
 mod ui_state;
 mod user_state;
 
@@ -9,14 +11,14 @@ use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::{
-    dataset_collection::{StatefulDataset, StatefulLayerEnum, StatefulVectorLayer},
-    gdal_if::{Envelope, WrappedRasterBand},
-};
+use crate::gdal_if::{Envelope, WrappedRasterBand};
 
 pub use loaded::*;
 pub use preloaded::*;
-pub use user_state::*;
+
+use self::gis::{
+    combined::StatefulLayerEnum, dataset::StatefulDataset, vector::StatefulVectorLayer,
+};
 
 pub type AppState<'a> = State<'a, AppDataSync>;
 

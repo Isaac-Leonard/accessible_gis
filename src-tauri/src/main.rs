@@ -22,10 +22,8 @@ pub use state::dataset_collection;
 use audio::AudioMessage;
 use clap::Parser;
 use core::cmp::Ordering;
-use dataset_collection::{StatefulDataset, StatefulLayerEnum, StatefulVectorInfo};
 use files::get_csv;
 use gdal::{
-    errors::GdalError,
     raster::StatisticsMinMax,
     spatial_ref::SpatialRef,
     vector::{LayerAccess, ToGdal},
@@ -49,7 +47,10 @@ use proj::Transform;
 use rstar::{RTree, RTreeObject};
 use serde::{Deserialize, Serialize};
 use specta::ts::{formatter::prettier, BigIntExportBehavior, ExportConfig};
-use state::{AppData, AppState, Screen};
+use state::{
+    gis::{combined::StatefulLayerEnum, dataset::StatefulDataset, vector::StatefulVectorInfo},
+    AppData, AppState, Screen,
+};
 use statrs::statistics::Statistics;
 use strum::{EnumDiscriminants, EnumIter};
 use tauri::{ipc::Invoke, Manager, Runtime, State};

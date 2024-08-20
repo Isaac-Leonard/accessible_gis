@@ -6,14 +6,17 @@ use geo_types::{LineString, Point, Polygon};
 use itertools::Itertools;
 
 use crate::{
-    dataset_collection::{
-        DatasetCollection, StatefulDataset, StatefulRasterBand, StatefulVectorLayer,
-    },
+    dataset_collection::DatasetCollection,
     gdal_if::{LocalFeatureInfo, WrappedDataset},
     geometry::AsPoint,
 };
 
-use super::{preloaded::Country, user_state::UserState, CountryImpl, Screen};
+use super::{
+    gis::{dataset::StatefulDataset, raster::StatefulRasterBand, vector::StatefulVectorLayer},
+    preloaded::Country,
+    user_state::UserState,
+    CountryImpl, Screen,
+};
 
 #[derive(Default)]
 pub struct AppData {

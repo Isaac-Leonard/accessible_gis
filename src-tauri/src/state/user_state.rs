@@ -1,11 +1,13 @@
 use gdal::vector::LayerAccess;
 
 use crate::{
-    dataset_collection::{DatasetCollection, StatefulDataset},
+    dataset_collection::DatasetCollection,
     gdal_if::{get_fields, WrappedDataset},
     tools::ToolList,
     FeatureInfo,
 };
+
+use super::gis::dataset::StatefulDataset;
 
 #[derive(Default)]
 pub struct UserState {

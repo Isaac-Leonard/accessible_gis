@@ -12,10 +12,12 @@ use proj::Transform;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dataset_collection::{StatefulDataset, StatefulVectorInfo},
     gdal_if::{get_driver_for_file, WrappedDataset},
     geometry::{MultiPoint, Point, Polygon},
-    state::AppState,
+    state::{
+        gis::{dataset::StatefulDataset, vector::StatefulVectorInfo},
+        AppState,
+    },
 };
 
 #[tauri::command]
