@@ -29,15 +29,12 @@ pub struct AppData {
 
 impl AppData {
     pub fn new() -> Self {
-        let settings = std::fs::read("settings.json")
-            .map(|x| serde_json::from_slice(&x).expect("Could not read settings file"))
-            .unwrap_or_default();
         Self {
             towns: HashMap::new(),
             screen: Screen::Main,
             shared: UserState::default(),
             errors: Vec::new(),
-            settings,
+            settings: GlobalSettings::read(),
         }
     }
 

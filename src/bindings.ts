@@ -203,6 +203,18 @@ export const commands = {
   async generateCountsReport(name: string): Promise<void> {
     await TAURI_INVOKE("generate_counts_report", { name });
   },
+  async openSettings(): Promise<void> {
+    await TAURI_INVOKE("open_settings");
+  },
+  async setShowFirstRasterByDefault(val: boolean): Promise<void> {
+    await TAURI_INVOKE("set_show_first_raster_by_default", { val });
+  },
+  async setShowCountriesByDefault(val: boolean): Promise<void> {
+    await TAURI_INVOKE("set_show_countries_by_default", { val });
+  },
+  async setShowTownsByDefault(val: boolean): Promise<void> {
+    await TAURI_INVOKE("set_show_towns_by_default", { val });
+  },
 };
 
 /** user-defined types **/

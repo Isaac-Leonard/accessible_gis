@@ -2,6 +2,7 @@ import { ThiessenPolygons } from "./thiessen-polygons-screen";
 import { MainScreen } from "./main-screen";
 import { NewDatasetScreen } from "./new-dataset-screen";
 import { state } from "./api";
+import { SettingsScreen } from "./settings-screen";
 
 export const Router = () => {
   switch (state.value.name) {
@@ -11,5 +12,7 @@ export const Router = () => {
       return <ThiessenPolygons />;
     case "NewDataset":
       return <NewDatasetScreen drivers={state.value.drivers} />;
+    case "Settings":
+      return <SettingsScreen settings={state.value} />;
   }
 };

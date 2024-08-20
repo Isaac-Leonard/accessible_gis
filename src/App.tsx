@@ -21,6 +21,7 @@ function App() {
         New dataset
       </button>
       <button onClick={() => {}}>Tools</button>
+      <button onClick={() => client.openSettings()}>Settings</button>
       <Router />
     </div>
   );

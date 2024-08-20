@@ -139,7 +139,11 @@ fn generate_handlers<R: Runtime>(
             calc_roughness,
             play_as_sound,
             play_histogram,
-            generate_counts_report
+            generate_counts_report,
+            open_settings,
+            set_show_first_raster_by_default,
+            set_show_countries_by_default,
+            set_show_towns_by_default
         ])
         .path(s)
         .config(
@@ -208,7 +212,7 @@ fn launch_gui() {
             // Print the IP address and port
             let port = 80;
             println!("Server running at http://{}:{}/", local_ip, port);
-
+            println!("cwd {:?}", std::env::current_dir());
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -1144,3 +1148,22 @@ fn open_settings(state: AppState) {
         state.screen = Screen::Settings;
     })
 }
+
+macro_rules! generate_general_settings_setter {
+    ($fn_name:ident, $setter:ident) => {
+        #[tauri::command]
+        #[specta::specta]
+        fn $fn_name(val: bool, state: AppState) {
+            eprintln!("Called settings setter");
+            state.with_lock(|state| {
+                state.settings.$setter(val);
+            })
+        }
+    };
+}
+
+generate_general_settings_setter!(set_show_first_raster_by_default, set_display_first_raster);
+
+generate_general_settings_setter!(set_show_countries_by_default, set_show_countries_by_default);
+
+generate_general_settings_setter!(set_show_towns_by_default, set_show_towns_by_default);
