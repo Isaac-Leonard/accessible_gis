@@ -19,22 +19,67 @@ pub struct NonEmptyDatasetCollection {
     index: usize,
 }
 
-impl NonEmptyDatasetCollection {
-    pub fn get(&mut self, index: DatasetLayerIndex) -> Option<StatefulLayerEnum> {
-        let mut dataset = self.datasets.get_mut(index.dataset)?;
+trait NonEmptyDelegator {
+    fn get_non_empty(&self) -> Option<&NonEmptyDatasetCollection>;
+    fn get_non_empty_mut(&mut self) -> Option<&mut NonEmptyDatasetCollection>;
+}
+
+pub trait NonEmptyDelegatorImpl: NonEmptyDelegator {
+    fn get_current_index(&self) -> Option<DatasetLayerIndex> {
+        let non_empty = self.get_non_empty()?;
+        let dataset = non_empty.datasets.get(non_empty.index).unwrap();
+        Some(DatasetLayerIndex {
+            dataset: non_empty.index,
+            layer: dataset.layer_index?,
+        })
+    }
+
+    fn get_current_vector_index(&self) -> Option<VectorIndex> {
+        let non_empty = self.get_non_empty()?;
+        let dataset = non_empty.datasets.get(non_empty.index).unwrap();
+        Some(VectorIndex {
+            dataset: non_empty.index,
+            layer: *dataset.layer_index?.as_vector()?,
+        })
+    }
+
+    fn get_current_raster_index(&self) -> Option<RasterIndex> {
+        let non_empty = self.get_non_empty()?;
+        let dataset = non_empty.datasets.get(non_empty.index).unwrap();
+        Some(RasterIndex {
+            dataset: non_empty.index,
+            band: *dataset.layer_index?.as_raster()?,
+        })
+    }
+
+    fn get(&mut self, index: DatasetLayerIndex) -> Option<StatefulLayerEnum> {
+        let dataset = self.get_non_empty_mut()?.datasets.get_mut(index.dataset)?;
         dataset.get_layer(index.layer)
     }
 
-    pub fn get_vector(&mut self, index: VectorIndex) -> Option<StatefulVectorLayer> {
-        let dataset = self.datasets.get_mut(index.dataset)?;
+    fn get_vector(&mut self, index: VectorIndex) -> Option<StatefulVectorLayer> {
+        let dataset = self.get_non_empty_mut()?.datasets.get_mut(index.dataset)?;
         dataset.get_vector(index.layer)
     }
 
-    pub fn get_raster(&mut self, index: RasterIndex) -> Option<StatefulRasterBand> {
-        let dataset = self.datasets.get_mut(index.dataset)?;
+    fn get_raster(&mut self, index: RasterIndex) -> Option<StatefulRasterBand> {
+        let dataset = self.get_non_empty_mut()?.datasets.get_mut(index.dataset)?;
         dataset.get_raster(index.band)
     }
+}
 
+impl<T: NonEmptyDelegator> NonEmptyDelegatorImpl for T {}
+
+impl NonEmptyDelegator for NonEmptyDatasetCollection {
+    fn get_non_empty(&self) -> Option<&NonEmptyDatasetCollection> {
+        Some(self)
+    }
+    fn get_non_empty_mut(&mut self) -> Option<&mut NonEmptyDatasetCollection> {
+        Some(self)
+    }
+}
+
+impl NonEmptyDatasetCollection {
     pub fn add(&mut self, dataset: StatefulDataset) {
         self.datasets.push(dataset)
     }
@@ -93,28 +138,23 @@ pub enum DatasetCollection {
     NonEmpty(NonEmptyDatasetCollection),
 }
 
+impl NonEmptyDelegator for DatasetCollection {
+    fn get_non_empty(&self) -> Option<&NonEmptyDatasetCollection> {
+        match self {
+            Self::NonEmpty(ref datasets) => Some(datasets),
+            Self::Empty => None,
+        }
+    }
+
+    fn get_non_empty_mut(&mut self) -> Option<&mut NonEmptyDatasetCollection> {
+        match self {
+            Self::NonEmpty(ref mut datasets) => Some(datasets),
+            Self::Empty => None,
+        }
+    }
+}
+
 impl DatasetCollection {
-    fn get_layer(&mut self, index: DatasetLayerIndex) -> Option<StatefulLayerEnum> {
-        match self {
-            Self::Empty => None,
-            Self::NonEmpty(ref mut datasets) => datasets.get(index),
-        }
-    }
-
-    pub fn get_vector(&mut self, index: VectorIndex) -> Option<StatefulVectorLayer> {
-        match self {
-            Self::Empty => None,
-            Self::NonEmpty(ref mut datasets) => datasets.get_vector(index),
-        }
-    }
-
-    pub fn get_raster(&mut self, index: RasterIndex) -> Option<StatefulRasterBand> {
-        match self {
-            Self::Empty => None,
-            Self::NonEmpty(ref mut datasets) => datasets.get_raster(index),
-        }
-    }
-
     pub fn create_from_current_dataset<E, F>(
         &mut self,
         f: F,
