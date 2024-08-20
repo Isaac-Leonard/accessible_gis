@@ -14,19 +14,33 @@ use crate::{
 use super::{
     gis::{dataset::StatefulDataset, raster::StatefulRasterBand, vector::StatefulVectorLayer},
     preloaded::Country,
+    settings::GlobalSettings,
     user_state::UserState,
     CountryImpl, Screen,
 };
 
-#[derive(Default)]
 pub struct AppData {
     pub towns: HashMap<String, Vec<LocalFeatureInfo>>,
     pub screen: Screen,
     pub shared: UserState,
     pub errors: Vec<String>,
+    pub settings: GlobalSettings,
 }
 
 impl AppData {
+    pub fn new() -> Self {
+        let settings = std::fs::read("settings.json")
+            .map(|x| serde_json::from_slice(&x).expect("Could not read settings file"))
+            .unwrap_or_default();
+        Self {
+            towns: HashMap::new(),
+            screen: Screen::Main,
+            shared: UserState::default(),
+            errors: Vec::new(),
+            settings,
+        }
+    }
+
     pub fn create_from_current_dataset<E, F>(
         &mut self,
         f: F,

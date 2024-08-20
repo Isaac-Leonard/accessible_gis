@@ -307,6 +307,11 @@ export type Geometry =
   | ({ type: "MultiPolygon" } & MultiPolygon)
   | ({ type: "GeometryCollection" } & GeometryCollection);
 export type GeometryCollection = { geometries: Geometry[] };
+export type GlobalSettings = {
+  show_towns_by_default: boolean;
+  show_countries_by_default: boolean;
+  display_first_raster: boolean;
+};
 export type LayerDescriptor = (
   | { type: "Vector"; index: number }
   | { type: "Raster"; index: number }
@@ -355,7 +360,7 @@ export type RasterScreenData = {
   display: boolean;
 };
 export type RasterSize = { width: number; length: number; bands: number };
-export type Screen = "Main" | "NewDataset";
+export type Screen = "Main" | "NewDataset" | "Settings";
 export type Srs =
   | { type: "Proj"; value: string }
   | { type: "Wkt"; value: string }
@@ -374,7 +379,8 @@ export type ToolDataDiscriminants = "TraceGeometries";
 export type UiScreen =
   | ({ name: "Layers" } & LayerScreen)
   | { name: "ThiessenPolygons" }
-  | ({ name: "NewDataset" } & NewDatasetScreenData);
+  | ({ name: "NewDataset" } & NewDatasetScreenData)
+  | ({ name: "Settings" } & GlobalSettings);
 export type UiToolData = {
   type: "TracingGeometry";
   points: Point[];

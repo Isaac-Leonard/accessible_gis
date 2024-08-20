@@ -1,8 +1,6 @@
 use std::slice::{Iter, IterMut};
 
 use gdal::vector::Layer;
-use itertools::Itertools;
-use strum::IntoEnumIterator;
 
 use crate::{
     gdal_if::{LayerEnum, LayerExt, LayerIndex, WrappedDataset},

@@ -99,4 +99,5 @@ pub enum Screen {
     #[default]
     Main,
     NewDataset,
+    Settings,
 }

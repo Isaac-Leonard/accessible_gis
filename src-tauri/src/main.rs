@@ -63,7 +63,7 @@ use std::{
     ffi::CString,
     path::Path,
     process::Command,
-    sync::{mpsc::SyncSender, MutexGuard},
+    sync::{mpsc::SyncSender, Arc, Mutex, MutexGuard},
 };
 
 use crate::{
@@ -91,6 +91,7 @@ fn get_app_info(state: AppState) -> UiScreen {
         Screen::NewDataset => UiScreen::NewDataset(NewDatasetScreenData {
             drivers: list_drivers(),
         }),
+        Screen::Settings => UiScreen::Settings(state.settings.clone()),
     })
 }
 
@@ -187,7 +188,7 @@ fn launch_gui() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .manage(AppDataSync {
-            data: Default::default(),
+            data: Arc::new(Mutex::new(AppData::new())),
             default_data: PreloadedAppData { countries },
         })
         .invoke_handler(handlers)
@@ -1133,5 +1134,13 @@ fn generate_counts_report(name: String, state: AppState) {
                 format!("{:.2}", percentage),
             ])
             .unwrap();
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
+fn open_settings(state: AppState) {
+    state.with_lock(|state| {
+        state.screen = Screen::Settings;
     })
 }

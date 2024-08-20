@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     gdal_if::{FieldSchema, FieldValue, LayerExt, LayerIndex},
     geometry::Point,
-    state::AppData,
+    state::{settings::GlobalSettings, AppData},
     FeatureInfo, LayerDescriptor,
 };
 
@@ -15,6 +15,7 @@ pub enum UiScreen {
     Layers(LayerScreen),
     ThiessenPolygons,
     NewDataset(NewDatasetScreenData),
+    Settings(GlobalSettings),
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]

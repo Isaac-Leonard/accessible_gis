@@ -1,5 +1,23 @@
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+pub struct GlobalSettings {
+    show_towns_by_default: bool,
+    show_countries_by_default: bool,
+    display_first_raster: bool,
+}
+
+impl Default for GlobalSettings {
+    fn default() -> Self {
+        Self {
+            show_towns_by_default: false,
+            show_countries_by_default: false,
+            display_first_raster: true,
+        }
+    }
+}
 
 pub struct AudioSettings {
     pub min_freq: f64,

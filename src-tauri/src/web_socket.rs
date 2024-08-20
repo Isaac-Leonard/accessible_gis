@@ -9,7 +9,6 @@ use futures_util::{
     StreamExt,
 };
 use gdal::vector::{LayerAccess, ToGdal};
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tokio::{sync::mpsc::unbounded_channel, time::interval};
