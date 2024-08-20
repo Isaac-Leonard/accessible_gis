@@ -1,3 +1,5 @@
+use crate::gdal_if::LayerIndex;
+
 use super::{raster::StatefulRasterBand, shared::SharedInfo, vector::StatefulVectorLayer};
 
 pub enum StatefulLayerEnum<'a> {
@@ -54,6 +56,40 @@ impl<'a> StatefulLayerEnum<'a> {
             Ok(v)
         } else {
             Err(self)
+        }
+    }
+}
+
+/// Layer in this case refering to either a raster band or vector layer
+pub struct DatasetLayerIndex {
+    pub dataset: usize,
+    pub layer: LayerIndex,
+}
+
+pub struct RasterIndex {
+    pub dataset: usize,
+    pub band: usize,
+}
+
+impl From<RasterIndex> for DatasetLayerIndex {
+    fn from(value: RasterIndex) -> Self {
+        Self {
+            dataset: value.dataset,
+            layer: LayerIndex::Raster(value.band),
+        }
+    }
+}
+
+pub struct VectorIndex {
+    pub dataset: usize,
+    pub layer: usize,
+}
+
+impl From<VectorIndex> for DatasetLayerIndex {
+    fn from(value: VectorIndex) -> Self {
+        Self {
+            dataset: value.dataset,
+            layer: LayerIndex::Vector(value.layer),
         }
     }
 }

@@ -87,10 +87,13 @@ impl StatefulDataset {
     }
 
     pub fn get_current_layer(&mut self) -> Option<StatefulLayerEnum> {
-        match self.layer_index {
-            Some(LayerIndex::Vector(index)) => self.get_vector(index).map(Into::into),
-            Some(LayerIndex::Raster(index)) => self.get_raster(index).map(Into::into),
-            None => None,
+        self.get_layer(self.layer_index?)
+    }
+
+    pub fn get_layer(&mut self, index: LayerIndex) -> Option<StatefulLayerEnum> {
+        match index {
+            LayerIndex::Vector(index) => self.get_vector(index).map(Into::into),
+            LayerIndex::Raster(index) => self.get_raster(index).map(Into::into),
         }
     }
 

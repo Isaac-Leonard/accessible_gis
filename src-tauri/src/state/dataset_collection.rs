@@ -7,7 +7,12 @@ use crate::{
     LayerDescriptor,
 };
 
-use super::gis::dataset::StatefulDataset;
+use super::gis::{
+    combined::{DatasetLayerIndex, RasterIndex, StatefulLayerEnum, VectorIndex},
+    dataset::StatefulDataset,
+    raster::StatefulRasterBand,
+    vector::StatefulVectorLayer,
+};
 
 pub struct NonEmptyDatasetCollection {
     datasets: Vec<StatefulDataset>,
@@ -15,6 +20,21 @@ pub struct NonEmptyDatasetCollection {
 }
 
 impl NonEmptyDatasetCollection {
+    pub fn get(&mut self, index: DatasetLayerIndex) -> Option<StatefulLayerEnum> {
+        let mut dataset = self.datasets.get_mut(index.dataset)?;
+        dataset.get_layer(index.layer)
+    }
+
+    pub fn get_vector(&mut self, index: VectorIndex) -> Option<StatefulVectorLayer> {
+        let dataset = self.datasets.get_mut(index.dataset)?;
+        dataset.get_vector(index.layer)
+    }
+
+    pub fn get_raster(&mut self, index: RasterIndex) -> Option<StatefulRasterBand> {
+        let dataset = self.datasets.get_mut(index.dataset)?;
+        dataset.get_raster(index.band)
+    }
+
     pub fn add(&mut self, dataset: StatefulDataset) {
         self.datasets.push(dataset)
     }

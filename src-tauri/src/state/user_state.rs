@@ -7,13 +7,13 @@ use crate::{
     FeatureInfo,
 };
 
-use super::gis::dataset::StatefulDataset;
+use super::gis::{combined::RasterIndex, dataset::StatefulDataset};
 
 #[derive(Default)]
 pub struct UserState {
     pub datasets: DatasetCollection,
     pub tools_data: ToolList,
-    pub show_towns: bool,
+    pub raster_to_display: Option<RasterIndex>,
 }
 
 impl UserState {
