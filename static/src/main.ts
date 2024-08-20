@@ -4,6 +4,7 @@ import { getTextFromImage } from "./render-image";
 import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
 import { mapPixel, rectContains } from "./utils";
+import { FeatureInfo } from "./types";
 
 const border = 16;
 const root = document.getElementById("image");
@@ -225,6 +226,23 @@ const manager = (canvas: HTMLCanvasElement) => {
     speak(activeLine.text);
   };
 
+  const features: FeatureInfo[] = [];
+  let activeFeature: FeatureInfo | null = null;
+  const manageFeatures = (x: number, y: number) => {
+    const feature = features.find((feature) =>
+      geomContains(feature.geometry, x, y)
+    );
+    if (feature === undefined) {
+      activeFeature = null;
+      return;
+    }
+    if (feature === activeFeature) {
+      return;
+    }
+    activeFeature = feature;
+    speak(activeFeature.fields[n]);
+  };
+
   const startHandler = (e: TouchEvent) => {
     e.preventDefault();
     playAudio();
@@ -234,6 +252,7 @@ const manager = (canvas: HTMLCanvasElement) => {
     const pixel = image.data.slice(index, index + 3);
     const average = mean(pixel);
     manageText(x, y);
+    manageFeatures(x, y);
     setAudioFrequency(mapPixel(average));
   };
 

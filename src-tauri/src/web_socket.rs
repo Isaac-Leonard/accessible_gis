@@ -9,8 +9,10 @@ use futures_util::{
     future::{select, Either},
     StreamExt,
 };
+use gdal::vector::{Geometry, LayerAccess, ToGdal};
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tokio::{
     sync::{
         mpsc::{unbounded_channel, UnboundedSender},
@@ -19,46 +21,7 @@ use tokio::{
     time::interval,
 };
 
-pub enum Command {
-    Connect {
-        conn_tx: UnboundedSender<()>,
-        res_tx: oneshot::Sender<bool>,
-    },
-    Disconnect,
-    Message,
-}
-
-#[derive(Debug, Clone)]
-pub struct WsServerHandle {
-    command_tx: Arc<Mutex<Option<UnboundedSender<Command>>>>,
-}
-
-impl WsServerHandle {
-    pub fn new() -> Self {
-        Self {
-            command_tx: Default::default(),
-        }
-    }
-
-    /// Register client message sender and obtain connection ID.
-    pub async fn connect(&self, conn_tx: UnboundedSender<Command>) -> bool {
-        let mut x = self.command_tx.lock().await;
-        match *x {
-            Some(_) => false,
-            None => {
-                x.insert(conn_tx);
-                true
-            }
-        }
-    }
-
-    pub async fn send(&self, message: ()) -> bool {
-        let x = self.command_tx.lock().await;
-        x.as_ref()
-            .map(|x| x.send(Command::Message).unwrap())
-            .is_some()
-    }
-}
+use crate::{gdal_if::LocalFeatureInfo, geometry::Point, state::AppState};
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -66,15 +29,13 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub async fn ws_handle(
-    server: WsServerHandle,
     app: AppHandle,
     mut session: actix_ws::Session,
     msg_stream: actix_ws::MessageStream,
 ) {
     let mut last_heartbeat = Instant::now();
     let mut interval = interval(HEARTBEAT_INTERVAL);
-    let (mut connection_tx, mut connection_rx) = unbounded_channel();
-    let conn_id = server.connect(connection_tx).await;
+    let (_, mut connection_rx) = unbounded_channel::<()>();
     let msg_stream = msg_stream
         .max_frame_size(128 * 1024)
         .aggregate_continuations()
@@ -107,7 +68,8 @@ pub async fn ws_handle(
                             }
 
                             AggregatedMessage::Text(text) => {
-                                process_text_msg(&server, &mut session, &text).await;
+                                let message = serde_json::from_str(&text).unwrap();
+                                send_msg(app.clone(), &mut session, message).await;
                             }
 
                             AggregatedMessage::Binary(_bin) => {
@@ -159,24 +121,49 @@ enum Message {
     Screen,
 }
 
-async fn process_text_msg(
-    app: &WsServerHandle,
-    external_display: &mut actix_ws::Session,
-    text: &str,
-) {
-    let msg = serde_json::from_str::<Message>(text);
-    // we check for /<cmd> type of messages
-    let msg = match msg {
-        Ok(msg) => msg,
-        Err(e) => {
-            eprintln!("{:?}", e);
-            return;
-        }
-    };
+async fn send_msg(app: AppHandle, external_display: &mut actix_ws::Session, msg: Message) {
     match msg {
         Message::Screen => external_display.text("message").await.unwrap(),
         Message::App => {
-            app.send(());
+            app.emit("", "Message");
         }
     }
+}
+
+enum RecievedMessage {}
+
+fn handle_message() {}
+
+pub struct ExternalTouchDevice<'a> {
+    ws_setion: &'a mut actix_ws::Session,
+}
+
+impl<'a> ExternalTouchDevice<'a> {
+    fn send(polygon: String) {}
+}
+
+fn get_current_polygon(point: Point, state: AppState) -> Option<String> {
+    // Point is in xy coordinates relative to a screen
+    // We need to transform it into coordinates relative to the current geometry layer.
+    let point = geo::Point::from(point).to_gdal().unwrap();
+    state
+        .with_current_vector_layer(|layer| -> Option<String> {
+            let feature = layer
+                .layer
+                .layer
+                .features()
+                .find(|x| x.geometry().unwrap().contains(&point))?;
+            let name = layer.info.primary_field_name.clone();
+            Some(match name {
+                None => format!("FID: {}", feature.fid().unwrap()),
+                Some(name) => {
+                    format!(
+                        "{}: {}",
+                        name,
+                        feature.field_as_string_by_name(&name).unwrap().unwrap()
+                    )
+                }
+            })
+        })
+        .unwrap()
 }

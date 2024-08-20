@@ -11,7 +11,7 @@ use tokio::task::spawn_local;
 use crate::{
     gdal_if::{read_raster_data_enum_as, RasterData},
     state::AppDataSync,
-    web_socket::{ws_handle, WsServerHandle},
+    web_socket::ws_handle,
     FeatureInfo,
 };
 
@@ -67,11 +67,10 @@ pub struct ImageSize {
     pub bands: Option<usize>,
 }
 
-pub async fn run_server(state: AppDataSync, handle: WsServerHandle, app_handle: AppHandle) {
+pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
     HttpServer::new(move || {
         App::new()
             .app_data(Data::new(state.clone()))
-            .app_data(Data::new(handle.clone()))
             .app_data(Data::new(app_handle.clone()))
             .service(get_image)
             .service(get_file)
@@ -98,17 +97,11 @@ async fn get_vector(state: Data<AppDataSync>) -> Json<Vec<FeatureInfo>> {
 async fn ws(
     req: HttpRequest,
     stream: web::Payload,
-    server: web::Data<WsServerHandle>,
     app_handle: web::Data<AppHandle>,
 ) -> Result<HttpResponse, Error> {
     let (res, session, msg_stream) = actix_ws::handle(&req, stream)?;
 
     // spawn websocket handler (and don't await it) so that the response is returned immediately
-    spawn_local(ws_handle(
-        (**server).clone(),
-        (**app_handle).clone(),
-        session,
-        msg_stream,
-    ));
+    spawn_local(ws_handle((**app_handle).clone(), session, msg_stream));
     Ok(res)
 }
