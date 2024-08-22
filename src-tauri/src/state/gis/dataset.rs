@@ -14,7 +14,7 @@ use crate::{
 
 use super::{
     combined::StatefulLayerEnum,
-    raster::{ImageType, StatefulRasterBand, StatefulRasterInfo},
+    raster::{ImageType, RenderMethod, StatefulRasterBand, StatefulRasterInfo},
     shared::SharedInfo,
     vector::{StatefulVectorInfo, StatefulVectorLayer},
 };
@@ -52,6 +52,7 @@ impl StatefulDataset {
                 audio_settings: AudioSettings::default(),
                 shared: SharedInfo,
                 image_type: ImageType::default(),
+                render: RenderMethod::Image,
             })
             .collect_vec();
 

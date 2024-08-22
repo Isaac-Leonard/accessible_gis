@@ -215,6 +215,9 @@ export const commands = {
   async setShowTownsByDefault(val: boolean): Promise<void> {
     await TAURI_INVOKE("set_show_towns_by_default", { val });
   },
+  async setCurrentRenderMethod(renderMethod: RenderMethod): Promise<void> {
+    await TAURI_INVOKE("set_current_render_method", { renderMethod });
+  },
 };
 
 /** user-defined types **/
@@ -372,6 +375,15 @@ export type RasterScreenData = {
   display: boolean;
 };
 export type RasterSize = { width: number; length: number; bands: number };
+export type RenderMethod =
+  /**
+   * Try to use native browser image rendering or fall back to ImageJS
+   */
+  | "Image"
+  /**
+   * Render pure raster values mapped to 256 grey scale
+   */
+  | "GDAL";
 export type Screen = "Main" | "NewDataset" | "Settings";
 export type Srs =
   | { type: "Proj"; value: string }

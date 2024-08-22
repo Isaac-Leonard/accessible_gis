@@ -11,13 +11,14 @@ use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::gdal_if::{Envelope, WrappedRasterBand};
+use crate::gdal_if::Envelope;
 
 pub use loaded::*;
 pub use preloaded::*;
 
 use self::gis::{
-    combined::StatefulLayerEnum, dataset::StatefulDataset, vector::StatefulVectorLayer,
+    combined::StatefulLayerEnum, dataset::StatefulDataset, raster::StatefulRasterBand,
+    vector::StatefulVectorLayer,
 };
 
 pub type AppState<'a> = State<'a, AppDataSync>;
@@ -48,11 +49,11 @@ impl AppDataSync {
 
     pub fn with_current_raster_band<T, F>(&self, f: F) -> Option<T>
     where
-        F: FnOnce(&mut WrappedRasterBand) -> T,
+        F: FnOnce(&mut StatefulRasterBand) -> T,
     {
         self.with_current_dataset_mut(|dataset, _| {
             let index = *dataset.layer_index?.as_raster()?;
-            let mut band = dataset.dataset.get_raster(index)?;
+            let mut band = dataset.get_raster(index)?;
             Some(f(&mut band))
         })
         .flatten()

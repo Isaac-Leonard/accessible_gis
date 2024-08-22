@@ -1,3 +1,7 @@
+use itertools::Itertools;
+use serde::{Deserialize, Serialize};
+use strum::{EnumIter, IntoEnumIterator};
+
 use crate::{gdal_if::WrappedRasterBand, state::settings::AudioSettings};
 
 use super::shared::SharedInfo;
@@ -17,6 +21,21 @@ pub struct StatefulRasterInfo {
     pub audio_settings: AudioSettings,
     pub shared: SharedInfo,
     pub image_type: ImageType,
+    pub render: RenderMethod,
+}
+
+#[derive(Clone, Copy, Debug, EnumIter, specta::Type, Serialize, Deserialize)]
+pub enum RenderMethod {
+    /// Try to use native browser image rendering or fall back to ImageJS
+    Image,
+    /// Render pure raster values mapped to 256 grey scale
+    GDAL,
+}
+
+impl RenderMethod {
+    fn get_variants() -> Vec<Self> {
+        Self::iter().collect_vec()
+    }
 }
 
 pub struct StatefulRasterBand<'a> {

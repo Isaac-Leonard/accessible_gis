@@ -12,11 +12,13 @@ const createButton = () => {
   const btn = document.createElement("button");
   btn.onclick = () => {
     // Speech needs to be ran on a explicit button click to allow it to work for other interactions to work on certain browsers
-    speak("This is a test string");
+    speak(
+      "If you are using a screen reader please turn it off to use this application"
+    );
     createCanvas();
     btn.remove();
   };
-  btn.textContent = "Clickme";
+  btn.textContent = "Start";
   root?.appendChild(btn);
   return btn;
 };

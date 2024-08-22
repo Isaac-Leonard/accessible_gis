@@ -49,7 +49,10 @@ use serde::{Deserialize, Serialize};
 use specta::ts::{formatter::prettier, BigIntExportBehavior, ExportConfig};
 use state::{
     dataset_collection::NonEmptyDelegatorImpl,
-    gis::{combined::StatefulLayerEnum, dataset::StatefulDataset, vector::StatefulVectorInfo},
+    gis::{
+        combined::StatefulLayerEnum, dataset::StatefulDataset, raster::RenderMethod,
+        vector::StatefulVectorInfo,
+    },
     AppData, AppState, Screen,
 };
 use statrs::statistics::Statistics;
@@ -144,7 +147,8 @@ fn generate_handlers<R: Runtime>(
             open_settings,
             set_show_first_raster_by_default,
             set_show_countries_by_default,
-            set_show_towns_by_default
+            set_show_towns_by_default,
+            set_current_render_method
         ])
         .path(s)
         .config(
@@ -260,14 +264,14 @@ fn get_value_at_point(point: Point, state: AppState) -> Option<f64> {
     state
         .with_current_raster_band(|band| {
             let val = read_raster_data_enum_as(
-                &band.band,
+                &band.band.band,
                 (point.x.round() as isize, point.y.round() as isize),
                 (1, 1),
                 (1, 1),
                 None,
             )?
             .to_f64()[0];
-            if band.no_data_value().is_some_and(|ndv| val == ndv) {
+            if band.band.no_data_value().is_some_and(|ndv| val == ndv) {
                 None
             } else {
                 Some(val)
@@ -281,9 +285,9 @@ fn get_value_at_point(point: Point, state: AppState) -> Option<f64> {
 fn get_point_of_max_value(state: AppState) -> Option<Point> {
     state
         .with_current_raster_band(|band| {
-            let data = read_raster_data(&band.band);
+            let data = read_raster_data(&band.band.band);
             let data_iter = data.indexed_iter();
-            match band.no_data_value() {
+            match band.band.no_data_value() {
                 Some(no_data_value) => itertools::Either::Left(data_iter.filter(move |x| {
                     x.1.total_cmp(&no_data_value) != Ordering::Equal && !x.1.is_nan()
                 })),
@@ -874,7 +878,8 @@ fn select_tool_for_current_index(tool: ToolDataDiscriminants, state: AppState) {
 fn get_image_pixels(state: AppState) -> Result<Vec<u8>, String> {
     state
         .with_current_raster_band(|band| {
-            band.band()
+            band.band
+                .band()
                 .read_band_as::<u8>()
                 .expect("Not u8 data")
                 .into_shape_and_vec()
@@ -1065,17 +1070,18 @@ gen_processing_command!(calc_roughness, roughness);
 fn play_as_sound(state: AppState, audio: State<SyncSender<AudioMessage>>) {
     state
         .with_current_raster_band(|band| {
-            let Ok(StatisticsMinMax { min, max }) = band.band.compute_raster_min_max(false) else {
+            let Ok(StatisticsMinMax { min, max }) = band.band.band.compute_raster_min_max(false)
+            else {
                 eprint!("Failed to ge min max for raster");
                 return;
             };
-            let data = read_raster_data(&band.band);
+            let data = read_raster_data(&band.band.band);
             audio
                 .send(AudioMessage::PlayRaster(
                     data,
                     min,
                     max,
-                    band.no_data_value(),
+                    band.band.no_data_value(),
                     Default::default(),
                 ))
                 .unwrap();
@@ -1088,11 +1094,12 @@ fn play_as_sound(state: AppState, audio: State<SyncSender<AudioMessage>>) {
 fn play_histogram(state: AppState, audio: State<SyncSender<AudioMessage>>) {
     state
         .with_current_raster_band(|band| {
-            let Ok(StatisticsMinMax { min, max }) = band.band.compute_raster_min_max(false) else {
+            let Ok(StatisticsMinMax { min, max }) = band.band.band.compute_raster_min_max(false)
+            else {
                 eprint!("Failed to ge min max for raster");
                 return;
             };
-            let Ok(histogram) = band.band.histogram(min, max, 256, true, false) else {
+            let Ok(histogram) = band.band.band.histogram(min, max, 256, true, false) else {
                 eprint!("Failed to get histogram");
                 return;
             };
@@ -1111,7 +1118,7 @@ fn play_histogram(state: AppState, audio: State<SyncSender<AudioMessage>>) {
 #[specta::specta]
 fn generate_counts_report(name: String, state: AppState) {
     let pixels = state
-        .with_current_raster_band(|band| read_raster_data(&band.band))
+        .with_current_raster_band(|band| read_raster_data(&band.band.band))
         .unwrap();
     let counts = pixels.into_iter().counts_by(|x| x.to_le_bytes());
     let total: f64 = counts.values().sum::<usize>() as f64;
@@ -1168,3 +1175,13 @@ generate_general_settings_setter!(set_show_first_raster_by_default, set_display_
 generate_general_settings_setter!(set_show_countries_by_default, set_show_countries_by_default);
 
 generate_general_settings_setter!(set_show_towns_by_default, set_show_towns_by_default);
+
+#[tauri::command]
+#[specta::specta]
+fn set_current_render_method(render_method: RenderMethod, state: AppState) {
+    state
+        .with_current_raster_band(|band| {
+            band.info.render = render_method;
+        })
+        .expect("No raster band selected");
+}

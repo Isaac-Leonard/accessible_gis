@@ -21,11 +21,11 @@ async fn get_image(size: Query<ImageSize>, state: Data<AppDataSync>) -> impl Res
     let (no_data_value, data) = state
         .with_current_raster_band(|band| {
             (
-                band.band().no_data_value(),
+                band.band.band().no_data_value(),
                 read_raster_data_enum_as(
-                    band.band(),
+                    band.band.band(),
                     (0, 0),
-                    band.band().size(),
+                    band.band.band().size(),
                     (size.width, size.height),
                     None,
                 )
