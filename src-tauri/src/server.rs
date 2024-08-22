@@ -1,9 +1,11 @@
 use actix_files::{self as fs, NamedFile};
 use actix_web::{
     get,
+    http::header::ContentType,
     web::{self, Data, Json, Query},
     App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use tokio::task::spawn_local;
@@ -16,30 +18,30 @@ use crate::{
 };
 
 #[get("/get_image")]
-async fn get_image(size: Query<ImageSize>, state: Data<AppDataSync>) -> impl Responder {
+async fn get_image(size: Query<ImageSize>, state: Data<AppDataSync>) -> HttpResponse {
     let ImageSize { width, height, .. } = *size;
-    let (no_data_value, data) = state
+    let data = state
         .with_current_raster_band(|band| {
-            (
-                band.band.band().no_data_value(),
-                read_raster_data_enum_as(
-                    band.band.band(),
-                    (0, 0),
-                    band.band.band().size(),
-                    (size.width, size.height),
-                    None,
-                )
-                .unwrap(),
+            read_raster_data_enum_as(
+                band.band.band(),
+                (0, 0),
+                band.band.band().size(),
+                (size.width, size.height),
+                None,
             )
+            .unwrap()
         })
         .ok_or_else(|| "Couldn't read band data".to_owned())
         .unwrap();
-    Json(ImageData {
-        width,
-        height,
-        data,
-        no_data_value,
-    })
+    let body_data = vec![width, height]
+        .into_iter()
+        .map(|x| x.to_le_bytes())
+        .chain(data.to_f64().into_iter().map(|x| x.to_le_bytes()))
+        .flatten()
+        .collect_vec();
+    HttpResponse::Ok()
+        .content_type(ContentType::octet_stream())
+        .body(body_data)
 }
 
 #[get("/get_file")]
