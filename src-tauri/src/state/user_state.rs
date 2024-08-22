@@ -7,13 +7,19 @@ use crate::{
     FeatureInfo,
 };
 
-use super::gis::{combined::RasterIndex, dataset::StatefulDataset, raster::StatefulRasterBand};
+use super::gis::{
+    combined::{RasterIndex, VectorIndex},
+    dataset::StatefulDataset,
+    raster::StatefulRasterBand,
+    vector::StatefulVectorLayer,
+};
 
 #[derive(Default)]
 pub struct UserState {
     pub datasets: DatasetCollection,
     pub tools_data: ToolList,
     pub raster_to_display: Option<RasterIndex>,
+    pub vector_to_display: Option<VectorIndex>,
 }
 
 impl UserState {
@@ -21,8 +27,24 @@ impl UserState {
         self.raster_to_display = self.datasets.get_current_raster_index();
     }
 
+    pub fn display_current_vector(&mut self) {
+        self.vector_to_display = self.datasets.get_current_vector_index();
+    }
+
     pub fn get_raster_to_display(&mut self) -> Option<StatefulRasterBand> {
         self.datasets.get_raster(self.raster_to_display?)
+    }
+
+    pub fn get_vector_to_display(&mut self) -> Option<StatefulVectorLayer> {
+        self.datasets.get_vector(self.vector_to_display?)
+    }
+
+    pub fn get_vector_index_to_display(&mut self) -> Option<VectorIndex> {
+        self.vector_to_display
+    }
+
+    pub fn get_raster_index_to_display(&mut self) -> Option<RasterIndex> {
+        self.raster_to_display
     }
 
     pub fn get_vectors_for_display(&mut self) -> Vec<FeatureInfo> {

@@ -5,7 +5,11 @@ use serde::{Deserialize, Serialize};
 use crate::{
     gdal_if::{FieldSchema, FieldValue, LayerExt, LayerIndex},
     geometry::Point,
-    state::{settings::GlobalSettings, AppData},
+    state::{
+        gis::combined::{RasterIndex, VectorIndex},
+        settings::GlobalSettings,
+        AppData,
+    },
     FeatureInfo, LayerDescriptor,
 };
 
@@ -84,6 +88,8 @@ impl AppData {
             .into_iter()
             .map_into()
             .collect_vec();
+        let visible_vector_index = self.shared.get_vector_index_to_display();
+        let visible_raster_index = self.shared.get_raster_index_to_display();
         let layer_info = self
             .shared
             .with_current_dataset_mut(|ds, ds_index| match ds.layer_index {
@@ -104,7 +110,11 @@ impl AppData {
                         .collect_vec();
                     Some(LayerScreenInfo::Vector(VectorScreenData {
                         name_field: primary_field_name.cloned(),
-                        display: false,
+                        display: visible_vector_index
+                            == Some(VectorIndex {
+                                dataset: ds_index,
+                                layer: index,
+                            }),
                         dataset_index: ds_index,
                         srs: try { layer.layer.layer.spatial_ref()?.to_wkt().ok()? },
                         field_schema: layer.layer.get_field_schema(),
@@ -124,7 +134,11 @@ impl AppData {
                         rows,
                         srs: band.band.srs.clone(),
                         tool: None,
-                        display: true,
+                        display: visible_raster_index
+                            == Some(RasterIndex {
+                                dataset: ds_index,
+                                band: index,
+                            }),
                     }))
                 }
                 None => None,
