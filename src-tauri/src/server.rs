@@ -105,3 +105,10 @@ async fn ws(
     spawn_local(ws_handle((**app_handle).clone(), session, msg_stream));
     Ok(res)
 }
+
+#[get("/get_info")]
+async fn get_info(state: Data<AppDataSync>) -> impl Responder {
+    state.with_lock(|state| {
+        Json::<Option<_>>(try { state.shared.get_raster_to_display()?.info.render })
+    })
+}
