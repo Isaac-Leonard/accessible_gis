@@ -5,6 +5,7 @@ import { ReprojectionDialog } from "./reprojection-dialog";
 import { DemMethodsDialog } from "./dem_methods";
 import { ClassificationDialog } from "./classification";
 import { SaveButton } from "./save-button";
+import { RenderMethodsSelector } from "./render_methods_selector";
 
 const tools = ["None", "Trace geometries"] as const;
 
@@ -25,6 +26,10 @@ export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
       <button onClick={() => client.playHistogram()}>
         Play audio Histogram
       </button>
+      <RenderMethodsSelector
+        selectedMethod={layer.render_method}
+        setMethod={client.setCurrentRenderMethod}
+      />
       <RasterNavigatorInner layer={layer} savePoints={() => {}} />
     </div>
   );

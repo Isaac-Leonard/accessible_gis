@@ -6,7 +6,10 @@ use crate::{
     gdal_if::{FieldSchema, FieldValue, LayerExt, LayerIndex},
     geometry::Point,
     state::{
-        gis::combined::{RasterIndex, VectorIndex},
+        gis::{
+            combined::{RasterIndex, VectorIndex},
+            raster::RenderMethod,
+        },
         settings::GlobalSettings,
         AppData,
     },
@@ -77,6 +80,7 @@ pub struct RasterScreenData {
     pub srs: Option<String>,
     pub tool: Option<UiToolData>,
     pub display: bool,
+    pub render_method: RenderMethod,
 }
 
 impl AppData {
@@ -139,6 +143,7 @@ impl AppData {
                                 dataset: ds_index,
                                 band: index,
                             }),
+                        render_method: band.info.render,
                     }))
                 }
                 None => None,

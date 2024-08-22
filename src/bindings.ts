@@ -218,6 +218,9 @@ export const commands = {
   async setCurrentRenderMethod(renderMethod: RenderMethod): Promise<void> {
     await TAURI_INVOKE("set_current_render_method", { renderMethod });
   },
+  async getRenderMethods(): Promise<RenderMethod[]> {
+    return await TAURI_INVOKE("get_render_methods");
+  },
 };
 
 /** user-defined types **/
@@ -373,6 +376,7 @@ export type RasterScreenData = {
   srs: string | null;
   tool: UiToolData | null;
   display: boolean;
+  render_method: RenderMethod;
 };
 export type RasterSize = { width: number; length: number; bands: number };
 export type RenderMethod =

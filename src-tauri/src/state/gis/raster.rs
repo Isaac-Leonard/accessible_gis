@@ -24,7 +24,7 @@ pub struct StatefulRasterInfo {
     pub render: RenderMethod,
 }
 
-#[derive(Clone, Copy, Debug, EnumIter, specta::Type, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, EnumIter, specta::Type, Serialize, Deserialize, PartialEq)]
 pub enum RenderMethod {
     /// Try to use native browser image rendering or fall back to ImageJS
     Image,
@@ -33,7 +33,7 @@ pub enum RenderMethod {
 }
 
 impl RenderMethod {
-    fn get_variants() -> Vec<Self> {
+    pub fn get_variants() -> Vec<Self> {
         Self::iter().collect_vec()
     }
 }
