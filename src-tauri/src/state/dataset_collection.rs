@@ -166,10 +166,8 @@ impl DatasetCollection {
     where
         F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, E>,
     {
-        match self {
-            Self::Empty => None,
-            Self::NonEmpty(datasets) => Some(datasets.create_from_current_dataset(f)),
-        }
+        self.get_non_empty_mut()
+            .map(|datasets| datasets.create_from_current_dataset(f))
     }
 
     pub fn get_all_layers(&mut self) -> Vec<IndexedDatasetLayer> {
@@ -220,16 +218,15 @@ impl DatasetCollection {
     where
         F: FnOnce(&mut StatefulDataset, usize) -> T,
     {
-        match self {
-            Self::NonEmpty(datasets) => {
-                let index = datasets.index;
-                let dataset = &mut datasets.datasets[index];
-                let res = f(dataset, index);
-                dataset.dataset.save_changes();
-                Some(res)
-            }
-            Self::Empty => None,
-        }
+        let datasets = self.get_non_empty_mut()?;
+        let index = datasets.index;
+        let dataset = &mut datasets.datasets[index];
+        let res = f(dataset, index);
+        dataset
+            .dataset
+            .save_changes()
+            .expect("Could not save changes");
+        Some(res)
     }
 }
 

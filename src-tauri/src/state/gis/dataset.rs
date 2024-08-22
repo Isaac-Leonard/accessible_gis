@@ -41,7 +41,7 @@ impl StatefulDataset {
             .map(|layer| StatefulVectorInfo {
                 selected_feature: layer.feature(0).map(|_| 0),
                 primary_field_name: get_default_field_name(&layer),
-                shared: SharedInfo { display: false },
+                shared: SharedInfo,
             })
             .collect_vec();
 
@@ -50,7 +50,7 @@ impl StatefulDataset {
             .rasterbands()
             .map(|_| StatefulRasterInfo {
                 audio_settings: AudioSettings::default(),
-                shared: SharedInfo { display: false },
+                shared: SharedInfo,
                 image_type: ImageType::default(),
             })
             .collect_vec();

@@ -104,7 +104,7 @@ impl AppData {
                         .collect_vec();
                     Some(LayerScreenInfo::Vector(VectorScreenData {
                         name_field: primary_field_name.cloned(),
-                        display: layer.info.shared.display,
+                        display: false,
                         dataset_index: ds_index,
                         srs: try { layer.layer.layer.spatial_ref()?.to_wkt().ok()? },
                         field_schema: layer.layer.get_field_schema(),
@@ -124,7 +124,7 @@ impl AppData {
                         rows,
                         srs: band.band.srs.clone(),
                         tool: None,
-                        display: band.info.shared.display,
+                        display: true,
                     }))
                 }
                 None => None,

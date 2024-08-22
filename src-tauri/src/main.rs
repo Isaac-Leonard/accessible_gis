@@ -882,11 +882,7 @@ fn get_image_pixels(state: AppState) -> Result<Vec<u8>, String> {
 #[tauri::command]
 #[specta::specta]
 fn set_display(state: AppState) {
-    state
-        .with_current_layer_mut(|mut layer| {
-            layer.shared_mut().display = true;
-        })
-        .expect("Tried to edit nonexistant dataset");
+    state.with_lock(|state| state.shared.display_current_raster())
 }
 
 #[tauri::command]
