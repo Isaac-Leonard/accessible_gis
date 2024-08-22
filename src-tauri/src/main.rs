@@ -208,12 +208,16 @@ fn launch_gui() {
                 state.clone(),
                 handle.clone(),
             )));
-            let local_ip = local_ip().expect("Unable to retrieve local IP address");
+            match local_ip() {
+                Ok(local_ip) => {
+                    // Print the IP address and port
+                    let port = 80;
+                    println!("Server running at http://{}:{}/", local_ip, port);
+                    println!("cwd {:?}", std::env::current_dir());
+                }
+                Err(error) => println!("Unable to retrieve local IP address, got error: {}", error),
+            };
 
-            // Print the IP address and port
-            let port = 80;
-            println!("Server running at http://{}:{}/", local_ip, port);
-            println!("cwd {:?}", std::env::current_dir());
             Ok(())
         })
         .run(tauri::generate_context!())
