@@ -4,7 +4,6 @@ import { getTextFromImage } from "./render-image";
 import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
 import { mapPixel, rectContains } from "./utils";
-import { FeatureInfo } from "./types";
 
 const border = 16;
 const root = document.getElementById("image");
@@ -45,8 +44,6 @@ const getRawImage = async (): Promise<ImageJS> => {
     return ImageJS.fromCanvas(canvas).rgba8();
   }
 };
-
-const blackPixel = [0, 0, 0, 0];
 
 const createCanvas = async () => {
   const canvas = document.createElement("canvas");
@@ -132,26 +129,7 @@ const createCanvas = async () => {
   gestureManager.addPinchHandler(zoomOut);
   gestureManager.addSpreadHandler(zoomIn);
   const context = canvas.getContext("2d")!;
-  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-  for (let x = border; x < width + border; x++) {
-    for (let y = 0; y < border; y++) {
-      imageData.data.set(blackPixel, (y * imageData.width + x) * 4);
-      imageData.data.set(
-        blackPixel,
-        ((imageData.height - y - 1) * imageData.width + x) * 4
-      );
-    }
-  }
-  for (let x = 0; x < border; x++) {
-    for (let y = 0; y < imageData.height; y++) {
-      imageData.data.set(blackPixel, (y * imageData.width + x) * 4);
-      const rightPixel = (y * imageData.width + (imageData.width - x - 1)) * 4;
-      imageData.data.set(blackPixel, rightPixel);
-    }
-  }
-  context.putImageData(imageData, 0, 0);
   const render = () => {
-    const imageData = new ImageData(width, height);
     const x = width * tileX;
     const y = height * tileY;
     const resizedImage = image.clone().resize({ factor: scaleFactor });
@@ -161,25 +139,25 @@ const createCanvas = async () => {
       width: Math.min(width, resizedImage.width - x),
       height: Math.min(height, resizedImage.height - y),
     });
-    for (let x = 0; x < newImage.width; x++) {
-      for (let y = 0; y < newImage.height; y++) {
-        const pixel = newImage.getPixelXY(x, y);
-        imageData.data.set(pixel, (y * width + x) * 4);
-      }
-      for (let y = newImage.height; y < height; y++) {
-        imageData.data.set(blackPixel, (y * width + x) * 4);
-      }
-    }
-    for (let x = newImage.width; x < width; x++) {
-      for (let y = 0; y < height; y++) {
-        imageData.data.set(blackPixel, (y * width + x) * 4);
-      }
-    }
+    const imageData = new ImageData(
+      Uint8ClampedArray.from(newImage.toBuffer()),
+      newImage.width,
+      newImage.height
+    );
+
     context.putImageData(imageData, border, border);
+    context.putImageData(
+      new ImageData(width - newImage.width, height),
+      border + newImage.width,
+      border
+    );
+    context.putImageData(
+      new ImageData(width, height - newImage.height),
+      border,
+      border + newImage.height
+    );
   };
   root?.appendChild(canvas);
-  canvas.width = document.documentElement.clientWidth;
-  canvas.height = document.documentElement.clientHeight;
   render();
   let removeHandlers = manager(canvas);
   const reset = () => {
@@ -226,22 +204,8 @@ const manager = (canvas: HTMLCanvasElement) => {
     speak(activeLine.text);
   };
 
-  const features: FeatureInfo[] = [];
-  let activeFeature: FeatureInfo | null = null;
-  const manageFeatures = (x: number, y: number) => {
-    const feature = features.find((feature) =>
-      geomContains(feature.geometry, x, y)
-    );
-    if (feature === undefined) {
-      activeFeature = null;
-      return;
-    }
-    if (feature === activeFeature) {
-      return;
-    }
-    activeFeature = feature;
-    speak(activeFeature.fields[n]);
-  };
+  // TODO: Make this call the server or websocket
+  const manageFeatures = (x: number, y: number) => {};
 
   const startHandler = (e: TouchEvent) => {
     e.preventDefault();
