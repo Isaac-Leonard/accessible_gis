@@ -52,3 +52,13 @@ export type MultiPoint = { points: Point[] };
 export type MultiPolygon = { polygons: Polygon[] };
 export type Point = { x: number; y: number };
 export type Polygon = { exterior: LineString; interior: LineString[] };
+
+export type RenderMethod =
+  /**
+   * Try to use native browser image rendering or fall back to ImageJS
+   */
+  | "Image"
+  /**
+   * Render pure raster values mapped to 256 grey scale
+   */
+  | "GDAL";

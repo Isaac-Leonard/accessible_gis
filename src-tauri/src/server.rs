@@ -2,7 +2,7 @@ use actix_files::{self as fs, NamedFile};
 use actix_web::{
     get,
     http::header::ContentType,
-    web::{self, Data, Json, Query},
+    web::{self, Data, Json},
     App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use itertools::Itertools;
@@ -11,28 +11,21 @@ use tauri::AppHandle;
 use tokio::task::spawn_local;
 
 use crate::{
-    gdal_if::{read_raster_data_enum_as, RasterData},
+    gdal_if::{read_raster_data_enum, RasterData},
     state::AppDataSync,
     web_socket::ws_handle,
     FeatureInfo,
 };
 
 #[get("/get_image")]
-async fn get_image(size: Query<ImageSize>, state: Data<AppDataSync>) -> HttpResponse {
-    let ImageSize { width, height, .. } = *size;
-    let data = state
-        .with_current_raster_band(|band| {
-            read_raster_data_enum_as(
-                band.band.band(),
-                (0, 0),
-                band.band.band().size(),
-                (size.width, size.height),
-                None,
-            )
-            .unwrap()
-        })
-        .ok_or_else(|| "Couldn't read band data".to_owned())
-        .unwrap();
+async fn get_image(state: Data<AppDataSync>) -> HttpResponse {
+    let ((width, height), data) = state.with_lock(|state| {
+        let band = state.shared.get_raster_to_display().unwrap().band;
+        let size = band.band.size();
+        let data = read_raster_data_enum(&band.band).unwrap();
+        (size, data)
+    });
+
     let body_data = vec![width, height]
         .into_iter()
         .map(|x| x.to_le_bytes())

@@ -1,9 +1,10 @@
-import ImageJS from "image-js";
+import ImageJS, { ImageKind } from "image-js";
 import { pauseAudio, playAudio, setAudioFrequency } from "./audio";
 import { getTextFromImage } from "./render-image";
 import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
 import { mapPixel, rectContains } from "./utils";
+import { RenderMethod } from "./types";
 
 const border = 16;
 const root = document.getElementById("image");
@@ -24,6 +25,47 @@ const createButton = () => {
 };
 
 const getRawImage = async (): Promise<ImageJS> => {
+  const renderMethodRes = await fetch("/get_info");
+  const renderMethod: RenderMethod = await renderMethodRes.json();
+  switch (renderMethod) {
+    case "GDAL":
+      return await getGdalRasterData();
+    case "Image":
+      return await getImageFile();
+  }
+};
+
+const getGdalRasterData = async () => {
+  const res = await fetch("/get_image");
+  const data = await res.arrayBuffer();
+  const view = new DataView(data);
+  const width = view.getBigInt64(0, true);
+  const height = view.getBigInt64(8, true);
+  const dataLen = view.byteLength / 8 - 2;
+  let imageData = new Array<number>(dataLen);
+  for (let i = 0; i < dataLen; i++) {
+    imageData[i] = view.getFloat64((i + 2) * 8);
+  }
+  const safeImageData = imageData.filter((x) => Number.isFinite(x));
+  const { min, max } = safeImageData.reduce(
+    ({ min, max }, el) => ({
+      min: el < min ? el : min,
+      max: el > max ? el : max,
+    }),
+    {
+      min: safeImageData[0],
+      max: safeImageData[0],
+    }
+  );
+  const range = max - min;
+  const factor = 256 / range;
+  const byteData = imageData.map((x) => (x - min) * factor);
+  return new ImageJS(Number(width), Number(height), byteData, {
+    kind: ImageKind.GREY,
+  });
+};
+
+const getImageFile = async () => {
   const req = await fetch(`/get_file`);
   const backup = req.clone();
   const blob = await req.blob();
