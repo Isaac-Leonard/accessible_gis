@@ -73,7 +73,7 @@ pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
             .service(get_ocr)
             .service(web::resource("/ws").route(web::get().to(ws)))
             .service(
-                fs::Files::new("/", "../static/dist/")
+                fs::Files::new("/", "../external-touch-device/dist/")
                     .show_files_listing()
                     .index_file("index.html"),
             )

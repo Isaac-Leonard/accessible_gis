@@ -11,7 +11,7 @@ in the root directory
 Run ```
 npm install
 ```
-in the static directory
+in the external-touch-device directory
 Then run
 ```
 npm run tauri dev

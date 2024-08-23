@@ -1,5 +1,5 @@
 {
-  "name": "static",
+  "name": "external-touch-device",
   "private": true,
   "version": "0.0.0",
   "type": "module",
