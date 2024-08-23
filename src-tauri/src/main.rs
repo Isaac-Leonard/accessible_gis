@@ -150,6 +150,7 @@ fn generate_handlers<R: Runtime>(
             set_show_towns_by_default,
             set_current_render_method,
             get_render_methods,
+            set_current_ocr,
         ])
         .path(s)
         .config(
@@ -1191,4 +1192,14 @@ fn set_current_render_method(render_method: RenderMethod, state: AppState) {
 #[specta::specta]
 fn get_render_methods() -> Vec<RenderMethod> {
     RenderMethod::get_variants()
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_current_ocr(enabled: bool, state: AppState) {
+    state
+        .with_current_raster_band(|band| {
+            band.info.ocr = enabled;
+        })
+        .expect("No raster band selected");
 }

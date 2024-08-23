@@ -22,6 +22,7 @@ pub struct StatefulRasterInfo {
     pub shared: SharedInfo,
     pub image_type: ImageType,
     pub render: RenderMethod,
+    pub ocr: bool,
 }
 
 #[derive(Clone, Copy, Debug, EnumIter, specta::Type, Serialize, Deserialize, PartialEq)]

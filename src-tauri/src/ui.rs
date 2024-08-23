@@ -81,6 +81,7 @@ pub struct RasterScreenData {
     pub tool: Option<UiToolData>,
     pub display: bool,
     pub render_method: RenderMethod,
+    pub ocr: bool,
 }
 
 impl AppData {
@@ -144,6 +145,7 @@ impl AppData {
                                 band: index,
                             }),
                         render_method: band.info.render,
+                        ocr: band.info.ocr,
                     }))
                 }
                 None => None,

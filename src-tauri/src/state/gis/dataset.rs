@@ -53,6 +53,7 @@ impl StatefulDataset {
                 shared: SharedInfo,
                 image_type: ImageType::default(),
                 render: RenderMethod::Image,
+                ocr: true,
             })
             .collect_vec();
 

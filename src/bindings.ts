@@ -377,6 +377,7 @@ export type RasterScreenData = {
   tool: UiToolData | null;
   display: boolean;
   render_method: RenderMethod;
+  ocr: boolean;
 };
 export type RasterSize = { width: number; length: number; bands: number };
 export type RenderMethod =
