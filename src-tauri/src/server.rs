@@ -69,6 +69,8 @@ pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
             .app_data(Data::new(app_handle.clone()))
             .service(get_image)
             .service(get_file)
+            .service(get_info)
+            .service(get_ocr)
             .service(web::resource("/ws").route(web::get().to(ws)))
             .service(
                 fs::Files::new("/", "../static/dist/")
@@ -105,5 +107,12 @@ async fn ws(
 async fn get_info(state: Data<AppDataSync>) -> impl Responder {
     state.with_lock(|state| {
         Json::<Option<_>>(try { state.shared.get_raster_to_display()?.info.render })
+    })
+}
+
+#[get("/get_ocr")]
+async fn get_ocr(state: Data<AppDataSync>) -> impl Responder {
+    state.with_lock(|state| {
+        Json::<Option<_>>(try { state.shared.get_raster_to_display()?.info.ocr })
     })
 }
