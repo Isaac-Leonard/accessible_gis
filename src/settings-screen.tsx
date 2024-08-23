@@ -1,5 +1,6 @@
 import { client } from "./api";
-import { GlobalSettings } from "./bindings";
+import { AudioIndicator, AudioSettings, GlobalSettings } from "./bindings";
+import { OptionPicker } from "./option-picker";
 
 type SettingsScreenProps = { settings: GlobalSettings };
 
@@ -47,5 +48,37 @@ export const SettingsScreen = ({ settings }: SettingsScreenProps) => {
         />
       </label>
     </div>
+  );
+};
+
+type AudioSettingsScreenProps = { settings: AudioSettings };
+
+const AudioSettingsScreen = ({ settings }: AudioSettingsScreenProps) => {
+  return (
+    <div>
+      <AudioIndicatorSelector selectedOption={settings.no_data_value_sound} />
+      <AudioIndicatorSelector selectedOption={settings.border_sound} />
+    </div>
+  );
+};
+
+const audioIndicators = await client.getAudioIndicators();
+
+type AudioIndicatorSelectorProps = {
+  selectedOption: AudioIndicator;
+  setIndicator: (indicator: AudioIndicator) => void;
+};
+
+const AudioIndicatorSelector = ({
+  selectedOption,
+  setIndicator,
+}: AudioIndicatorSelectorProps) => {
+  return (
+    <OptionPicker
+      options={audioIndicators}
+      selectedOption={selectedOption}
+      setOption={setIndicator}
+      emptyText="Somethings wrong"
+    />
   );
 };
