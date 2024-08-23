@@ -90,37 +90,6 @@ fn launch_gui() {
         .expect("error while running tauri application");
 }
 
-/*
-// Use column major ordering for this array
-// So index with cell[x][y]
-fn describe_3x3_cell(cell: [[f64; 3]; 3]) -> String {
-    let midpoint_val = cell[1][1];
-    let indexed_iter = cell
-        .into_iter()
-        .enumerate()
-        .flat_map(|(y, row)| row.into_iter().enumerate().map(|(x, v)| ((x, y), v)))
-        .collect::<Vec<_>>();
-}
-
-fn is_corner_of_3x3(p: (usize, usize)) -> bool {
-    match p {
-        (0, 0) => true,
-        (0, 2) => true,
-        (2, 0) => true,
-        (2, 2) => true,
-        _ => false,
-    }
-}
-
-fn is_left_of_3x3(p: (usize, usize)) -> bool {
-    p.1 == 0
-}
-
-fn is_center_of_3x3(p: (usize, usize)) -> bool {
-    p == (1, 1)
-}
-*/
-
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
 pub struct FeatureInfo {
     fields: Vec<Field>,

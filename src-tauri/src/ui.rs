@@ -154,6 +154,7 @@ impl AppData {
         LayerScreen { layers, layer_info }
     }
 }
+
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, specta::Type)]
 pub struct LayerDescriptor {
     pub dataset: usize,

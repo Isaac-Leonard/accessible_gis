@@ -108,6 +108,7 @@ pub fn add_field_to_schema(
         })
         .ok_or_else(|| "Tried to add field to schema when state is uninitialised".to_string())?
 }
+
 #[tauri::command]
 #[specta::specta]
 pub fn set_feature_index(index: usize, state: AppState) -> Result<(), String> {
@@ -115,6 +116,7 @@ pub fn set_feature_index(index: usize, state: AppState) -> Result<(), String> {
         .with_current_vector_layer(|layer| layer.info.selected_feature = Some(index))
         .ok_or_else(|| "error".to_string())
 }
+
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
 pub struct FeatureIndex {
     layer: LayerIndex,
