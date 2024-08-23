@@ -9,6 +9,7 @@ pub struct GlobalSettings {
     show_towns_by_default: bool,
     show_countries_by_default: bool,
     display_first_raster: bool,
+    default_ocr_for_gdal: bool,
 }
 
 impl GlobalSettings {
@@ -52,6 +53,15 @@ impl GlobalSettings {
     pub fn show_towns_by_default(&self) -> bool {
         self.show_towns_by_default
     }
+
+    pub fn default_ocr_for_gdal(&self) -> bool {
+        self.default_ocr_for_gdal
+    }
+
+    pub fn set_default_ocr_for_gdal(&mut self, default_ocr_for_gdal: bool) {
+        self.default_ocr_for_gdal = default_ocr_for_gdal;
+        self.write_to_file()
+    }
 }
 
 impl Default for GlobalSettings {
@@ -60,6 +70,7 @@ impl Default for GlobalSettings {
             show_towns_by_default: false,
             show_countries_by_default: false,
             display_first_raster: true,
+            default_ocr_for_gdal: false,
         }
     }
 }

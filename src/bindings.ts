@@ -332,6 +332,7 @@ export type GlobalSettings = {
   show_towns_by_default: boolean;
   show_countries_by_default: boolean;
   display_first_raster: boolean;
+  default_ocr_for_gdal: boolean;
 };
 export type LayerDescriptor = (
   | { type: "Vector"; index: number }

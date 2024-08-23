@@ -45,6 +45,9 @@ impl StatefulDataset {
             })
             .collect_vec();
 
+        // TODO: Make this customisable in settings
+        let render_method = RenderMethod::Image;
+
         let band_info = dataset
             .dataset
             .rasterbands()
@@ -52,8 +55,11 @@ impl StatefulDataset {
                 audio_settings: AudioSettings::default(),
                 shared: SharedInfo,
                 image_type: ImageType::default(),
-                render: RenderMethod::Image,
-                ocr: true,
+                render: render_method,
+                ocr: match render_method {
+                    RenderMethod::GDAL => settings.default_ocr_for_gdal(),
+                    RenderMethod::Image => true,
+                },
             })
             .collect_vec();
 
