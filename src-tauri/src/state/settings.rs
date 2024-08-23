@@ -2,6 +2,8 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 
+use super::gis::raster::RenderMethod;
+
 const DEFAULT_SETTINGS_FILE_NAME: &str = "settings.json";
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -10,6 +12,8 @@ pub struct GlobalSettings {
     show_countries_by_default: bool,
     display_first_raster: bool,
     default_ocr_for_gdal: bool,
+    default_rendering_method_for_images: RenderMethod,
+    audio: AudioSettings,
 }
 
 impl GlobalSettings {
@@ -62,6 +66,18 @@ impl GlobalSettings {
         self.default_ocr_for_gdal = default_ocr_for_gdal;
         self.write_to_file()
     }
+
+    pub fn default_rendering_method_for_images(&self) -> RenderMethod {
+        self.default_rendering_method_for_images
+    }
+
+    pub fn set_default_rendering_method_for_images(
+        &mut self,
+        default_rendering_method: RenderMethod,
+    ) {
+        self.default_rendering_method_for_images = default_rendering_method;
+        self.write_to_file()
+    }
 }
 
 impl Default for GlobalSettings {
@@ -71,10 +87,13 @@ impl Default for GlobalSettings {
             show_countries_by_default: false,
             display_first_raster: true,
             default_ocr_for_gdal: false,
+            default_rendering_method_for_images: RenderMethod::Image,
+            audio: AudioSettings::default(),
         }
     }
 }
 
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
 pub struct AudioSettings {
     pub min_freq: f64,
     pub max_freq: f64,
@@ -95,7 +114,7 @@ impl Default for AudioSettings {
     }
 }
 
-#[derive(EnumIter)]
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type, EnumIter)]
 pub enum AudioIndicator {
     Silence,
     MinFreq,
@@ -105,7 +124,7 @@ pub enum AudioIndicator {
 }
 
 impl AudioIndicator {
-    fn get_all_options() -> Vec<Self> {
+    pub fn get_all_options() -> Vec<Self> {
         Self::iter().collect_vec()
     }
 }

@@ -221,6 +221,9 @@ export const commands = {
   async getRenderMethods(): Promise<RenderMethod[]> {
     return await TAURI_INVOKE("get_render_methods");
   },
+  async getAudioIndicators(): Promise<AudioIndicator[]> {
+    return await TAURI_INVOKE("get_audio_indicators");
+  },
   async setCurrentOcr(enabled: boolean): Promise<void> {
     await TAURI_INVOKE("set_current_ocr", { enabled });
   },
@@ -231,6 +234,19 @@ export const commands = {
 
 /** user-defined types **/
 
+export type AudioIndicator =
+  | "Silence"
+  | "MinFreq"
+  | "MaxFreq"
+  | "Verbal"
+  | "Different";
+export type AudioSettings = {
+  min_freq: number;
+  max_freq: number;
+  volume: number;
+  no_data_value_sound: AudioIndicator;
+  border_sound: AudioIndicator;
+};
 export type Classification = { min: number; max: number; target: number };
 export type ClosedLineDescription = {
   x: number;
@@ -336,6 +352,8 @@ export type GlobalSettings = {
   show_countries_by_default: boolean;
   display_first_raster: boolean;
   default_ocr_for_gdal: boolean;
+  default_rendering_method_for_images: RenderMethod;
+  audio: AudioSettings;
 };
 export type LayerDescriptor = (
   | { type: "Vector"; index: number }

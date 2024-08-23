@@ -53,6 +53,7 @@ use state::{
         combined::StatefulLayerEnum, dataset::StatefulDataset, raster::RenderMethod,
         vector::StatefulVectorInfo,
     },
+    settings::AudioIndicator,
     AppData, AppState, Screen,
 };
 use statrs::statistics::Statistics;
@@ -149,6 +150,7 @@ fn generate_handlers<R: Runtime>(
             set_show_towns_by_default,
             set_current_render_method,
             get_render_methods,
+            get_audio_indicators,
             set_current_ocr,
             set_default_ocr_for_gdal,
         ])
@@ -1194,6 +1196,12 @@ fn set_current_render_method(render_method: RenderMethod, state: AppState) {
 #[specta::specta]
 fn get_render_methods() -> Vec<RenderMethod> {
     RenderMethod::get_variants()
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_audio_indicators() -> Vec<AudioIndicator> {
+    AudioIndicator::get_all_options()
 }
 
 #[tauri::command]
