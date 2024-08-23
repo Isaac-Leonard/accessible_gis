@@ -7,11 +7,14 @@ use crate::{
     LayerDescriptor,
 };
 
-use super::gis::{
-    combined::{DatasetLayerIndex, RasterIndex, StatefulLayerEnum, VectorIndex},
-    dataset::StatefulDataset,
-    raster::StatefulRasterBand,
-    vector::StatefulVectorLayer,
+use super::{
+    gis::{
+        combined::{DatasetLayerIndex, RasterIndex, StatefulLayerEnum, VectorIndex},
+        dataset::StatefulDataset,
+        raster::StatefulRasterBand,
+        vector::StatefulVectorLayer,
+    },
+    settings::GlobalSettings,
 };
 
 pub struct NonEmptyDatasetCollection {
@@ -96,8 +99,8 @@ impl NonEmptyDatasetCollection {
         self.datasets.push(dataset)
     }
 
-    pub fn add_gdal(&mut self, dataset: WrappedDataset) {
-        self.datasets.push(StatefulDataset::new(dataset))
+    pub fn add_gdal(&mut self, dataset: WrappedDataset, settings: &GlobalSettings) {
+        self.datasets.push(StatefulDataset::new(dataset, settings))
     }
 
     pub fn new(dataset: StatefulDataset) -> Self {
@@ -120,7 +123,11 @@ impl NonEmptyDatasetCollection {
         res
     }
 
-    pub fn create_from_current_dataset<E, F>(&mut self, f: F) -> Result<&mut StatefulDataset, E>
+    pub fn create_from_current_dataset<E, F>(
+        &mut self,
+        f: F,
+        settings: &GlobalSettings,
+    ) -> Result<&mut StatefulDataset, E>
     where
         F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, E>,
     {
@@ -130,7 +137,7 @@ impl NonEmptyDatasetCollection {
             .dataset
             .save_changes()
             .expect("Could not flush changes to disc");
-        self.add(StatefulDataset::new(res));
+        self.add(StatefulDataset::new(res, settings));
         Ok(self.datasets.last_mut().unwrap())
     }
 }
@@ -162,12 +169,13 @@ impl DatasetCollection {
     pub fn create_from_current_dataset<E, F>(
         &mut self,
         f: F,
+        settings: &GlobalSettings,
     ) -> Option<Result<&mut StatefulDataset, E>>
     where
         F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, E>,
     {
         self.get_non_empty_mut()
-            .map(|datasets| datasets.create_from_current_dataset(f))
+            .map(|datasets| datasets.create_from_current_dataset(f, settings))
     }
 
     pub fn get_all_layers(&mut self) -> Vec<IndexedDatasetLayer> {
@@ -185,9 +193,13 @@ impl DatasetCollection {
         layers
     }
 
-    pub fn open(&mut self, name: String) -> Result<&mut StatefulDataset, String> {
+    pub fn open(
+        &mut self,
+        name: String,
+        settings: &GlobalSettings,
+    ) -> Result<&mut StatefulDataset, String> {
         let dataset = WrappedDataset::open(name)?;
-        Ok(self.add(StatefulDataset::new(dataset)))
+        Ok(self.add(StatefulDataset::new(dataset, settings)))
     }
 
     pub fn set_index(&mut self, index: usize) -> Result<(), ()> {

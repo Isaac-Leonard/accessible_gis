@@ -7,11 +7,14 @@ use crate::{
     FeatureInfo,
 };
 
-use super::gis::{
-    combined::{RasterIndex, VectorIndex},
-    dataset::StatefulDataset,
-    raster::StatefulRasterBand,
-    vector::StatefulVectorLayer,
+use super::{
+    gis::{
+        combined::{RasterIndex, VectorIndex},
+        dataset::StatefulDataset,
+        raster::StatefulRasterBand,
+        vector::StatefulVectorLayer,
+    },
+    settings::GlobalSettings,
 };
 
 #[derive(Default)]
@@ -72,11 +75,12 @@ impl UserState {
     pub fn create_from_current_dataset<E, F>(
         &mut self,
         f: F,
+        settings: &GlobalSettings,
     ) -> Option<Result<&mut StatefulDataset, E>>
     where
         F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, E>,
     {
-        self.datasets.create_from_current_dataset(f)
+        self.datasets.create_from_current_dataset(f, &settings)
     }
 
     pub fn with_current_dataset_mut<T, F>(&mut self, f: F) -> Option<T>

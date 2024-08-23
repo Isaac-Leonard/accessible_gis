@@ -28,6 +28,10 @@ pub struct AppData {
 }
 
 impl AppData {
+    pub fn open_dataset(&mut self, name: String) -> Result<&mut StatefulDataset, String> {
+        self.shared.datasets.open(name, &self.settings)
+    }
+
     pub fn new() -> Self {
         Self {
             towns: HashMap::new(),
@@ -45,7 +49,7 @@ impl AppData {
     where
         F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, E>,
     {
-        self.shared.create_from_current_dataset(f)
+        self.shared.create_from_current_dataset(f, &self.settings)
     }
 
     pub fn with_current_vector_layer<T, F>(&mut self, f: F) -> Option<T>

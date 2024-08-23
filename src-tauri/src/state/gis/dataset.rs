@@ -8,7 +8,7 @@ use itertools::Itertools;
 use crate::{
     dataset_collection::{get_default_field_name, IndexedLayer},
     gdal_if::{LayerIndex, WrappedDataset},
-    state::settings::AudioSettings,
+    state::settings::{AudioSettings, GlobalSettings},
     FeatureInfo,
 };
 
@@ -27,11 +27,11 @@ pub struct StatefulDataset {
 }
 
 impl StatefulDataset {
-    fn open(name: String) -> Result<Self, String> {
-        Ok(Self::new(WrappedDataset::open(name)?))
+    fn open(name: String, settings: &GlobalSettings) -> Result<Self, String> {
+        Ok(Self::new(WrappedDataset::open(name)?, settings))
     }
 
-    pub fn new(dataset: WrappedDataset) -> Self {
+    pub fn new(dataset: WrappedDataset, settings: &GlobalSettings) -> Self {
         let layer_count = dataset.dataset.layer_count();
         let band_count = dataset.dataset.rasterbands().count();
 
@@ -72,8 +72,8 @@ impl StatefulDataset {
         }
     }
 
-    fn from_raw(dataset: Dataset, name: String) -> Self {
-        Self::new(WrappedDataset::wrap_existing(dataset, name))
+    fn from_raw(dataset: Dataset, name: String, settings: &GlobalSettings) -> Self {
+        Self::new(WrappedDataset::wrap_existing(dataset, name), settings)
     }
 
     pub fn get_all_layers(&mut self) -> Vec<IndexedLayer> {

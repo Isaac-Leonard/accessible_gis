@@ -83,8 +83,7 @@ use crate::{
 #[tauri::command]
 #[specta::specta]
 fn load_file(name: String, state: AppState) -> Result<(), String> {
-    let mut guard = state.data.lock().unwrap();
-    guard.shared.datasets.open(name).map(|_| ())
+    state.with_lock(|state| state.open_dataset(name).map(|_| ()))
 }
 
 #[tauri::command]
