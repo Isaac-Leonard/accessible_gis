@@ -17,6 +17,7 @@ mod tools;
 mod ui;
 mod web_socket;
 
+use geo_types::Polygon;
 pub use state::dataset_collection;
 
 use clap::Parser;
@@ -25,7 +26,7 @@ use gdal::{vector::LayerAccess, Dataset};
 use gdal_if::{Field, LayerIndex};
 use geometry::Geometry;
 use local_ip_address::local_ip;
-use rstar::RTree;
+use rstar::{primitives::GeomWithData, RTree};
 use serde::{Deserialize, Serialize};
 use state::AppData;
 use tauri::Manager;
@@ -52,26 +53,7 @@ fn main() {
 
 fn launch_gui() {
     let handlers = generate_handlers("../src/bindings.ts");
-    let countries_path = std::env::current_dir()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("data/countries.geojson");
-    eprintln!("Loading {:?}", &countries_path);
-    let countries = RTree::bulk_load(
-        Dataset::open(countries_path)
-            .unwrap()
-            .layer(0)
-            .unwrap()
-            .features()
-            .flat_map(|feature| {
-                Vec::<Country>::from(LocalFeatureInfo {
-                    geometry: feature.geometry().unwrap().to_geo().unwrap(),
-                    fields: feature.fields().map(Into::into).collect(),
-                })
-            })
-            .collect::<Vec<_>>(),
-    );
+    let countries = load_countries();
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -169,4 +151,27 @@ impl FeatureInfo {
             fid: None,
         }
     }
+}
+
+fn load_countries() -> RTree<GeomWithData<Polygon, Vec<Field>>> {
+    let countries_path = std::env::current_dir()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("data/countries.geojson");
+    let countries = RTree::bulk_load(
+        Dataset::open(countries_path)
+            .unwrap()
+            .layer(0)
+            .unwrap()
+            .features()
+            .flat_map(|feature| {
+                Vec::<Country>::from(LocalFeatureInfo {
+                    geometry: feature.geometry().unwrap().to_geo().unwrap(),
+                    fields: feature.fields().map(Into::into).collect(),
+                })
+            })
+            .collect::<Vec<_>>(),
+    );
+    countries
 }
