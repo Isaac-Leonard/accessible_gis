@@ -150,6 +150,7 @@ fn generate_handlers<R: Runtime>(
             set_current_render_method,
             get_render_methods,
             set_current_ocr,
+            set_default_ocr_for_gdal,
         ])
         .path(s)
         .config(
@@ -1176,6 +1177,8 @@ generate_general_settings_setter!(set_show_first_raster_by_default, set_display_
 generate_general_settings_setter!(set_show_countries_by_default, set_show_countries_by_default);
 
 generate_general_settings_setter!(set_show_towns_by_default, set_show_towns_by_default);
+
+generate_general_settings_setter!(set_default_ocr_for_gdal, set_default_ocr_for_gdal);
 
 #[tauri::command]
 #[specta::specta]

@@ -224,6 +224,9 @@ export const commands = {
   async setCurrentOcr(enabled: boolean): Promise<void> {
     await TAURI_INVOKE("set_current_ocr", { enabled });
   },
+  async setDefaultOcrForGdal(val: boolean): Promise<void> {
+    await TAURI_INVOKE("set_default_ocr_for_gdal", { val });
+  },
 };
 
 /** user-defined types **/

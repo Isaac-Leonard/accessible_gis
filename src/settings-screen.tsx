@@ -38,6 +38,14 @@ export const SettingsScreen = ({ settings }: SettingsScreenProps) => {
           }
         />
       </label>
+      <label>
+        Enable OCR by default for rasters that use the GDAL rendering method
+        <input
+          type="checkbox"
+          checked={settings.default_ocr_for_gdal}
+          onChange={(e) => client.setDefaultOcrForGdal(e.currentTarget.checked)}
+        />
+      </label>
     </div>
   );
 };
