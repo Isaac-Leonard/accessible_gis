@@ -87,7 +87,7 @@ export type OptionPickerProps<T extends readonly string[]> = {
   options: T;
   setOption: (field: T[number]) => void;
   selectedOption: T[number] | null;
-  prompt: string;
+  prompt?: string;
   emptyText: string;
 };
 
@@ -112,7 +112,7 @@ export function OptionPicker<T extends readonly string[]>({
   } else if (options.length < 240) {
     return (
       <label>
-        {prompt}:
+        {typeof prompt === "string" ? `${prompt}:` : ""}
         <select
           value={selectedOption ?? undefined}
           onChange={(e) => setOption(e.currentTarget.value as T[number])}
