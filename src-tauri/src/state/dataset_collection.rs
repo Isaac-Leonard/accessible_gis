@@ -4,7 +4,7 @@ use gdal::vector::Layer;
 
 use crate::{
     gdal_if::{LayerEnum, LayerExt, LayerIndex, WrappedDataset},
-    LayerDescriptor,
+    ui::LayerDescriptor,
 };
 
 use super::{
@@ -266,7 +266,7 @@ impl From<IndexedDatasetLayer<'_>> for LayerDescriptor {
                 Self {
                     dataset: value.dataset_index,
                     band: LayerIndex::Raster(value.layer.layer_index),
-                    dataset_file: value.ds_file,
+                    dataset_file: value.ds_file.clone(),
                 }
             }
         }

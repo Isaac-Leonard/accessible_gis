@@ -23,7 +23,7 @@ pub use state::dataset_collection;
 use clap::Parser;
 use files::get_csv;
 use gdal::{vector::LayerAccess, Dataset};
-use gdal_if::{Field, LayerIndex};
+use gdal_if::Field;
 use geometry::Geometry;
 use local_ip_address::local_ip;
 use rstar::{primitives::GeomWithData, RTree};
@@ -120,21 +120,6 @@ fn is_center_of_3x3(p: (usize, usize)) -> bool {
     p == (1, 1)
 }
 */
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, specta::Type)]
-pub struct LayerDescriptor {
-    dataset: usize,
-    #[serde(flatten)]
-    band: LayerIndex,
-    dataset_file: String,
-}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, specta::Type)]
-#[serde(tag = "type")]
-pub enum LayerInfo {
-    Raster { width: usize, length: usize },
-    Vector,
-}
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
 pub struct FeatureInfo {

@@ -13,7 +13,7 @@ use crate::{
         settings::GlobalSettings,
         AppData,
     },
-    FeatureInfo, LayerDescriptor,
+    FeatureInfo,
 };
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -153,4 +153,11 @@ impl AppData {
             .flatten();
         LayerScreen { layers, layer_info }
     }
+}
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, specta::Type)]
+pub struct LayerDescriptor {
+    pub dataset: usize,
+    #[serde(flatten)]
+    pub band: LayerIndex,
+    pub dataset_file: String,
 }
