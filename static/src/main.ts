@@ -203,10 +203,10 @@ const createCanvas = async () => {
   };
   root?.appendChild(canvas);
   render();
-  let removeHandlers = manager(canvas);
-  const reset = () => {
+  let removeHandlers = await manager(canvas);
+  const reset = async () => {
     removeHandlers();
-    removeHandlers = manager(canvas);
+    removeHandlers = await manager(canvas);
   };
   return canvas;
 };
@@ -229,10 +229,14 @@ const mean = (arr: ArrayLike<number>): number => {
   return sum / arr.length;
 };
 
-const manager = (canvas: HTMLCanvasElement) => {
+const manager = async (canvas: HTMLCanvasElement) => {
   const ctx = canvas.getContext("2d")!;
   const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const lines = getTextFromImage(image);
+  const ocrRes = await fetch("/get_ocr");
+  const ocrEnabled = await ocrRes.json();
+  // Quick hack for now
+  // Leave all of the ocr code working but just use an empty detections array instead of scan the image if not enabled
+  const lines = ocrEnabled ? getTextFromImage(image) : [];
   let activeLine: { text: string; rect: DOMRect } | null = null;
 
   const manageText = (x: number, y: number) => {
