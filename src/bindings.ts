@@ -221,6 +221,9 @@ export const commands = {
   async getRenderMethods(): Promise<RenderMethod[]> {
     return await TAURI_INVOKE("get_render_methods");
   },
+  async setCurrentOcr(enabled: boolean): Promise<void> {
+    await TAURI_INVOKE("set_current_ocr", { enabled });
+  },
 };
 
 /** user-defined types **/

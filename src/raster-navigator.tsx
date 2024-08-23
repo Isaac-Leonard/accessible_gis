@@ -30,6 +30,16 @@ export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
         selectedMethod={layer.render_method}
         setMethod={client.setCurrentRenderMethod}
       />
+      <label>
+        Enable OCR when displayed?
+        <input
+          role="switch"
+          type="checkbox"
+          checked={layer.ocr}
+          aria-pressed={layer.ocr}
+          onChange={(e) => client.setCurrentOcr(e.currentTarget.checked)}
+        />
+      </label>
       <RasterNavigatorInner layer={layer} savePoints={() => {}} />
     </div>
   );
