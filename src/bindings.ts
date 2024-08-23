@@ -136,17 +136,6 @@ export const commands = {
       else return { status: "error", error: e as any };
     }
   },
-  async setEpsgSrsForLayer(epsgCode: number): Promise<Result<null, string>> {
-    try {
-      return {
-        status: "ok",
-        data: await TAURI_INVOKE("set_epsg_srs_for_layer", { epsgCode }),
-      };
-    } catch (e) {
-      if (e instanceof Error) throw e;
-      else return { status: "error", error: e as any };
-    }
-  },
   async selectToolForCurrentIndex(tool: ToolDataDiscriminants): Promise<void> {
     await TAURI_INVOKE("select_tool_for_current_index", { tool });
   },
@@ -218,6 +207,9 @@ export const commands = {
   async setCurrentRenderMethod(renderMethod: RenderMethod): Promise<void> {
     await TAURI_INVOKE("set_current_render_method", { renderMethod });
   },
+  /**
+   * This file is for commands that return static data such as names for options
+   */
   async getRenderMethods(): Promise<RenderMethod[]> {
     return await TAURI_INVOKE("get_render_methods");
   },
