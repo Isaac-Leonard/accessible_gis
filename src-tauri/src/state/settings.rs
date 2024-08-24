@@ -78,6 +78,15 @@ impl GlobalSettings {
         self.default_rendering_method_for_images = default_rendering_method;
         self.write_to_file()
     }
+
+    pub fn get_default_audio(&self) -> &AudioSettings {
+        &self.audio
+    }
+
+    pub fn set_default_audio(&mut self, audio: AudioSettings) {
+        self.audio = audio;
+        self.write_to_file()
+    }
 }
 
 impl Default for GlobalSettings {

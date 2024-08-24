@@ -85,6 +85,7 @@ pub fn generate_handlers<R: Runtime>(
             get_audio_indicators,
             set_current_ocr,
             set_default_ocr_for_gdal,
+            set_default_audio,
         ])
         .path(s)
         .config(
