@@ -222,6 +222,9 @@ export const commands = {
   async setDefaultOcrForGdal(val: boolean): Promise<void> {
     await TAURI_INVOKE("set_default_ocr_for_gdal", { val });
   },
+  async setDefaultAudio(val: AudioSettings): Promise<void> {
+    await TAURI_INVOKE("set_default_audio", { val });
+  },
 };
 
 /** user-defined types **/

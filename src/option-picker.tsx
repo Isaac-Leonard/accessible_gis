@@ -158,3 +158,23 @@ export function OptionPicker<T extends readonly string[]>({
     );
   }
 }
+
+type SelectorProps<T extends string[]> = {
+  selectedOption: T[number];
+  setSelectedOption: (option: T[number]) => void;
+  prompt?: string;
+};
+
+export const selectorFactory =
+  <T extends string[]>(options: T) =>
+  ({ selectedOption, setSelectedOption, prompt }: SelectorProps<T>) => {
+    return (
+      <OptionPicker
+        options={options}
+        selectedOption={selectedOption}
+        setOption={setSelectedOption}
+        prompt={prompt}
+        emptyText="Somethings wrong"
+      />
+    );
+  };

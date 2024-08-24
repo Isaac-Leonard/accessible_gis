@@ -1,6 +1,7 @@
 import { client } from "./api";
-import { AudioIndicator, AudioSettings, GlobalSettings } from "./bindings";
-import { OptionPicker } from "./option-picker";
+import { AudioSettings, GlobalSettings } from "./bindings";
+import { selectorFactory } from "./option-picker";
+import { getterSetterFactory } from "./utils";
 
 type SettingsScreenProps = { settings: GlobalSettings };
 
@@ -47,38 +48,39 @@ export const SettingsScreen = ({ settings }: SettingsScreenProps) => {
           onChange={(e) => client.setDefaultOcrForGdal(e.currentTarget.checked)}
         />
       </label>
+      <AudioSettingsScreen
+        settings={settings.audio}
+        setSettings={client.setDefaultAudio}
+      />{" "}
     </div>
   );
 };
 
-type AudioSettingsScreenProps = { settings: AudioSettings };
+type AudioSettingsScreenProps = {
+  settings: AudioSettings;
+  setSettings: (settings: AudioSettings) => void;
+};
 
-const AudioSettingsScreen = ({ settings }: AudioSettingsScreenProps) => {
+const AudioSettingsScreen = ({
+  settings,
+  setSettings,
+}: AudioSettingsScreenProps) => {
+  const getterSetter = getterSetterFactory(settings, setSettings);
   return (
     <div>
-      <AudioIndicatorSelector selectedOption={settings.no_data_value_sound} />
-      <AudioIndicatorSelector selectedOption={settings.border_sound} />
+      <h2>Audio Settings</h2>
+      <AudioIndicatorSelector
+        prompt="Sound when touching areas with no data"
+        {...getterSetter.getSet("no_data_value_sound", "selectedOption")}
+      />
+      <AudioIndicatorSelector
+        prompt="Sound when touching border of image"
+        {...getterSetter.getSet("border_sound", "selectedOption")}
+      />
     </div>
   );
 };
 
-const audioIndicators = await client.getAudioIndicators();
-
-type AudioIndicatorSelectorProps = {
-  selectedOption: AudioIndicator;
-  setIndicator: (indicator: AudioIndicator) => void;
-};
-
-const AudioIndicatorSelector = ({
-  selectedOption,
-  setIndicator,
-}: AudioIndicatorSelectorProps) => {
-  return (
-    <OptionPicker
-      options={audioIndicators}
-      selectedOption={selectedOption}
-      setOption={setIndicator}
-      emptyText="Somethings wrong"
-    />
-  );
-};
+const AudioIndicatorSelector = selectorFactory(
+  await client.getAudioIndicators()
+);
