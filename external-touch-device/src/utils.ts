@@ -67,3 +67,11 @@ export function convertTo8Bit(image: FetchedImageData): number[] {
   }
   return output;
 }
+
+export const mean = (arr: ArrayLike<number>): number => {
+  let sum = 0;
+  for (let i = 0; i < arr.length; i++) {
+    sum = sum + arr[i];
+  }
+  return sum / arr.length;
+};

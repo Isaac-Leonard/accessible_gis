@@ -3,7 +3,7 @@ import { pauseAudio, playAudio, setAudioFrequency } from "./audio";
 import { getTextFromImage } from "./render-image";
 import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
-import { mapPixel, rectContains } from "./utils";
+import { mapPixel, mean, rectContains } from "./utils";
 import { RenderMethod } from "./types";
 
 const border = 16;
@@ -211,24 +211,6 @@ const createCanvas = async () => {
   return canvas;
 };
 
-const cancelHandler = (e: TouchEvent) => {
-  e.preventDefault();
-  pauseAudio();
-};
-
-const endHandler = (e: TouchEvent) => {
-  e.preventDefault();
-  pauseAudio();
-};
-
-const mean = (arr: ArrayLike<number>): number => {
-  let sum = 0;
-  for (let i = 0; i < arr.length; i++) {
-    sum = sum + arr[i];
-  }
-  return sum / arr.length;
-};
-
 const manager = async (canvas: HTMLCanvasElement) => {
   const ctx = canvas.getContext("2d")!;
   const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -281,10 +263,22 @@ const manager = async (canvas: HTMLCanvasElement) => {
       setAudioFrequency(mapPixel(average));
     }
   };
+
+  const cancelHandler = (e: TouchEvent) => {
+    e.preventDefault();
+    pauseAudio();
+  };
+
+  const endHandler = (e: TouchEvent) => {
+    e.preventDefault();
+    pauseAudio();
+  };
+
   canvas.addEventListener("touchstart", startHandler);
   canvas.addEventListener("touchmove", moveHandler);
   canvas.addEventListener("touchend", endHandler);
   canvas.addEventListener("touchcancel", cancelHandler);
+
   return () => {
     canvas.removeEventListener("touchstart", startHandler);
     canvas.removeEventListener("touchmove", moveHandler);
