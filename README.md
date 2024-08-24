@@ -8,7 +8,8 @@ Run
 npm install
 ```
 in the root directory
-Run ```
+Run
+```
 npm install
 ```
 in the external-touch-device directory
