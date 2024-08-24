@@ -33,6 +33,8 @@ The pixels in any raster dataset can be classified with custom ranges and target
 An audio histogram can be played of any raster, either directly from the command line with various options or from the UI with no options.
 An entire raster can be played in audio, either directly from the command line with various options or from the UI with no options.
 It is also possible to explore a raster image manually with an external touch screen device that plays a given tone depending on the brightness of the current pixel being touched.
+#### Analysis
+A counts report can be generated and written to a csv that counts how many times each value of a raster appears in a dataset.
 ### Vector
 #### Descriptions
 The Points and attributes / fields of vector features can be examined and simple descriptions can be generated.
@@ -41,4 +43,5 @@ Any dataset can be reprojected given an EPSG code, PROJ4 string, ESRI code or WK
 New datasets can be created by selecting a subset of features from an existing dataset.
 New datasets can be created by simplifying the geometries of existing datasets.
 ### Example workflow
-It is possible for a user to download a vector dataset of an area they want to examine, select a subset of specific features, reproject it to a specific projection, simplify the geometries to make it simpler to work with and then use the result to download a DEM of the area from a source like [Elvis](https://elevation.fsdf.org.au) then reproject into a new crs and generate derived datasets like slope or aspect profiles and finally classify the resulting pixels into a new datas
+It is possible for a user to download a vector dataset of an area they want to examine, select a subset of specific features, reproject it to a specific projection, simplify the geometries to make it simpler to work with and then use the result to download a DEM of the area from a source like [Elvis](https://elevation.fsdf.org.au) then reproject into a new crs and generate derived datasets like slope or aspect profiles and finally classify the resulting pixels into a new dataset.
+They can then generate a csv with rows for how many times each pixel value appears in the final raster dataset.
