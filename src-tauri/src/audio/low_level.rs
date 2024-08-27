@@ -4,6 +4,7 @@ use cpal::{Device, FromSample, SizedSample};
 use cpal::{Stream, StreamConfig};
 use fundsp::hacker::*;
 use serde::{Deserialize, Serialize};
+use strum::EnumIter;
 
 pub fn write_data<T>(output: &mut [T], channels: usize, next_sample: &mut dyn FnMut() -> (f64, f64))
 where
@@ -45,7 +46,9 @@ pub trait Playable {
         T: cpal::Sample + cpal::SizedSample + cpal::FromSample<f64>;
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Default, Serialize, Deserialize, specta::Type)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Default, Serialize, Deserialize, specta::Type, EnumIter,
+)]
 pub enum Waveform {
     #[default]
     Sine,

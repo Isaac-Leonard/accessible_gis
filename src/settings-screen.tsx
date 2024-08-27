@@ -1,7 +1,8 @@
 import { client } from "./api";
-import { AudioSettings, GlobalSettings } from "./bindings";
+import { AudioSettings, GlobalSettings, RasterGraphSettings } from "./bindings";
 import { bindedSelectorFactory } from "./option-picker";
 import { Checkbox, useBindedObjectProperties } from "./binded-input";
+import { H, Section } from "react-headings";
 
 type SettingsScreenProps = { settings: GlobalSettings };
 
@@ -46,8 +47,7 @@ export const AudioSettingsScreen = ({
 }: AudioSettingsScreenProps) => {
   const getterSetter = useBindedObjectProperties(settings, setSettings);
   return (
-    <div>
-      <h2>Audio Settings</h2>
+    <Section component={<H>Audio Settings</H>}>
       <AudioIndicatorSelector
         prompt="Sound when touching areas with no data"
         binding={getterSetter.no_data_value_sound}
@@ -56,10 +56,40 @@ export const AudioSettingsScreen = ({
         prompt="Sound when touching border of image"
         binding={getterSetter.border_sound}
       />
-    </div>
+      <RasterGraphSettingsScreen
+        settings={getterSetter.graph.value}
+        setSettings={getterSetter.graph.setValue}
+      />
+    </Section>
   );
 };
 
 const AudioIndicatorSelector = bindedSelectorFactory(
   await client.getAudioIndicators()
 );
+
+type RasterGraphSettingsScreenProps = {
+  settings: RasterGraphSettings;
+  setSettings: (settings: RasterGraphSettings) => void;
+};
+
+export const RasterGraphSettingsScreen = ({
+  settings,
+  setSettings,
+}: RasterGraphSettingsScreenProps) => {
+  const graphSettings = useBindedObjectProperties(settings, setSettings);
+  return (
+    <Section component={<H>Raster Graph Settings</H>}>
+      <Checkbox
+        label="Treat as classified data?"
+        binding={graphSettings.classified}
+      />
+      <WaveformSelector
+        prompt="Audio wave to use"
+        binding={graphSettings.wave}
+      />
+    </Section>
+  );
+};
+
+const WaveformSelector = bindedSelectorFactory(await client.getWaveForms());

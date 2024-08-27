@@ -204,6 +204,9 @@ export const commands = {
   async getAudioIndicators(): Promise<AudioIndicator[]> {
     return await TAURI_INVOKE("get_audio_indicators");
   },
+  async getWaveForms(): Promise<Waveform[]> {
+    return await TAURI_INVOKE("get_wave_forms");
+  },
   async setDisplay(): Promise<void> {
     await TAURI_INVOKE("set_display");
   },
@@ -232,6 +235,8 @@ export type AudioSettings = {
   volume: number;
   no_data_value_sound: AudioIndicator;
   border_sound: AudioIndicator;
+  histogram: HistogramSettings;
+  graph: RasterGraphSettings;
 };
 export type Classification = { min: number; max: number; target: number };
 export type ClosedLineDescription = {
@@ -246,6 +251,7 @@ export type ClosedLineDescription = {
   number_of_points: number;
 };
 export type DistanceFromBoarder = { name: string; distance: number };
+export type Duration = { secs: number; nanos: number };
 export type FeatureIdentifier = { name: string | null; fid: number };
 export type FeatureInfo = {
   fields: Field[];
@@ -341,6 +347,14 @@ export type GlobalSettings = {
   default_rendering_method_for_images: RenderMethod;
   audio: AudioSettings;
 };
+export type HistogramSettings = {
+  /**
+   * The length the histogram should play for in milliseconds
+   */
+  duration: number;
+  min_freq: number;
+  max_freq: number;
+};
 export type LayerDescriptor = (
   | { type: "Vector"; index: number }
   | { type: "Raster"; index: number }
@@ -379,6 +393,20 @@ export type OpenLineDescription = {
 export type Point = { x: number; y: number };
 export type Polygon = { exterior: LineString; interior: LineString[] };
 export type PolygonInfo = { area: number; fields: Field[] };
+export type RasterGraphSettings = {
+  /**
+   * The length the histogram should play for in milliseconds
+   */
+  row_duration: Duration;
+  min_freq: number;
+  max_freq: number;
+  rows: number;
+  cols: number;
+  classified: boolean;
+  wave: Waveform;
+  min_value: number | null;
+  max_value: number | null;
+};
 export type RasterScreenData = {
   layer_index: number;
   dataset_index: number;
@@ -438,6 +466,7 @@ export type VectorScreenData = {
   display: boolean;
   name_field: string | null;
 };
+export type Waveform = "Sine" | "Square" | "Triangle" | "Sawtooth";
 
 /** tauri-specta globals **/
 

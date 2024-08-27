@@ -79,6 +79,7 @@ pub fn generate_handlers<R: Runtime>(
             set_settings,
             get_render_methods,
             get_audio_indicators,
+            get_wave_forms,
             set_display,
             set_current_ocr,
             set_current_render_method,

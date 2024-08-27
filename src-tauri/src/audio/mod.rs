@@ -3,7 +3,7 @@
 
 pub mod graph;
 pub mod histogram;
-mod low_level;
+pub mod low_level;
 
 pub use low_level::Waveform;
 use std::sync::mpsc::{self, Receiver};
