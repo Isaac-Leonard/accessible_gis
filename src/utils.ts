@@ -22,9 +22,11 @@ export const getterSetterFactory = <T extends {}>(
     onChange: (e: TargetedEvent<HTMLInputElement, Event>) =>
       setValue({ ...value, [name]: e.currentTarget.value }),
   }),
-  getSet: <K extends keyof T, P extends string>(
+  getSet: <K extends keyof T, P extends string = "value">(
     name: K,
-    prop: P
+    // TODO: Make this an over loaded method rather then using a type assertion
+    // https://stackoverflow.com/questions/65221629/how-to-give-a-default-value-to-a-generic-parameter
+    prop: P = "value" as P
   ): GetSet<P, T, K> =>
     ({
       [prop]: value[name],
