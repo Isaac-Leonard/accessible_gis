@@ -1,6 +1,6 @@
 import { client } from "./api";
-import { selectorFactory } from "./option-picker";
+import { bindedSelectorFactory } from "./option-picker";
 
-export const RenderMethodsSelector = selectorFactory(
+export const RenderMethodsSelector = bindedSelectorFactory(
   await client.getRenderMethods()
 );

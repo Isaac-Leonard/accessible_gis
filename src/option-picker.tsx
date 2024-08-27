@@ -1,4 +1,6 @@
 import { useState } from "preact/hooks";
+import { Binding } from "./binded-input";
+import { ReadonlySignal, Signal } from "@preact/signals";
 
 export type IndexedOptionPickerProps = {
   options: string[];
@@ -159,22 +161,72 @@ export function OptionPicker<T extends readonly string[]>({
   }
 }
 
-type SelectorProps<T extends string[]> = {
-  selectedOption: T[number];
-  setSelectedOption: (option: T[number]) => void;
+type BindedSelectorProps<T extends string[]> = {
+  binding: Binding<T[number]>;
   prompt?: string;
 };
 
-export const selectorFactory =
+export const bindedSelectorFactory =
   <T extends string[]>(options: T) =>
-  ({ selectedOption, setSelectedOption, prompt }: SelectorProps<T>) => {
-    return (
-      <OptionPicker
+  ({ prompt, binding }: BindedSelectorProps<T>) => {
+    return binding instanceof Signal ? (
+      <SignalSelector options={options} signal={binding} prompt={prompt} />
+    ) : (
+      <GetSetSelector
         options={options}
-        selectedOption={selectedOption}
-        setOption={setSelectedOption}
         prompt={prompt}
-        emptyText="Somethings wrong"
+        value={binding.value}
+        setValue={binding.setValue}
       />
     );
   };
+
+type SignalSelectorProps<T extends string[]> = {
+  signal: Signal<T[number]>;
+  options: T;
+  prompt?: string;
+};
+
+export const SignalSelector = <T extends string[]>({
+  signal,
+  options,
+  prompt,
+}: SignalSelectorProps<T>) => {
+  return (
+    <OptionPicker
+      options={options}
+      // TODO: Inline this to avoid rerenders
+      selectedOption={signal.value}
+      setOption={(e) => {
+        signal.value = e;
+      }}
+      prompt={prompt}
+      emptyText="Somethings wrong"
+    />
+  );
+};
+
+type GetSetSelectorProps<T extends string[]> = {
+  value: T[number] | ReadonlySignal<T[number]>;
+  setValue: (value: T[number]) => void;
+  options: T;
+  prompt?: string;
+};
+
+export const GetSetSelector = <T extends string[]>({
+  value,
+  setValue,
+  options,
+  prompt,
+}: GetSetSelectorProps<T>) => {
+  return (
+    <OptionPicker
+      options={options}
+      // TODO: Inline this to avoid rerenders
+      selectedOption={typeof value === "string" ? value : value.value}
+      setOption={setValue}
+      prompt={prompt}
+      emptyText="Somethings wrong"
+    />
+  );
+};

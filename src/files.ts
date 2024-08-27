@@ -17,7 +17,7 @@ export const openFile = async (prompt?: string): Promise<null | string> => {
   }
 };
 
-export const loadFile = async (name: string): Promise<string> => {
+export const loadFile = async (name: string): Promise<string | null> => {
   return await client.loadFile(name).catch((e) => e as unknown as string);
 };
 
