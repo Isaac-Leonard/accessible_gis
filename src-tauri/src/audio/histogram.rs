@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use super::low_level::{AudioWave, Playable, Waveform};
 use std::{thread::sleep, time::Duration};
 
@@ -82,7 +84,7 @@ pub fn play_histogram(counts: Vec<f64>, settings: HistogramSettings, wave: Wavef
     sonifier.play();
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
 pub struct HistogramSettings {
     /// The length the histogram should play for in milliseconds
     pub duration: usize,

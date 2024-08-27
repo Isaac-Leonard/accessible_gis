@@ -2,6 +2,8 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 
+use crate::audio::{graph::RasterGraphSettings, histogram::HistogramSettings};
+
 use super::gis::raster::RenderMethod;
 
 const DEFAULT_SETTINGS_FILE_NAME: &str = "settings.json";
@@ -109,6 +111,18 @@ pub struct AudioSettings {
     pub volume: f64,
     no_data_value_sound: AudioIndicator,
     border_sound: AudioIndicator,
+    histogram: HistogramSettings,
+    graph: RasterGraphSettings,
+}
+
+impl AudioSettings {
+    pub fn histogram(&self) -> &HistogramSettings {
+        &self.histogram
+    }
+
+    pub fn graph(&self) -> &RasterGraphSettings {
+        &self.graph
+    }
 }
 
 impl Default for AudioSettings {
@@ -119,6 +133,8 @@ impl Default for AudioSettings {
             volume: 1.0,
             no_data_value_sound: AudioIndicator::Different,
             border_sound: AudioIndicator::MinFreq,
+            histogram: HistogramSettings::default(),
+            graph: RasterGraphSettings::default(),
         }
     }
 }

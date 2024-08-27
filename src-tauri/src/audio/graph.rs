@@ -1,5 +1,6 @@
 use itertools::{Either, Itertools};
 use ndarray::{Array2, Zip};
+use serde::{Deserialize, Serialize};
 
 use std::{collections::HashMap, thread::sleep, time::Duration};
 
@@ -12,7 +13,7 @@ pub fn play_rasta(vals: Vec<(Array2<f64>, f64, f64, Option<f64>, RasterGraphSett
     rasta_graph.play();
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
 pub struct RasterGraphSettings {
     /// The length the histogram should play for in milliseconds
     pub row_duration: Duration,
