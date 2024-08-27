@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 
 type DialogProps = {
   openText: string;
-  modal: boolean;
+  modal?: boolean;
   open: boolean;
   setOpen: (open: boolean) => void;
   children: ComponentChildren;
@@ -21,7 +21,7 @@ export const Dialog = ({
 
   useEffect(() => {
     if (open) {
-      if (modal) {
+      if (modal ?? true) {
         ref.current?.showModal();
       } else {
         ref.current?.show();
