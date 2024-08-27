@@ -52,7 +52,7 @@ impl StatefulDataset {
             .dataset
             .rasterbands()
             .map(|_| StatefulRasterInfo {
-                audio_settings: AudioSettings::default(),
+                audio_settings: settings.get_default_audio().clone(),
                 shared: SharedInfo,
                 image_type: ImageType::default(),
                 render: render_method,
