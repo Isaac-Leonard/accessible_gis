@@ -17,6 +17,7 @@ const globalKeyHandler = (e: KeyboardEvent) => {
 function App() {
   return (
     <div onKeyDown={globalKeyHandler}>
+      <button onClick={() => client.setScreen("Main")}>Main</button>
       <button onClick={() => client.setScreen("NewDataset")}>
         New dataset
       </button>
