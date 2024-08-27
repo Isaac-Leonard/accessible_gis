@@ -19,6 +19,6 @@ pub fn get_app_info(state: AppState) -> UiScreen {
         Screen::NewDataset => UiScreen::NewDataset(NewDatasetScreenData {
             drivers: list_drivers(),
         }),
-        Screen::Settings => UiScreen::Settings(state.settings.clone()),
+        Screen::Settings => UiScreen::Settings(state.settings().clone()),
     })
 }

@@ -41,7 +41,7 @@ pub fn create_new_dataset(
     let mut guard = state.data.lock().unwrap();
     let mut dataset = WrappedDataset::new_vector(file, driver_name)?;
     dataset.add_layer()?;
-    let dataset = StatefulDataset::new(dataset, &guard.settings);
+    let dataset = StatefulDataset::new(dataset, guard.settings());
     guard.shared.datasets.add(dataset);
     guard.screen = Screen::Main;
     Ok(())

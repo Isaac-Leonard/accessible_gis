@@ -147,9 +147,6 @@ export const commands = {
       else return { status: "error", error: e as any };
     }
   },
-  async setDisplay(): Promise<void> {
-    await TAURI_INVOKE("set_display");
-  },
   async setNameField(field: string): Promise<void> {
     await TAURI_INVOKE("set_name_field", { field });
   },
@@ -195,17 +192,8 @@ export const commands = {
   async openSettings(): Promise<void> {
     await TAURI_INVOKE("open_settings");
   },
-  async setShowFirstRasterByDefault(val: boolean): Promise<void> {
-    await TAURI_INVOKE("set_show_first_raster_by_default", { val });
-  },
-  async setShowCountriesByDefault(val: boolean): Promise<void> {
-    await TAURI_INVOKE("set_show_countries_by_default", { val });
-  },
-  async setShowTownsByDefault(val: boolean): Promise<void> {
-    await TAURI_INVOKE("set_show_towns_by_default", { val });
-  },
-  async setCurrentRenderMethod(renderMethod: RenderMethod): Promise<void> {
-    await TAURI_INVOKE("set_current_render_method", { renderMethod });
+  async setSettings(settings: GlobalSettings): Promise<void> {
+    await TAURI_INVOKE("set_settings", { settings });
   },
   /**
    * This file is for commands that return static data such as names for options
@@ -216,14 +204,14 @@ export const commands = {
   async getAudioIndicators(): Promise<AudioIndicator[]> {
     return await TAURI_INVOKE("get_audio_indicators");
   },
+  async setDisplay(): Promise<void> {
+    await TAURI_INVOKE("set_display");
+  },
   async setCurrentOcr(enabled: boolean): Promise<void> {
     await TAURI_INVOKE("set_current_ocr", { enabled });
   },
-  async setDefaultOcrForGdal(val: boolean): Promise<void> {
-    await TAURI_INVOKE("set_default_ocr_for_gdal", { val });
-  },
-  async setDefaultAudio(val: AudioSettings): Promise<void> {
-    await TAURI_INVOKE("set_default_audio", { val });
+  async setCurrentRenderMethod(renderMethod: RenderMethod): Promise<void> {
+    await TAURI_INVOKE("set_current_render_method", { renderMethod });
   },
 };
 

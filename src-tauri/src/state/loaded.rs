@@ -19,12 +19,14 @@ use super::{
     CountryImpl, Screen,
 };
 
+const DEFAULT_SETTINGS_FILE_NAME: &str = "settings.json";
+
 pub struct AppData {
     pub towns: HashMap<String, Vec<LocalFeatureInfo>>,
     pub screen: Screen,
     pub shared: UserState,
     pub errors: Vec<String>,
-    pub settings: GlobalSettings,
+    settings: GlobalSettings,
 }
 
 impl AppData {
@@ -163,5 +165,19 @@ impl AppData {
                     .unwrap()
                     .cmp(&str::parse::<i64>(&a.get_field("population").unwrap()).unwrap())
             })
+    }
+
+    pub fn settings(&self) -> &GlobalSettings {
+        &self.settings
+    }
+
+    pub fn set_settings(&mut self, settings: GlobalSettings) -> &GlobalSettings {
+        self.settings = settings;
+        std::fs::write(
+            DEFAULT_SETTINGS_FILE_NAME,
+            serde_json::to_string_pretty(&self.settings).expect("Could not serialise settings"),
+        )
+        .expect("Could not save settings");
+        &self.settings
     }
 }

@@ -62,7 +62,6 @@ pub fn generate_handlers<R: Runtime>(
             add_feature_to_layer,
             select_tool_for_current_index,
             get_image_pixels,
-            set_display,
             set_name_field,
             classify_current_raster,
             set_srs,
@@ -77,15 +76,12 @@ pub fn generate_handlers<R: Runtime>(
             play_histogram,
             generate_counts_report,
             open_settings,
-            set_show_first_raster_by_default,
-            set_show_countries_by_default,
-            set_show_towns_by_default,
-            set_current_render_method,
+            set_settings,
             get_render_methods,
             get_audio_indicators,
+            set_display,
             set_current_ocr,
-            set_default_ocr_for_gdal,
-            set_default_audio,
+            set_current_render_method,
         ])
         .path(s)
         .config(
