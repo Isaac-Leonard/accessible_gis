@@ -213,6 +213,9 @@ export const commands = {
   async setCurrentRenderMethod(renderMethod: RenderMethod): Promise<void> {
     await TAURI_INVOKE("set_current_render_method", { renderMethod });
   },
+  async setCurrentAudioSettings(settings: AudioSettings): Promise<void> {
+    await TAURI_INVOKE("set_current_audio_settings", { settings });
+  },
 };
 
 /** user-defined types **/
@@ -386,6 +389,7 @@ export type RasterScreenData = {
   display: boolean;
   render_method: RenderMethod;
   ocr: boolean;
+  audio_settings: AudioSettings;
 };
 export type RasterSize = { width: number; length: number; bands: number };
 export type RenderMethod =

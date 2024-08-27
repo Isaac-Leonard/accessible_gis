@@ -40,7 +40,7 @@ type AudioSettingsScreenProps = {
   setSettings: (settings: AudioSettings) => void;
 };
 
-const AudioSettingsScreen = ({
+export const AudioSettingsScreen = ({
   settings,
   setSettings,
 }: AudioSettingsScreenProps) => {

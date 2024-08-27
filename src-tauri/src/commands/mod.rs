@@ -82,6 +82,7 @@ pub fn generate_handlers<R: Runtime>(
             set_display,
             set_current_ocr,
             set_current_render_method,
+            set_current_audio_settings,
         ])
         .path(s)
         .config(

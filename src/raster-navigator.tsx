@@ -1,4 +1,4 @@
-import { Point, RasterScreenData } from "./bindings";
+import { AudioSettings, Point, RasterScreenData } from "./bindings";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { client } from "./api";
 import { ReprojectionDialog } from "./reprojection-dialog";
@@ -6,6 +6,8 @@ import { DemMethodsDialog } from "./dem_methods";
 import { ClassificationDialog } from "./classification";
 import { SaveButton } from "./save-button";
 import { RenderMethodsSelector } from "./render_methods_selector";
+import { Dialog, useDialog } from "./dialog";
+import { AudioSettingsScreen } from "./settings-screen";
 
 export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
   return (
@@ -39,6 +41,7 @@ export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
           onChange={(e) => client.setCurrentOcr(e.currentTarget.checked)}
         />
       </label>
+      <AudioSettingsDialog settings={layer.audio_settings} />
       <RasterNavigatorInner layer={layer} savePoints={() => {}} />
     </div>
   );
@@ -79,9 +82,9 @@ const RasterNavigatorInner = ({
           const val = await client.getValueAtPoint({ x, y });
           const newVal = typeof val === "number" ? val.toPrecision(4) : val;
           if (showCoords) {
-            setInfo(`${newVal} at ${x}, ${rows - y}`);
+            setInfo(`${newVal ?? "No data"} at ${x}, ${rows - y}`);
           } else {
-            setInfo(newVal);
+            setInfo(newVal ?? "No data");
           }
         }
       }
@@ -213,5 +216,17 @@ const SaveScreen = ({
       <button onClick={cancel}>Cancel</button>
       <button onClick={done}>Done</button>
     </div>
+  );
+};
+
+const AudioSettingsDialog = ({ settings }: { settings: AudioSettings }) => {
+  const { open, setOpen } = useDialog();
+  return (
+    <Dialog openText="Customise Audio Settings" open={open} setOpen={setOpen}>
+      <AudioSettingsScreen
+        settings={settings}
+        setSettings={client.setCurrentAudioSettings}
+      />
+    </Dialog>
   );
 };

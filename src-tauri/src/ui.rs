@@ -10,7 +10,7 @@ use crate::{
             combined::{RasterIndex, VectorIndex},
             raster::RenderMethod,
         },
-        settings::GlobalSettings,
+        settings::{AudioSettings, GlobalSettings},
         AppData,
     },
     FeatureInfo,
@@ -82,6 +82,7 @@ pub struct RasterScreenData {
     pub display: bool,
     pub render_method: RenderMethod,
     pub ocr: bool,
+    pub audio_settings: AudioSettings,
 }
 
 impl AppData {
@@ -146,6 +147,7 @@ impl AppData {
                             }),
                         render_method: band.info.render,
                         ocr: band.info.ocr,
+                        audio_settings: band.info.audio_settings.clone(),
                     }))
                 }
                 None => None,

@@ -7,7 +7,7 @@ use crate::{
     dataset_collection::NonEmptyDelegatorImpl,
     gdal_if::{read_raster_data, read_raster_data_enum_as},
     geometry::Point,
-    state::AppState,
+    state::{settings::AudioSettings, AppState},
 };
 
 #[tauri::command]
@@ -94,6 +94,14 @@ impl Classification {
 #[specta::specta]
 pub fn set_display(state: AppState) {
     state.with_lock(|state| state.shared.display_current_raster())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_current_audio_settings(settings: AudioSettings, state: AppState) {
+    state
+        .with_current_raster_band(|band| band.info.audio_settings = settings)
+        .expect("Tried to work on non selected raster band");
 }
 
 #[tauri::command]
