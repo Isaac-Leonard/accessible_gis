@@ -1,7 +1,11 @@
 import { client } from "./api";
 import { AudioSettings, GlobalSettings, RasterGraphSettings } from "./bindings";
 import { bindedSelectorFactory } from "./option-picker";
-import { Checkbox, useBindedObjectProperties } from "./binded-input";
+import {
+  Checkbox,
+  NumberInput,
+  useBindedObjectProperties,
+} from "./binded-input";
 import { H, Section } from "react-headings";
 
 type SettingsScreenProps = { settings: GlobalSettings };
@@ -80,6 +84,14 @@ export const RasterGraphSettingsScreen = ({
   const graphSettings = useBindedObjectProperties(settings, setSettings);
   return (
     <Section component={<H>Raster Graph Settings</H>}>
+      <NumberInput
+        label="Minimum frequency to play for the raster graph"
+        binding={graphSettings.min_freq}
+      />
+      <NumberInput
+        label="Maximum frequency to play for the raster graph"
+        binding={graphSettings.max_freq}
+      />
       <Checkbox
         label="Treat as classified data?"
         binding={graphSettings.classified}
@@ -87,6 +99,14 @@ export const RasterGraphSettingsScreen = ({
       <WaveformSelector
         prompt="Audio wave to use"
         binding={graphSettings.wave}
+      />
+      <NumberInput
+        label="Shrink Horozontal resolution to x number of rows"
+        binding={graphSettings.rows}
+      />
+      <NumberInput
+        label="Shrink vertical resolution to y number of rows"
+        binding={graphSettings.cols}
       />
     </Section>
   );

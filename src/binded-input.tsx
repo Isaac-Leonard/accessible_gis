@@ -54,6 +54,48 @@ export const SetterInput = ({
   );
 };
 
+type BindedNumberInputProps = { binding: Binding<number> } & InputProps;
+
+export const NumberInput = ({ binding, label }: BindedNumberInputProps) => {
+  return (
+    <label>
+      {label ?? ""}
+      {binding instanceof Signal ? (
+        <SignalNumberInput signal={binding} />
+      ) : (
+        <SetterNumberInput {...binding} />
+      )}
+    </label>
+  );
+};
+
+type SignalNumberInputProps = { signal: Signal<number> };
+
+export const SignalNumberInput = ({ signal }: SignalNumberInputProps) => {
+  return (
+    <input
+      value={signal}
+      onChange={(e) => {
+        signal.value = Number(e.currentTarget.value);
+      }}
+    />
+  );
+};
+
+export const SetterNumberInput = ({
+  value,
+  setValue,
+}: ComputedSetter<number> | GetSet<number>) => {
+  return (
+    <input
+      value={value}
+      onChange={(e) => {
+        setValue(Number(e.currentTarget.value));
+      }}
+    />
+  );
+};
+
 type BindedCheckboxProps = { binding: Binding<boolean> } & InputProps;
 
 export const Checkbox = ({ binding, label }: BindedCheckboxProps) => {

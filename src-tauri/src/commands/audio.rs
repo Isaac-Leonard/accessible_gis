@@ -23,7 +23,7 @@ pub fn play_as_sound(state: AppState, audio: State<SyncSender<AudioMessage>>) {
                     min,
                     max,
                     band.band.no_data_value(),
-                    Default::default(),
+                    band.info.audio_settings.graph().clone(),
                 ))
                 .unwrap();
         })
@@ -47,7 +47,7 @@ pub fn play_histogram(state: AppState, audio: State<SyncSender<AudioMessage>>) {
             audio
                 .send(AudioMessage::PlayHistogram(
                     histogram.counts().iter().map(|x| (*x) as f64).collect_vec(),
-                    Default::default(),
+                    band.info.audio_settings.histogram().clone(),
                     Default::default(),
                 ))
                 .unwrap();
