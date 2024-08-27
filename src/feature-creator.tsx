@@ -53,7 +53,9 @@ export const FeatureCreator = ({
           />
         ))}
       </div>
-      <button onClick={() => setFeature({ geometry, fields })}>Create</button>
+      <button onClick={() => setFeature({ geometry, fields, fid: null })}>
+        Create
+      </button>
     </div>
   );
 };

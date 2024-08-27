@@ -1,4 +1,4 @@
-import { Point, Classification, RasterScreenData } from "./bindings";
+import { Point, RasterScreenData } from "./bindings";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { client } from "./api";
 import { ReprojectionDialog } from "./reprojection-dialog";
@@ -7,10 +7,7 @@ import { ClassificationDialog } from "./classification";
 import { SaveButton } from "./save-button";
 import { RenderMethodsSelector } from "./render_methods_selector";
 
-const tools = ["None", "Trace geometries"] as const;
-
 export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
-  const [tool, setTool] = useState<(typeof tools)[number]>(tools[0]);
   return (
     <div>
       <ReprojectionDialog />
@@ -27,8 +24,10 @@ export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
         Play audio Histogram
       </button>
       <RenderMethodsSelector
-        selectedMethod={layer.render_method}
-        setMethod={client.setCurrentRenderMethod}
+        binding={{
+          value: layer.render_method,
+          setValue: client.setCurrentRenderMethod,
+        }}
       />
       <label>
         Enable OCR when displayed?

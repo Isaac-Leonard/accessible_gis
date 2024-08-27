@@ -165,7 +165,11 @@ const CurrentFeatureViewer = ({ info, srs }: CurrentFeatureViewerProps) => {
         setOpen={setPointsOpen}
         openText="Examine points"
       >
-        <GeometryViewer geometry={info.geometry} srs={srs} />
+        {info.geometry !== null ? (
+          <GeometryViewer geometry={info.geometry} srs={srs} />
+        ) : (
+          <div>No Geometry</div>
+        )}
       </Dialog>
       <Dialog
         modal={true}
