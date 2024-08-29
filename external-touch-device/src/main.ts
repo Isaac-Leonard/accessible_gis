@@ -1,3 +1,4 @@
+import turf from "@turf/turf";
 import ImageJS, { ImageKind } from "image-js";
 import { pauseAudio, playAudio, setAudioFrequency } from "./audio";
 import { getTextFromImage } from "./render-image";
@@ -5,6 +6,7 @@ import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
 import { mapPixel, mean, rectContains } from "./utils";
 import { RenderMethod } from "./types";
+import { featureCollection } from "./geojson-parser";
 
 const border = 16;
 const root = document.getElementById("image");
@@ -22,6 +24,12 @@ const createButton = () => {
   btn.textContent = "Start";
   root?.appendChild(btn);
   return btn;
+};
+
+const getGeojson = async (): Promise<GeoJSON.FeatureCollection> => {
+  const res = await fetch("/get_vector");
+  const data = await res.json();
+  return featureCollection.parse(data);
 };
 
 const getRawImage = async (): Promise<ImageJS> => {
@@ -96,6 +104,7 @@ const createCanvas = async () => {
   const width = canvas.width - border * 2;
   const height = canvas.height - border * 2;
   const image = await getRawImage();
+  const features = await getGeojson();
   console.log("Width: " + width + " and image width: " + image.width);
   console.log("height: " + height + " and image height: " + image.height);
   let scaleFactor = 1;
