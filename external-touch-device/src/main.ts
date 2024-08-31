@@ -1,3 +1,4 @@
+import "./websocket";
 import turf from "@turf/turf";
 import ImageJS, { ImageKind } from "image-js";
 import { pauseAudio, playAudio, setAudioFrequency } from "./audio";
@@ -7,6 +8,7 @@ import { GestureManager } from "./touch-gpt";
 import { mapPixel, mean, rectContains } from "./utils";
 import { RenderMethod } from "./types";
 import { featureCollection } from "./geojson-parser";
+import { AppMessage, WsConnection } from "./websocket";
 
 const border = 16;
 const root = document.getElementById("image");
@@ -213,128 +215,129 @@ const createCanvas = async () => {
   root?.appendChild(canvas);
   render();
   let removeHandlers = await manager(canvas);
-  const reset = async () => {
+  const reset = async (): Promise<void> => {
     removeHandlers();
-    removeHandlers = await manager(canvas);
   };
   return canvas;
 };
 
-const manager = async (canvas: HTMLCanvasElement) => {
-  const ctx = canvas.getContext("2d")!;
-  const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const ocrRes = await fetch("/get_ocr");
-  const ocrEnabled = await ocrRes.json();
+type Line = {
+  text: string;
+  rect: DOMRect;
+};
+
+class OcrManager {
   // Quick hack for now
   // Leave all of the ocr code working but just use an empty detections array instead of scan the image if not enabled
-  const lines = ocrEnabled ? getTextFromImage(image) : [];
-  let activeLine: { text: string; rect: DOMRect } | null = null;
+  lines: Line[];
 
-  const manageText = (x: number, y: number) => {
-    const line = lines.find((line) => rectContains(line.rect, x, y));
+  activeLine: Line | null = null;
+
+  settings: boolean;
+
+  manageText(this: OcrManager, x: number, y: number) {
+    const line = this.lines.find((line) => rectContains(line.rect, x, y));
     if (line === undefined) {
-      activeLine = null;
+      this.activeLine = null;
       return;
     }
-    if (line === activeLine) {
+    if (line === this.activeLine) {
       return;
     }
-    activeLine = line;
-    speak(activeLine.text);
-  };
+    this.activeLine = line;
+    speak(this.activeLine.text);
+  }
 
-  // TODO: Make this call the server or websocket
-  const manageFeatures = (x: number, y: number) => {};
+  constructor(image: ImageData, ocrEnabled: boolean) {
+    this.lines = ocrEnabled ? getTextFromImage(image) : [];
+    this.settings = ocrEnabled;
+  }
 
-  const startHandler = (e: TouchEvent) => {
+  setImage(image: ImageData) {}
+  setSettings(settings: boolean) {}
+}
+
+export class CanvasManager {
+  image: ImageData;
+  ctx: CanvasRenderingContext2D;
+  connection: WsConnection;
+  ocr: OcrManager;
+  constructor(public canvas: HTMLCanvasElement) {
+    this.bindHandlers();
+    this.ctx = canvas.getContext("2d")!;
+    this.image = this.ctx.getImageData(0, 0, canvas.width, canvas.height);
+    this.connection = new WsConnection(this);
+    this.ocr = new OcrManager(this.image, false);
+  }
+
+  update(message: AppMessage) {
+    switch (message.type) {
+      case "Raster":
+        return;
+      case "Vector":
+        return;
+    }
+  }
+
+  manageFeatures(x: number, y: number) {}
+
+  addListeners() {
+    this.canvas.addEventListener("touchstart", this.startHandler);
+    this.canvas.addEventListener("touchmove", this.moveHandler);
+    this.canvas.addEventListener("touchend", this.endHandler);
+    this.canvas.addEventListener("touchcancel", this.cancelHandler);
+  }
+
+  bindHandlers() {
+    this.startHandler = this.startHandler.bind(this);
+    this.moveHandler = this.moveHandler.bind(this);
+    this.endHandler = this.endHandler.bind(this);
+    this.cancelHandler = this.cancelHandler.bind(this);
+  }
+
+  startHandler(this: CanvasManager, e: TouchEvent) {
     e.preventDefault();
     playAudio();
     const y = e.touches[0].pageY;
     const x = e.touches[0].pageX;
-    const index = (y * image.width + x) * 4;
-    const pixel = image.data.slice(index, index + 3);
+    const index = (y * this.image.width + x) * 4;
+    const pixel = this.image.data.slice(index, index + 3);
     const average = mean(pixel);
-    manageText(x, y);
-    manageFeatures(x, y);
+    this.ocr.manageText(x, y);
+    this.manageFeatures(x, y);
     setAudioFrequency(mapPixel(average));
-  };
+  }
 
-  const moveHandler = (e: TouchEvent) => {
+  moveHandler(this: CanvasManager, e: TouchEvent) {
     e.preventDefault();
     if (e.currentTarget instanceof HTMLCanvasElement) {
       const touch = e.touches[e.touches.length - 1];
       const y = touch.pageY;
       const x = touch.pageX;
-      const index = (y * image.width + x) * 4;
-      const pixel = image.data.slice(index, index + 3);
+      const index = (y * this.image.width + x) * 4;
+      const pixel = this.image.data.slice(index, index + 3);
       const average = mean(pixel);
-      manageText(x, y);
+      this.ocr.manageText(x, y);
       setAudioFrequency(mapPixel(average));
     }
-  };
+  }
 
-  const cancelHandler = (e: TouchEvent) => {
+  cancelHandler(this: CanvasManager, e: TouchEvent) {
     e.preventDefault();
     pauseAudio();
-  };
+  }
 
-  const endHandler = (e: TouchEvent) => {
+  endHandler(this: CanvasManager, e: TouchEvent) {
     e.preventDefault();
     pauseAudio();
-  };
+  }
 
-  canvas.addEventListener("touchstart", startHandler);
-  canvas.addEventListener("touchmove", moveHandler);
-  canvas.addEventListener("touchend", endHandler);
-  canvas.addEventListener("touchcancel", cancelHandler);
-
-  return () => {
-    canvas.removeEventListener("touchstart", startHandler);
-    canvas.removeEventListener("touchmove", moveHandler);
-    canvas.removeEventListener("touchend", endHandler);
-    canvas.removeEventListener("touchcancel", cancelHandler);
-  };
-};
+  removeListeners(this: CanvasManager) {
+    this.canvas.removeEventListener("touchstart", this.startHandler);
+    this.canvas.removeEventListener("touchmove", this.moveHandler);
+    this.canvas.removeEventListener("touchend", this.endHandler);
+    this.canvas.removeEventListener("touchcancel", this.cancelHandler);
+  }
+}
 
 createButton();
-
-const host = window.location.host;
-const wsUrl = `ws://${host}/ws`;
-
-let socket: WebSocket | null = null;
-
-const connect = () => {
-  socket = new WebSocket(wsUrl);
-
-  socket.addEventListener("open", () => {
-    console.log("Opened web socket");
-  });
-
-  socket.addEventListener("error", (e) => {
-    console.log("Error in websocket");
-    console.log(e);
-    connect();
-  });
-
-  socket.addEventListener("message", (e) => {
-    console.log("Message recieved");
-    console.log(e.data);
-  });
-
-  socket.addEventListener("close", (e) => {
-    console.log("Closed socket");
-    console.log(e);
-    connect();
-  });
-};
-
-connect();
-
-document.addEventListener("visibilitychange", () => {
-  if (
-    document.visibilityState === "visible" &&
-    socket?.readyState === WebSocket.CLOSED
-  ) {
-    connect();
-  }
-});
