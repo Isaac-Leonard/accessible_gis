@@ -100,22 +100,50 @@ type RasterSettings = {
   enableOcr: boolean;
   image: boolean;
   audio: AudioSettings;
+  geoTransform: GeoTransform;
+  invertedGeoTransform: GeoTransform;
 };
 
-const rasterParser: ZodType<RasterSettings> = z.object({
+const geoTransformParser = z
+  .tuple([
+    z.number(),
+    z.number(),
+    z.number(),
+    z.number(),
+    z.number(),
+    z.number(),
+  ])
+  .transform((gt) => new GeoTransform(gt));
+
+const rasterParser = z.object({
   enableOcr: z.boolean(),
   image: z.boolean(),
   audio: z.object({}),
+  geoTransform: geoTransformParser,
+  invertedGeoTransform: geoTransformParser,
 });
 
 const vectorSettingsParser = z.object({});
 
-const vectorParser = z.object({
+const vectorParser: MyZodType<VectorMessage> = z.object({
   data: featureCollection,
   settings: vectorSettingsParser,
 });
 
-const messageParser: ZodType<AppMessage> = z.union([
+const messageParser: MyZodType<AppMessage> = z.union([
   z.object({ type: z.literal("Vector"), data: vectorParser }),
   z.object({ type: z.literal("Raster"), data: rasterParser }),
 ]);
+
+class GeoTransform {
+  constructor(private gt: [number, number, number, number, number, number]) {}
+
+  apply(x: number, y: number) {
+    return [
+      this.gt[0] + x * this.gt[1] + y * this.gt[2],
+      this.gt[3] + x * this.gt[4] + y * this.gt[5],
+    ];
+  }
+}
+
+type MyZodType<T> = ZodType<T, any, any>;
