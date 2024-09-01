@@ -116,6 +116,8 @@ export class createCanvas {
 
   ctx: CanvasRenderingContext2D;
 
+  connection: WsConnection;
+
   constructor() {
     this.bindHandlers();
     this.canvas = document.createElement("canvas");
@@ -135,6 +137,7 @@ export class createCanvas {
     root?.appendChild(this.canvas);
     this.render();
     this.ocr = new OcrManager();
+    this.connection = new WsConnection(this);
   }
 
   addListeners() {
@@ -310,6 +313,7 @@ export class createCanvas {
   async initialise() {
     this.image = await getRawImage();
     this.features = await getGeojson();
+    this.ocr.setImage(this.image);
   }
 
   bindHandlers() {
@@ -362,6 +366,18 @@ class OcrManager {
     }
     this.activeLine = line;
     speak(this.activeLine.text);
+  }
+  setImage(image: ImageJS | null) {
+    const imageData = image
+      ?.getCanvas()
+      ?.getContext("2d")
+      ?.getImageData(0, 0, image.width, image.height);
+
+    if (imageData === null || imageData === undefined) {
+      this.lines = [];
+      return;
+    }
+    this.lines = getTextFromImage(imageData);
   }
 }
 
