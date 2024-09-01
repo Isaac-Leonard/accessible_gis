@@ -134,6 +134,7 @@ export class createCanvas {
     this.ctx = this.canvas.getContext("2d")!;
     root?.appendChild(this.canvas);
     this.render();
+    this.ocr = new OcrManager();
   }
 
   addListeners() {
@@ -145,10 +146,10 @@ export class createCanvas {
     this.gestureManager.addPinchHandler(this.zoomOut);
     this.gestureManager.addSpreadHandler(this.zoomIn);
 
-    this.canvas.addEventListener("touchstart", this.startHandler);
-    this.canvas.addEventListener("touchmove", this.moveHandler);
-    this.canvas.addEventListener("touchend", this.endHandler);
-    this.canvas.addEventListener("touchcancel", this.cancelHandler);
+    this.canvas.addEventListener("touchstart", (e) => this.startHandler(e));
+    this.canvas.addEventListener("touchmove", (e) => this.moveHandler(e));
+    this.canvas.addEventListener("touchend", (e) => this.endHandler(e));
+    this.canvas.addEventListener("touchcancel", (e) => this.cancelHandler(e));
   }
 
   getPixel(x: number, y: number): number[] {
@@ -185,6 +186,11 @@ export class createCanvas {
 
   startHandler(this: createCanvas, e: TouchEvent) {
     e.preventDefault();
+    if (this.image === null) {
+      speak("No raster image on screen");
+      return;
+    }
+
     playAudio();
     const y = e.touches[0].pageY;
     const x = e.touches[0].pageX;
@@ -219,6 +225,10 @@ export class createCanvas {
   }
 
   zoomOut() {
+    if (this.image === null) {
+      return;
+    }
+
     this.scaleFactor *= 2;
     this.tileX = Math.floor(this.tileX / 2);
     this.tileY = Math.floor(this.tileY / 2);
@@ -227,6 +237,10 @@ export class createCanvas {
   }
 
   zoomIn() {
+    if (this.image === null) {
+      return;
+    }
+
     this.scaleFactor /= 2;
     this.tileX = Math.floor(this.tileX * 2);
     this.tileY = Math.floor(this.tileY * 2);
@@ -235,6 +249,10 @@ export class createCanvas {
   }
 
   panLeft() {
+    if (this.image === null) {
+      return;
+    }
+
     if (this.tileX === 0) {
       speak("At left edge");
       return;
@@ -245,6 +263,9 @@ export class createCanvas {
   }
 
   panRight(this: createCanvas) {
+    if (this.image === null) {
+      return;
+    }
     if (
       this.tileX >=
       Math.floor(this.image?.width / (this.width * this.scaleFactor))
@@ -258,6 +279,9 @@ export class createCanvas {
   }
 
   panUp() {
+    if (this.image === null) {
+      return;
+    }
     if (this.tileY === 0) {
       speak("At top edge");
       return;
@@ -268,6 +292,9 @@ export class createCanvas {
   }
 
   panDown() {
+    if (this.image === null) {
+      return;
+    }
     if (
       this.tileY >=
       Math.floor(this.image.height / (this.height * this.scaleFactor))
@@ -318,11 +345,11 @@ type Line = {
 class OcrManager {
   // Quick hack for now
   // Leave all of the ocr code working but just use an empty detections array instead of scan the image if not enabled
-  lines: Line[];
+  lines: Line[] = [];
 
   activeLine: Line | null = null;
 
-  settings: boolean;
+  settings: boolean = false;
 
   manageText(this: OcrManager, x: number, y: number) {
     const line = this.lines.find((line) => rectContains(line.rect, x, y));
@@ -335,11 +362,6 @@ class OcrManager {
     }
     this.activeLine = line;
     speak(this.activeLine.text);
-  }
-
-  constructor(image: ImageData, ocrEnabled: boolean) {
-    this.lines = ocrEnabled ? getTextFromImage(image) : [];
-    this.settings = ocrEnabled;
   }
 }
 
