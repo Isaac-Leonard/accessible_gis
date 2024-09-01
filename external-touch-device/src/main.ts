@@ -21,7 +21,7 @@ const createButton = () => {
     speak(
       "If you are using a screen reader please turn it off to use this application"
     );
-    new createCanvas();
+    new GisViewer();
     btn.remove();
   };
   btn.textContent = "Start";
@@ -100,7 +100,7 @@ const getImageFile = async () => {
   }
 };
 
-export class createCanvas {
+export class GisViewer {
   ocr: OcrManager;
   canvas: HTMLCanvasElement;
 
@@ -187,7 +187,7 @@ export class createCanvas {
     this.ctx.putImageData(imageData, border, border);
   }
 
-  startHandler(this: createCanvas, e: TouchEvent) {
+  startHandler(this: GisViewer, e: TouchEvent) {
     e.preventDefault();
     if (this.image === null) {
       speak("No raster image on screen");
@@ -204,7 +204,7 @@ export class createCanvas {
     setAudioFrequency(mapPixel(average));
   }
 
-  moveHandler(this: createCanvas, e: TouchEvent) {
+  moveHandler(this: GisViewer, e: TouchEvent) {
     e.preventDefault();
     if (e.currentTarget instanceof HTMLCanvasElement) {
       const touch = e.touches[e.touches.length - 1];
@@ -217,12 +217,12 @@ export class createCanvas {
     }
   }
 
-  cancelHandler(this: createCanvas, e: TouchEvent) {
+  cancelHandler(this: GisViewer, e: TouchEvent) {
     e.preventDefault();
     pauseAudio();
   }
 
-  endHandler(this: createCanvas, e: TouchEvent) {
+  endHandler(this: GisViewer, e: TouchEvent) {
     e.preventDefault();
     pauseAudio();
   }
@@ -265,7 +265,7 @@ export class createCanvas {
     this.render();
   }
 
-  panRight(this: createCanvas) {
+  panRight(this: GisViewer) {
     if (this.image === null) {
       return;
     }

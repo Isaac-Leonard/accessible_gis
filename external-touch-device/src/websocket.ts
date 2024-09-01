@@ -1,5 +1,5 @@
 import { featureCollection } from "./geojson-parser";
-import type { createCanvas } from "./main";
+import type { GisViewer } from "./main";
 import { ZodType, z } from "zod";
 
 const host = window.location.host;
@@ -10,9 +10,9 @@ export type DeviceMessage = never;
 export class WsConnection {
   // We assign this in the connect method and we call the connect method in the constructor
   socket!: WebSocket;
-  manager: createCanvas;
+  manager: GisViewer;
 
-  constructor(manager: createCanvas) {
+  constructor(manager: GisViewer) {
     this.manager = manager;
     this.bindHandlers();
     this.connect();
