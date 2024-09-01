@@ -1,4 +1,5 @@
-import type { CanvasManager } from "./main";
+import { featureCollection } from "./geojson-parser";
+import type { createCanvas } from "./main";
 import { ZodType, z } from "zod";
 
 const host = window.location.host;
@@ -7,15 +8,17 @@ const wsUrl = `ws://${host}/ws`;
 export type DeviceMessage = never;
 
 export class WsConnection {
-  socket: WebSocket;
-  manager: CanvasManager;
-  constructor(manager: CanvasManager) {
+  // We assign this in the connect method and we call the connect method in the constructor
+  socket!: WebSocket;
+  manager: createCanvas;
+
+  constructor(manager: createCanvas) {
     this.manager = manager;
     this.bindHandlers();
     this.connect();
   }
 
-  buffer: unknown[];
+  buffer: unknown[] = [];
 
   send(message: DeviceMessage) {
     this.socket.send(message);
@@ -65,44 +68,54 @@ export class WsConnection {
   onClose(e: CloseEvent) {
     console.log("Closed socket");
     console.log(e);
-    connect();
+    this.connect();
+  }
+
+  handleReconnects() {
+    document.addEventListener("visibilitychange", () => {
+      if (
+        document.visibilityState === "visible" &&
+        this.socket?.readyState === WebSocket.CLOSED
+      ) {
+        this.connect();
+      }
+    });
   }
 }
 
-document.addEventListener("visibilitychange", () => {
-  if (
-    document.visibilityState === "visible" &&
-    socket?.readyState === WebSocket.CLOSED
-  ) {
-    connect();
-  }
-});
+export type AppMessage =
+  | { type: "Raster"; data: RasterrMessage }
+  | { type: "Vector"; data: VectorMessage };
 
-type Settings = {};
+type RasterrMessage = RasterSettings;
 
-export type AppMessage = { type: "Raster" } | { type: "Vector" };
-
-type RasterrMessage = { type: "Raster"; data: {} };
-
-type VectorMessage = { type: "Vector"; data: {} };
-
-type UpdateVectorSettings = {};
-type UpdateVectorData = {};
-
-type UpdateVectorFull = { data: VectorData; settings: VectorSettings };
+type VectorMessage = { data: VectorData; settings: VectorSettings };
 
 type VectorData = GeoJSON.FeatureCollection;
 type VectorSettings = {};
+
+type AudioSettings = {};
+
 type RasterSettings = {
   enableOcr: boolean;
   image: boolean;
   audio: AudioSettings;
 };
 
-const rasterParser = z.object({ type: z.literal("Raster") });
-const vectorParser = z.union([z.object({ type: z.literal("Settings") })]);
+const rasterParser: ZodType<RasterSettings> = z.object({
+  enableOcr: z.boolean(),
+  image: z.boolean(),
+  audio: z.object({}),
+});
+
+const vectorSettingsParser = z.object({});
+
+const vectorParser = z.object({
+  data: featureCollection,
+  settings: vectorSettingsParser,
+});
 
 const messageParser: ZodType<AppMessage> = z.union([
   z.object({ type: z.literal("Vector"), data: vectorParser }),
-  z.object({ type: z.literal("Raster") }),
+  z.object({ type: z.literal("Raster"), data: rasterParser }),
 ]);

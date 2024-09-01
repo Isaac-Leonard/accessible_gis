@@ -9,6 +9,7 @@ import { mapPixel, mean, rectContains } from "./utils";
 import { RenderMethod } from "./types";
 import { featureCollection } from "./geojson-parser";
 import { AppMessage, WsConnection } from "./websocket";
+import { FeatureCollection } from "geojson";
 
 const border = 16;
 const root = document.getElementById("image");
@@ -20,7 +21,7 @@ const createButton = () => {
     speak(
       "If you are using a screen reader please turn it off to use this application"
     );
-    createCanvas();
+    new createCanvas();
     btn.remove();
   };
   btn.textContent = "Start";
@@ -99,100 +100,79 @@ const getImageFile = async () => {
   }
 };
 
-const createCanvas = async () => {
-  const canvas = document.createElement("canvas");
-  canvas.width = document.documentElement.clientWidth;
-  canvas.height = document.documentElement.clientHeight;
-  const width = canvas.width - border * 2;
-  const height = canvas.height - border * 2;
-  const image = await getRawImage();
-  const features = await getGeojson();
-  console.log("Width: " + width + " and image width: " + image.width);
-  console.log("height: " + height + " and image height: " + image.height);
-  let scaleFactor = 1;
-  let tileX = 0;
-  let tileY = 0;
-  const gestureManager = new GestureManager(canvas);
+export class createCanvas {
+  ocr: OcrManager;
+  canvas: HTMLCanvasElement;
 
-  const panLeft = () => {
-    if (tileX === 0) {
-      speak("At left edge");
+  image: ImageJS | null = null;
+  features: FeatureCollection | null = null;
+  width: number;
+  height: number;
+  scaleFactor: number = 1;
+  tileX: number = 0;
+  tileY: number = 0;
+
+  gestureManager: GestureManager;
+
+  ctx: CanvasRenderingContext2D;
+
+  constructor() {
+    this.bindHandlers();
+    this.canvas = document.createElement("canvas");
+    this.canvas.width = document.documentElement.clientWidth;
+    this.canvas.height = document.documentElement.clientHeight;
+    this.width = this.canvas.width - border * 2;
+    this.height = this.canvas.height - border * 2;
+    console.log(
+      "Width: " + this.width + " and image width: " + this.image?.width
+    );
+    console.log(
+      "height: " + this.height + " and image height: " + this.image?.height
+    );
+    this.gestureManager = new GestureManager(this.canvas);
+
+    this.ctx = this.canvas.getContext("2d")!;
+    root?.appendChild(this.canvas);
+    this.render();
+  }
+
+  addListeners() {
+    this.gestureManager.addSwipeHandler("left", this.panLeft);
+    this.gestureManager.addSwipeHandler("right", this.panRight);
+    this.gestureManager.addSwipeHandler("up", this.panUp);
+    this.gestureManager.addSwipeHandler("down", this.panDown);
+
+    this.gestureManager.addPinchHandler(this.zoomOut);
+    this.gestureManager.addSpreadHandler(this.zoomIn);
+
+    this.canvas.addEventListener("touchstart", this.startHandler);
+    this.canvas.addEventListener("touchmove", this.moveHandler);
+    this.canvas.addEventListener("touchend", this.endHandler);
+    this.canvas.addEventListener("touchcancel", this.cancelHandler);
+  }
+
+  getPixel(x: number, y: number): number[] {
+    x = (x + this.width * this.tileX) / 2 ** (this.scaleFactor - 1);
+    y = (y + this.height * this.tileY) / 2 ** (this.scaleFactor - 1);
+    return this.image?.getPixelXY(x, y)!;
+  }
+
+  render() {
+    // Clear the canvas before writing fresh data to it
+    this.ctx.clearRect(border, border, this.width, this.height);
+    if (this.image === null) {
       return;
     }
-    tileX = tileX - 1;
-    speak("panning left");
-    render();
-    reset();
-  };
-
-  const panRight = () => {
-    if (tileX >= Math.floor(image.width / (width * scaleFactor))) {
-      speak("At right edge");
-      return;
-    }
-    tileX = tileX + 1;
-    speak("panning right");
-    render();
-    reset();
-  };
-
-  const panUp = () => {
-    if (tileY === 0) {
-      speak("At top edge");
-      return;
-    }
-    tileY = tileY - 1;
-    speak("Panning up");
-    render();
-    reset();
-  };
-
-  const panDown = () => {
-    if (tileY >= Math.floor(image.height / (height * scaleFactor))) {
-      speak("At bottom edge");
-      return;
-    }
-    tileY = tileY + 1;
-    speak("Panning down");
-    render();
-    reset();
-  };
-
-  gestureManager.addSwipeHandler("left", panLeft);
-  gestureManager.addSwipeHandler("right", panRight);
-  gestureManager.addSwipeHandler("up", panUp);
-  gestureManager.addSwipeHandler("down", panDown);
-
-  const zoomOut = () => {
-    scaleFactor *= 2;
-    tileX = Math.floor(tileX / 2);
-    tileY = Math.floor(tileY / 2);
-    speak("Zooming out");
-    render();
-    reset();
-  };
-
-  const zoomIn = () => {
-    scaleFactor /= 2;
-    tileX = Math.floor(tileX * 2);
-    tileY = Math.floor(tileY * 2);
-    speak("Zooming in");
-    render();
-    reset();
-  };
-
-  gestureManager.addPinchHandler(zoomOut);
-  gestureManager.addSpreadHandler(zoomIn);
-  const context = canvas.getContext("2d")!;
-  const render = () => {
-    const x = width * tileX;
-    const y = height * tileY;
-    const resizedImage = image.clone().resize({ factor: scaleFactor });
+    const x = this.width * this.tileX;
+    const y = this.height * this.tileY;
+    const resizedImage = this.image
+      .clone()
+      .resize({ factor: this.scaleFactor });
     const newImage = resizedImage.crop({
       x,
       y,
-      width: Math.min(width, resizedImage.width - x),
-      height: Math.min(height, resizedImage.height - y),
+      width: Math.min(this.width, resizedImage.width - x),
+      height: Math.min(this.height, resizedImage.height - y),
     });
     const imageData = new ImageData(
       Uint8ClampedArray.from(newImage.toBuffer()),
@@ -200,26 +180,135 @@ const createCanvas = async () => {
       newImage.height
     );
 
-    context.putImageData(imageData, border, border);
-    context.putImageData(
-      new ImageData(width - newImage.width, height),
-      border + newImage.width,
-      border
-    );
-    context.putImageData(
-      new ImageData(width, height - newImage.height),
-      border,
-      border + newImage.height
-    );
-  };
-  root?.appendChild(canvas);
-  render();
-  let removeHandlers = await manager(canvas);
-  const reset = async (): Promise<void> => {
-    removeHandlers();
-  };
-  return canvas;
-};
+    this.ctx.putImageData(imageData, border, border);
+  }
+
+  startHandler(this: createCanvas, e: TouchEvent) {
+    e.preventDefault();
+    playAudio();
+    const y = e.touches[0].pageY;
+    const x = e.touches[0].pageX;
+    const pixel = this.getPixel(x - border, y - border);
+    const average = mean(pixel);
+    this.ocr.manageText(x, y);
+    this.manageFeatures(x, y);
+    setAudioFrequency(mapPixel(average));
+  }
+
+  moveHandler(this: createCanvas, e: TouchEvent) {
+    e.preventDefault();
+    if (e.currentTarget instanceof HTMLCanvasElement) {
+      const touch = e.touches[e.touches.length - 1];
+      const y = touch.pageY;
+      const x = touch.pageX;
+      const pixel = this.getPixel(x - border, y - border);
+      const average = mean(pixel);
+      this.ocr.manageText(x, y);
+      setAudioFrequency(mapPixel(average));
+    }
+  }
+
+  cancelHandler(this: createCanvas, e: TouchEvent) {
+    e.preventDefault();
+    pauseAudio();
+  }
+
+  endHandler(this: createCanvas, e: TouchEvent) {
+    e.preventDefault();
+    pauseAudio();
+  }
+
+  zoomOut() {
+    this.scaleFactor *= 2;
+    this.tileX = Math.floor(this.tileX / 2);
+    this.tileY = Math.floor(this.tileY / 2);
+    speak("Zooming out");
+    this.render();
+  }
+
+  zoomIn() {
+    this.scaleFactor /= 2;
+    this.tileX = Math.floor(this.tileX * 2);
+    this.tileY = Math.floor(this.tileY * 2);
+    speak("Zooming in");
+    this.render();
+  }
+
+  panLeft() {
+    if (this.tileX === 0) {
+      speak("At left edge");
+      return;
+    }
+    this.tileX = this.tileX - 1;
+    speak("panning left");
+    this.render();
+  }
+
+  panRight(this: createCanvas) {
+    if (
+      this.tileX >=
+      Math.floor(this.image?.width / (this.width * this.scaleFactor))
+    ) {
+      speak("At right edge");
+      return;
+    }
+    this.tileX = this.tileX + 1;
+    speak("panning right");
+    this.render();
+  }
+
+  panUp() {
+    if (this.tileY === 0) {
+      speak("At top edge");
+      return;
+    }
+    this.tileY = this.tileY - 1;
+    speak("Panning up");
+    this.render();
+  }
+
+  panDown() {
+    if (
+      this.tileY >=
+      Math.floor(this.image.height / (this.height * this.scaleFactor))
+    ) {
+      speak("At bottom edge");
+      return;
+    }
+    this.tileY = this.tileY + 1;
+    speak("Panning down");
+    this.render();
+  }
+
+  async initialise() {
+    this.image = await getRawImage();
+    this.features = await getGeojson();
+  }
+
+  bindHandlers() {
+    this.panLeft = this.panLeft.bind(this);
+    this.panRight = this.panRight.bind(this);
+    this.panUp = this.panUp.bind(this);
+    this.panDown = this.panDown.bind(this);
+    this.zoomIn = this.zoomIn.bind(this);
+    this.zoomOut = this.zoomOut.bind(this);
+    this.startHandler = this.startHandler.bind(this);
+    this.moveHandler = this.moveHandler.bind(this);
+    this.endHandler = this.endHandler.bind(this);
+    this.cancelHandler = this.cancelHandler.bind(this);
+  }
+
+  update(message: AppMessage) {
+    switch (message.type) {
+      case "Raster":
+        return;
+      case "Vector":
+        return;
+    }
+  }
+
+  manageFeatures(_x: number, _y: number) {}
+}
 
 type Line = {
   text: string;
@@ -251,92 +340,6 @@ class OcrManager {
   constructor(image: ImageData, ocrEnabled: boolean) {
     this.lines = ocrEnabled ? getTextFromImage(image) : [];
     this.settings = ocrEnabled;
-  }
-
-  setImage(image: ImageData) {}
-  setSettings(settings: boolean) {}
-}
-
-export class CanvasManager {
-  image: ImageData;
-  ctx: CanvasRenderingContext2D;
-  connection: WsConnection;
-  ocr: OcrManager;
-  constructor(public canvas: HTMLCanvasElement) {
-    this.bindHandlers();
-    this.ctx = canvas.getContext("2d")!;
-    this.image = this.ctx.getImageData(0, 0, canvas.width, canvas.height);
-    this.connection = new WsConnection(this);
-    this.ocr = new OcrManager(this.image, false);
-  }
-
-  update(message: AppMessage) {
-    switch (message.type) {
-      case "Raster":
-        return;
-      case "Vector":
-        return;
-    }
-  }
-
-  manageFeatures(x: number, y: number) {}
-
-  addListeners() {
-    this.canvas.addEventListener("touchstart", this.startHandler);
-    this.canvas.addEventListener("touchmove", this.moveHandler);
-    this.canvas.addEventListener("touchend", this.endHandler);
-    this.canvas.addEventListener("touchcancel", this.cancelHandler);
-  }
-
-  bindHandlers() {
-    this.startHandler = this.startHandler.bind(this);
-    this.moveHandler = this.moveHandler.bind(this);
-    this.endHandler = this.endHandler.bind(this);
-    this.cancelHandler = this.cancelHandler.bind(this);
-  }
-
-  startHandler(this: CanvasManager, e: TouchEvent) {
-    e.preventDefault();
-    playAudio();
-    const y = e.touches[0].pageY;
-    const x = e.touches[0].pageX;
-    const index = (y * this.image.width + x) * 4;
-    const pixel = this.image.data.slice(index, index + 3);
-    const average = mean(pixel);
-    this.ocr.manageText(x, y);
-    this.manageFeatures(x, y);
-    setAudioFrequency(mapPixel(average));
-  }
-
-  moveHandler(this: CanvasManager, e: TouchEvent) {
-    e.preventDefault();
-    if (e.currentTarget instanceof HTMLCanvasElement) {
-      const touch = e.touches[e.touches.length - 1];
-      const y = touch.pageY;
-      const x = touch.pageX;
-      const index = (y * this.image.width + x) * 4;
-      const pixel = this.image.data.slice(index, index + 3);
-      const average = mean(pixel);
-      this.ocr.manageText(x, y);
-      setAudioFrequency(mapPixel(average));
-    }
-  }
-
-  cancelHandler(this: CanvasManager, e: TouchEvent) {
-    e.preventDefault();
-    pauseAudio();
-  }
-
-  endHandler(this: CanvasManager, e: TouchEvent) {
-    e.preventDefault();
-    pauseAudio();
-  }
-
-  removeListeners(this: CanvasManager) {
-    this.canvas.removeEventListener("touchstart", this.startHandler);
-    this.canvas.removeEventListener("touchmove", this.moveHandler);
-    this.canvas.removeEventListener("touchend", this.endHandler);
-    this.canvas.removeEventListener("touchcancel", this.cancelHandler);
   }
 }
 
