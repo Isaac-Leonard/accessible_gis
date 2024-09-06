@@ -1,17 +1,10 @@
-import "./websocket";
-import turf from "@turf/turf";
-import ImageJS, { ImageKind } from "image-js";
-import { pauseAudio, playAudio, setAudioFrequency } from "./audio";
-import { getTextFromImage } from "./render-image";
+import * as turf from "@turf/turf";
+import { Feature, Position } from "geojson";
+import { pauseAudio, setAudioFrequency } from "./audio";
+import { featureCollection } from "./geojson-parser";
 import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
-import { mapPixel, mean, rectContains } from "./utils";
-import { RenderMethod } from "./types";
-import { featureCollection } from "./geojson-parser";
-import { AppMessage, WsConnection } from "./websocket";
-import { FeatureCollection } from "geojson";
 
-const border = 16;
 const root = document.getElementById("image");
 
 const createButton = () => {
@@ -21,7 +14,7 @@ const createButton = () => {
     speak(
       "If you are using a screen reader please turn it off to use this application"
     );
-    new GisViewer();
+    launchGis();
     btn.remove();
   };
   btn.textContent = "Start";
@@ -29,356 +22,260 @@ const createButton = () => {
   return btn;
 };
 
-const getGeojson = async (): Promise<GeoJSON.FeatureCollection> => {
-  const res = await fetch("/get_vector");
-  const data = await res.json();
-  return featureCollection.parse(data);
-};
+const minLon = -180,
+  minLat = -90,
+  maxLon = 180,
+  maxLat = 90;
 
-const getRawImage = async (): Promise<ImageJS> => {
-  const renderMethodRes = await fetch("/get_info");
-  const renderMethod: RenderMethod = await renderMethodRes.json();
-  switch (renderMethod) {
-    case "GDAL":
-      return await getGdalRasterData();
-    case "Image":
-      return await getImageFile();
-  }
-};
+const launchGis = () => {
+  let features: Feature[] = [];
+  const canvas = document.createElement("canvas");
+  document.body.appendChild(canvas);
+  canvas.width = window.innerWidth;
+  canvas.height = document.documentElement.clientHeight;
+  const ctx = canvas.getContext("2d")!;
+  setAudioFrequency(440);
 
-const getGdalRasterData = async () => {
-  const res = await fetch("/get_image");
-  const data = await res.arrayBuffer();
-  const view = new DataView(data);
-  const width = view.getBigInt64(0, true);
-  const height = view.getBigInt64(8, true);
-  const dataLen = view.byteLength / 8 - 2;
-  let imageData = new Array<number>(dataLen);
-  for (let i = 0; i < dataLen; i++) {
-    imageData[i] = view.getFloat64((i + 2) * 8);
-  }
-  const safeImageData = imageData.filter((x) => Number.isFinite(x));
-  const { min, max } = safeImageData.reduce(
-    ({ min, max }, el) => ({
-      min: el < min ? el : min,
-      max: el > max ? el : max,
-    }),
-    {
-      min: safeImageData[0],
-      max: safeImageData[0],
+  let leftLon = minLon,
+    rightLon = maxLon,
+    bottomLat = minLat,
+    topLat = maxLat;
+
+  const screenToCoords = (x: number, y: number): [number, number] => [
+    (x / canvas.width) * (rightLon - leftLon) + leftLon,
+    (-y / canvas.height) * (topLat - bottomLat) + topLat,
+  ];
+
+  const coordsToScreen = ([lon, lat]: [number, number]): [number, number] => [
+    ((lon - leftLon) * canvas.width) / (rightLon - leftLon),
+    -((lat - topLat) * canvas.height) / (topLat - bottomLat),
+  ];
+
+  canvas.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    if (e.touches.length > 1) {
+      return;
     }
-  );
-  const range = max - min;
-  const factor = 256 / range;
-  const byteData = imageData.map((x) => (x - min) * factor);
-  return new ImageJS(Number(width), Number(height), byteData, {
-    kind: ImageKind.GREY,
+    // playAudio();
+    const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
+    const coords = screenToCoords(screenX, screenY);
+    speakFeatures(coords);
   });
-};
 
-const getImageFile = async () => {
-  const req = await fetch(`/get_file`);
-  const backup = req.clone();
-  const blob = await req.blob();
-  if (blob.size === 0) {
-    return (await ImageJS.load(await backup.arrayBuffer())).rgba8();
-  } else {
-    const canvas = document.createElement("canvas");
-    const url = URL.createObjectURL(blob);
-    const imageEl = new Image();
-    const imageLoaded = new Promise((res, rej) => {
-      imageEl.onload = res;
-      imageEl.onerror = rej;
-    });
-    imageEl.src = url;
-    await imageLoaded;
-    const ctx = canvas.getContext("2d");
-    canvas.width = imageEl.width;
-    canvas.height = imageEl.height;
-    ctx?.drawImage(imageEl, 0, 0);
-    return ImageJS.fromCanvas(canvas).rgba8();
-  }
-};
+  canvas.addEventListener("touchmove", (e) => {
+    e.preventDefault();
+    const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
+    const coords = screenToCoords(screenX, screenY);
+    speakFeatures(coords);
+  });
 
-export class GisViewer {
-  ocr: OcrManager;
-  canvas: HTMLCanvasElement;
-
-  image: ImageJS | null = null;
-  features: FeatureCollection | null = null;
-  width: number;
-  height: number;
-  scaleFactor: number = 1;
-  tileX: number = 0;
-  tileY: number = 0;
-
-  gestureManager: GestureManager;
-
-  ctx: CanvasRenderingContext2D;
-
-  connection: WsConnection;
-
-  constructor() {
-    this.bindHandlers();
-    this.canvas = document.createElement("canvas");
-    this.canvas.width = document.documentElement.clientWidth;
-    this.canvas.height = document.documentElement.clientHeight;
-    this.width = this.canvas.width - border * 2;
-    this.height = this.canvas.height - border * 2;
-    console.log(
-      "Width: " + this.width + " and image width: " + this.image?.width
-    );
-    console.log(
-      "height: " + this.height + " and image height: " + this.image?.height
-    );
-    this.gestureManager = new GestureManager(this.canvas);
-
-    this.ctx = this.canvas.getContext("2d")!;
-    root?.appendChild(this.canvas);
-    this.render();
-    this.ocr = new OcrManager();
-    this.connection = new WsConnection(this);
-  }
-
-  addListeners() {
-    this.gestureManager.addSwipeHandler("left", this.panLeft);
-    this.gestureManager.addSwipeHandler("right", this.panRight);
-    this.gestureManager.addSwipeHandler("up", this.panUp);
-    this.gestureManager.addSwipeHandler("down", this.panDown);
-
-    this.gestureManager.addPinchHandler(this.zoomOut);
-    this.gestureManager.addSpreadHandler(this.zoomIn);
-
-    this.canvas.addEventListener("touchstart", (e) => this.startHandler(e));
-    this.canvas.addEventListener("touchmove", (e) => this.moveHandler(e));
-    this.canvas.addEventListener("touchend", (e) => this.endHandler(e));
-    this.canvas.addEventListener("touchcancel", (e) => this.cancelHandler(e));
-  }
-
-  getPixel(x: number, y: number): number[] {
-    x = (x + this.width * this.tileX) / 2 ** (this.scaleFactor - 1);
-    y = (y + this.height * this.tileY) / 2 ** (this.scaleFactor - 1);
-    return this.image?.getPixelXY(x, y)!;
-  }
-
-  render() {
-    // Clear the canvas before writing fresh data to it
-    this.ctx.clearRect(border, border, this.width, this.height);
-    if (this.image === null) {
+  canvas.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    if (e.touches.length > 1) {
       return;
     }
-    const x = this.width * this.tileX;
-    const y = this.height * this.tileY;
-    const resizedImage = this.image
-      .clone()
-      .resize({ factor: this.scaleFactor });
-    const newImage = resizedImage.crop({
-      x,
-      y,
-      width: Math.min(this.width, resizedImage.width - x),
-      height: Math.min(this.height, resizedImage.height - y),
-    });
-    const imageData = new ImageData(
-      Uint8ClampedArray.from(newImage.toBuffer()),
-      newImage.width,
-      newImage.height
-    );
-
-    this.ctx.putImageData(imageData, border, border);
-  }
-
-  startHandler(this: GisViewer, e: TouchEvent) {
-    e.preventDefault();
-    if (this.image === null) {
-      speak("No raster image on screen");
-      return;
-    }
-
-    playAudio();
-    const y = e.touches[0].pageY;
-    const x = e.touches[0].pageX;
-    const pixel = this.getPixel(x - border, y - border);
-    const average = mean(pixel);
-    this.ocr.manageText(x, y);
-    this.manageFeatures(x, y);
-    setAudioFrequency(mapPixel(average));
-  }
-
-  moveHandler(this: GisViewer, e: TouchEvent) {
-    e.preventDefault();
-    if (e.currentTarget instanceof HTMLCanvasElement) {
-      const touch = e.touches[e.touches.length - 1];
-      const y = touch.pageY;
-      const x = touch.pageX;
-      const pixel = this.getPixel(x - border, y - border);
-      const average = mean(pixel);
-      this.ocr.manageText(x, y);
-      setAudioFrequency(mapPixel(average));
-    }
-  }
-
-  cancelHandler(this: GisViewer, e: TouchEvent) {
-    e.preventDefault();
     pauseAudio();
-  }
+  });
 
-  endHandler(this: GisViewer, e: TouchEvent) {
+  canvas.addEventListener("touchcancel", (e) => {
     e.preventDefault();
-    pauseAudio();
-  }
-
-  zoomOut() {
-    if (this.image === null) {
+    if (e.touches.length > 1) {
       return;
     }
+    pauseAudio();
+  });
 
-    this.scaleFactor *= 2;
-    this.tileX = Math.floor(this.tileX / 2);
-    this.tileY = Math.floor(this.tileY / 2);
+  const gestureManager = new GestureManager(canvas);
+
+  gestureManager.addPinchHandler(() => {
     speak("Zooming out");
-    this.render();
-  }
+    rightLon = Math.min(rightLon - leftLon, maxLon);
+    bottomLat = Math.max(bottomLat - (topLat - bottomLat), minLat);
+  });
 
-  zoomIn() {
-    if (this.image === null) {
-      return;
-    }
-
-    this.scaleFactor /= 2;
-    this.tileX = Math.floor(this.tileX * 2);
-    this.tileY = Math.floor(this.tileY * 2);
+  gestureManager.addSpreadHandler(() => {
     speak("Zooming in");
-    this.render();
-  }
+    rightLon = (leftLon + rightLon) / 2;
+    topLat = (bottomLat + topLat) / 2;
+  });
 
-  panLeft() {
-    if (this.image === null) {
-      return;
+  gestureManager.addSwipeHandler("up", () => {
+    speak("Swiped up");
+    const range = topLat - bottomLat;
+    const top = Math.min(topLat + range, maxLat);
+    const panDistance = top - topLat;
+    topLat = top;
+    bottomLat += panDistance;
+  });
+
+  gestureManager.addSwipeHandler("down", () => {
+    speak("Swiped down");
+    const range = topLat - bottomLat;
+    const bottom = Math.max(bottomLat - range, minLat);
+    const panDistance = bottomLat - bottom;
+    bottomLat = bottom;
+    topLat -= panDistance;
+  });
+
+  gestureManager.addSwipeHandler("left", () => {
+    speak("Swiped left");
+    const range = rightLon - leftLon;
+    const left = Math.max(leftLon - range, minLon);
+    const panDistance = leftLon - left;
+    leftLon = left;
+    rightLon -= panDistance;
+  });
+
+  gestureManager.addSwipeHandler("right", () => {
+    speak("Swiped right");
+    const range = rightLon - leftLon;
+    const right = Math.min(rightLon + range, maxLon);
+    const panDistance = right - rightLon;
+    rightLon = right;
+    leftLon += panDistance;
+  });
+
+  const drawPoint = (p: Position) => {
+    const [x, y] = coordsToScreen(p as [number, number]);
+    ctx.fillRect(x, y, 1, 1);
+  };
+
+  const drawLine = (line: Position[]) => {
+    ctx.beginPath();
+    line.forEach((p) => {
+      const [x, y] = coordsToScreen(p as [number, number]);
+      ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+  };
+
+  const renderVectors = async () => {
+    const res = await fetch("get_vector");
+    const geojson = await res.json().then((x) => featureCollection.parse(x));
+    ctx.fillStyle = "#ffffff";
+    geojson.features.forEach(({ geometry }) => {
+      switch (geometry.type) {
+        case "Point":
+          drawPoint(geometry.coordinates);
+          return;
+        case "LineString":
+          drawLine(geometry.coordinates);
+          return;
+        case "Polygon":
+          geometry.coordinates.forEach(drawLine);
+          return;
+        case "MultiPoint":
+          geometry.coordinates.forEach(drawPoint);
+          return;
+        case "MultiLineString":
+          geometry.coordinates.forEach(drawLine);
+          return;
+        case "MultiPolygon":
+          geometry.coordinates.forEach((poly) => poly.forEach(drawLine));
+          return;
+      }
+    });
+    features = geojson.features;
+  };
+  renderVectors();
+
+  const radial = (rightLon - leftLon) / 20;
+
+  let previousFeatures: Feature[] = [];
+
+  const speakFeatures = (coords: [number, number]) => {
+    let foundFeatures: Feature[] = [];
+    const degrees = { units: "degrees" } as const;
+    const geodesic = { method: "geodesic" } as const;
+    for (let feature of features) {
+      const { geometry } = feature;
+      switch (geometry.type) {
+        case "Point":
+          if (turf.distance(coords, geometry.coordinates, degrees) < radial) {
+            foundFeatures.push(feature);
+          }
+          return;
+        case "MultiPoint":
+          if (
+            geometry.coordinates.some(
+              (position) => turf.distance(coords, position, degrees) < radial
+            )
+          ) {
+            foundFeatures.push(feature);
+          }
+          continue;
+        case "LineString":
+          const distanceToLine = turf.pointToLineDistance(
+            coords,
+            geometry,
+            geodesic
+          );
+          if (distanceToLine < radial) {
+            foundFeatures.push(feature);
+          }
+          continue;
+        case "MultiLineString":
+          if (
+            geometry.coordinates.some(
+              (line) =>
+                turf.pointToLineDistance(
+                  coords,
+                  turf.lineString(line),
+                  geodesic
+                ) < radial
+            )
+          ) {
+            foundFeatures.push(feature);
+          }
+          continue;
+        case "Polygon":
+        case "MultiPolygon":
+          if (turf.booleanPointInPolygon(coords, geometry)) {
+            foundFeatures.push(feature);
+          }
+      }
     }
 
-    if (this.tileX === 0) {
-      speak("At left edge");
-      return;
-    }
-    this.tileX = this.tileX - 1;
-    speak("panning left");
-    this.render();
-  }
+    const featuresToSpeak = foundFeatures.filter(
+      (feature) => !previousFeatures.includes(feature)
+    );
 
-  panRight(this: GisViewer) {
-    if (this.image === null) {
-      return;
-    }
-    if (
-      this.tileX >=
-      Math.floor(this.image?.width / (this.width * this.scaleFactor))
-    ) {
-      speak("At right edge");
-      return;
-    }
-    this.tileX = this.tileX + 1;
-    speak("panning right");
-    this.render();
-  }
+    const leftFeatures = previousFeatures.filter(
+      (feature) => !foundFeatures.includes(feature)
+    );
 
-  panUp() {
-    if (this.image === null) {
-      return;
+    const foundText = featuresToSpeak
+      .map((feature) => {
+        const { geometry, properties } = feature;
+        const name = properties === null ? null : Object.values(properties)[0];
+        switch (geometry.type) {
+          case "Point":
+          case "MultiPoint":
+          case "LineString":
+          case "MultiLineString":
+            return `Near ${geometry.type} ${name}`;
+          case "Polygon":
+          case "MultiPolygon":
+            return `In ${geometry.type} ${name}`;
+        }
+      })
+      .join();
+
+    const leftText = leftFeatures
+      .map((feature) => {
+        const { properties } = feature;
+        const name = properties === null ? null : Object.values(properties)[0];
+        return `Left ${name}`;
+      })
+      .join();
+    const text = foundText + "\n" + leftText;
+    // Speaking empty text while moving affectively makes any speach while moving impossible.
+    if (text.length > 1) {
+      speak(text);
     }
-    if (this.tileY === 0) {
-      speak("At top edge");
-      return;
-    }
-    this.tileY = this.tileY - 1;
-    speak("Panning up");
-    this.render();
-  }
-
-  panDown() {
-    if (this.image === null) {
-      return;
-    }
-    if (
-      this.tileY >=
-      Math.floor(this.image.height / (this.height * this.scaleFactor))
-    ) {
-      speak("At bottom edge");
-      return;
-    }
-    this.tileY = this.tileY + 1;
-    speak("Panning down");
-    this.render();
-  }
-
-  async initialise() {
-    this.image = await getRawImage();
-    this.features = await getGeojson();
-    this.ocr.setImage(this.image);
-  }
-
-  bindHandlers() {
-    this.panLeft = this.panLeft.bind(this);
-    this.panRight = this.panRight.bind(this);
-    this.panUp = this.panUp.bind(this);
-    this.panDown = this.panDown.bind(this);
-    this.zoomIn = this.zoomIn.bind(this);
-    this.zoomOut = this.zoomOut.bind(this);
-    this.startHandler = this.startHandler.bind(this);
-    this.moveHandler = this.moveHandler.bind(this);
-    this.endHandler = this.endHandler.bind(this);
-    this.cancelHandler = this.cancelHandler.bind(this);
-  }
-
-  update(message: AppMessage) {
-    switch (message.type) {
-      case "Raster":
-        return;
-      case "Vector":
-        return;
-    }
-  }
-
-  manageFeatures(_x: number, _y: number) {}
-}
-
-type Line = {
-  text: string;
-  rect: DOMRect;
+    previousFeatures = foundFeatures;
+  };
+  return canvas;
 };
-
-class OcrManager {
-  // Quick hack for now
-  // Leave all of the ocr code working but just use an empty detections array instead of scan the image if not enabled
-  lines: Line[] = [];
-
-  activeLine: Line | null = null;
-
-  settings: boolean = false;
-
-  manageText(this: OcrManager, x: number, y: number) {
-    const line = this.lines.find((line) => rectContains(line.rect, x, y));
-    if (line === undefined) {
-      this.activeLine = null;
-      return;
-    }
-    if (line === this.activeLine) {
-      return;
-    }
-    this.activeLine = line;
-    speak(this.activeLine.text);
-  }
-  setImage(image: ImageJS | null) {
-    const imageData = image
-      ?.getCanvas()
-      ?.getContext("2d")
-      ?.getImageData(0, 0, image.width, image.height);
-
-    if (imageData === null || imageData === undefined) {
-      this.lines = [];
-      return;
-    }
-    this.lines = getTextFromImage(imageData);
-  }
-}
 
 createButton();

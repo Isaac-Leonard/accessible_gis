@@ -1,5 +1,3 @@
-import { featureCollection } from "./geojson-parser";
-import type { GisViewer } from "./main";
 import { ZodType, z } from "zod";
 
 const host = window.location.host;
@@ -10,9 +8,9 @@ export type DeviceMessage = never;
 export class WsConnection {
   // We assign this in the connect method and we call the connect method in the constructor
   socket!: WebSocket;
-  manager: GisViewer;
+  manager: any;
 
-  constructor(manager: GisViewer) {
+  constructor(manager: any) {
     this.manager = manager;
     this.bindHandlers();
     this.connect();
@@ -84,24 +82,27 @@ export class WsConnection {
 }
 
 export type AppMessage =
-  | { type: "Raster"; data: RasterrMessage }
-  | { type: "Vector"; data: VectorMessage };
+  | { type: "Image"; data: ImageMessage }
+  | { type: "Gis"; data: GisMessage }
+  | null;
 
-type RasterrMessage = RasterSettings;
+export type ImageMessage = { ocr: boolean };
 
-type VectorMessage = { data: VectorData; settings: VectorSettings };
+export type GisMessage = { vector: VectorSettings; raster: RasterSettings };
 
-type VectorData = GeoJSON.FeatureCollection;
-type VectorSettings = {};
+export type VectorSettings = {};
 
-type AudioSettings = {};
+export type AudioSettings = {};
 
-type RasterSettings = {
+export type RasterSettings = {
   enableOcr: boolean;
   image: boolean;
   audio: AudioSettings;
   geoTransform: GeoTransform;
   invertedGeoTransform: GeoTransform;
+  min?: number;
+  max?: number;
+  clamp: boolean;
 };
 
 const geoTransformParser = z
@@ -115,24 +116,28 @@ const geoTransformParser = z
   ])
   .transform((gt) => new GeoTransform(gt));
 
-const rasterParser = z.object({
+const rasterParser: MyZodType<RasterSettings> = z.object({
   enableOcr: z.boolean(),
   image: z.boolean(),
   audio: z.object({}),
   geoTransform: geoTransformParser,
   invertedGeoTransform: geoTransformParser,
+  min: z.number().optional(),
+  max: z.number().optional(),
+  clamp: z.boolean().default(false),
 });
 
 const vectorSettingsParser = z.object({});
 
-const vectorParser: MyZodType<VectorMessage> = z.object({
-  data: featureCollection,
-  settings: vectorSettingsParser,
+const GisParser = z.object({
+  vector: vectorSettingsParser,
+  raster: rasterParser,
 });
 
 const messageParser: MyZodType<AppMessage> = z.union([
-  z.object({ type: z.literal("Vector"), data: vectorParser }),
-  z.object({ type: z.literal("Raster"), data: rasterParser }),
+  z.object({ type: z.literal("Image"), data: z.object({ ocr: z.boolean() }) }),
+  z.object({ type: z.literal("Gis"), data: GisParser }),
+  z.null(),
 ]);
 
 class GeoTransform {

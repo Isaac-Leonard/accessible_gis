@@ -7,14 +7,14 @@ use actix_web::{
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tokio::task::spawn_local;
 
 use crate::{
+    commands::{reproject_layer, Srs},
     gdal_if::{read_raster_data_enum, RasterData},
     state::AppDataSync,
     web_socket::ws_handle,
-    FeatureInfo,
 };
 
 #[get("/get_image")]
@@ -71,6 +71,7 @@ pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
             .service(get_file)
             .service(get_info)
             .service(get_ocr)
+            .service(get_vector)
             .service(web::resource("/ws").route(web::get().to(ws)))
             .service(
                 fs::Files::new("/", "../external-touch-device/dist/")
@@ -85,9 +86,15 @@ pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
     .unwrap();
 }
 
-#[get("/get_image")]
-async fn get_vector(state: Data<AppDataSync>) -> Json<Vec<FeatureInfo>> {
-    Json(state.with_lock(|state| state.shared.get_vectors_for_display()))
+#[get("/get_vector")]
+async fn get_vector(app: Data<AppHandle>) -> impl Responder {
+    eprintln!("get_vector called");
+    let json_name = "../vector.json";
+    reproject_layer(Srs::Epsg(4326), json_name, app.state::<AppDataSync>());
+    let data = std::fs::read(json_name).unwrap();
+    HttpResponse::Ok()
+        .content_type(ContentType::json())
+        .body(String::from_utf8_lossy(&data).to_string())
 }
 
 /// Handshake and start WebSocket handler with heartbeats.
