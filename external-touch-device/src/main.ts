@@ -1,6 +1,12 @@
+import ImageJS, {
+  BitDepth,
+  ColorModel,
+  ImageConstructorOptions,
+  ImageKind,
+} from "image-js";
 import * as turf from "@turf/turf";
 import { Feature, Position } from "geojson";
-import { pauseAudio, setAudioFrequency } from "./audio";
+import { pauseAudio, playAudio, setAudioFrequency } from "./audio";
 import { featureCollection } from "./geojson-parser";
 import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
@@ -26,6 +32,71 @@ const minLon = -180,
   minLat = -90,
   maxLon = 180,
   maxLat = 90;
+
+type RasterData =
+  | { type: "Uint8"; data: Uint8Array }
+  | { type: "Uint16"; data: Uint16Array }
+  | { type: "Uint32"; data: Uint32Array }
+  | { type: "Int8"; data: Int8Array }
+  | { type: "Int16"; data: Int16Array }
+  | { type: "Int32"; data: Int32Array }
+  | { type: "Float32"; data: Float32Array }
+  | { type: "Float64"; data: Float64Array };
+
+type Raster = {
+  topLeft: Position;
+  xResolution: number;
+  yResolution: number;
+  data: RasterData;
+  width: number;
+  height: number;
+  min: number;
+  max: number;
+};
+
+const getMinMax = (arr: ArrayLike<number>): { min: number; max: number } => {
+  let min = arr[0],
+    max = arr[0];
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] < min) {
+      min = arr[i];
+    } else if (arr[i] > max) {
+      max = arr[i];
+    }
+  }
+  return { min, max };
+};
+
+const rasterToGrey = (raster: Raster): ImageJS => {
+  const data = raster.data;
+  const options: ImageConstructorOptions = {
+    width: raster.width,
+    height: raster.height,
+    kind: ImageKind.GREY,
+    colorModel: ColorModel.GREY,
+    components: 1,
+    bitDepth: BitDepth.UINT8,
+  };
+  switch (data.type) {
+    case "Uint8":
+      return new ImageJS({
+        ...options,
+        data: data.data,
+      });
+    case "Int8":
+      return new ImageJS({
+        ...options,
+        data: Uint8Array.from(data.data, (x) => x + 128),
+      });
+    default:
+      const { min, max } = raster;
+      const range = max - min;
+      const scaledData = Uint8Array.from(data.data, (x) =>
+        Math.round(((x - min) / range) * 256)
+      );
+      return new ImageJS({ ...options, data: scaledData });
+  }
+};
 
 const launchGis = () => {
   let features: Feature[] = [];
@@ -66,10 +137,10 @@ const launchGis = () => {
     if (e.touches.length > 1) {
       return;
     }
-    // playAudio();
     const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
     const coords = screenToCoords(screenX, screenY);
     speakFeatures(coords);
+    playAudioInRaster(coords);
   });
 
   canvas.addEventListener("touchmove", (e) => {
@@ -81,6 +152,7 @@ const launchGis = () => {
     const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
     const coords = screenToCoords(screenX, screenY);
     speakFeatures(coords);
+    playAudioInRaster(coords);
   });
 
   canvas.addEventListener("touchend", (e) => {
@@ -301,6 +373,114 @@ const launchGis = () => {
     previousFeatures = foundFeatures;
   };
 
+  let raster: Raster;
+  let image: ImageJS;
+
+  const coordsToRaster = ([lon, lat]: [number, number]) => [
+    Math.floor((lon - raster.topLeft[0]) * raster.xResolution),
+    Math.floor((lat - raster.topLeft[1]) * raster.yResolution),
+  ];
+
+  // @ts-ignore
+  const rasterToCoords = (x: number, y: number): [number, number] => [
+    x / raster.xResolution + raster.topLeft[0],
+    y / raster.yResolution + raster.topLeft[1],
+  ];
+
+  const renderRaster = () => {
+    if (
+      raster.topLeft[0] > rightLon ||
+      raster.topLeft[1] < topLat ||
+      raster.topLeft[0] + raster.width * raster.xResolution < leftLon ||
+      raster.topLeft[1] + raster.height * raster.yResolution > topLat
+    ) {
+      // No raster data is visable
+      return;
+    }
+    const scale = (leftLon - rightLon) / canvas.width / raster.xResolution;
+    const transformedImage = image.clone().resize({ factor: scale });
+    const screenPosition = coordsToScreen(raster.topLeft as [number, number]);
+    const imageData = new ImageData(
+      transformedImage.getRGBAData({ clamped: true }) as Uint8ClampedArray,
+      transformedImage.width,
+      transformedImage.height
+    );
+    ctx.putImageData(imageData, ...screenPosition);
+  };
+
+  const playAudioInRaster = (coords: [number, number]) => {
+    const [x, y] = coordsToRaster(coords);
+    if (x < 0 || x >= raster.width || y < 0 || y >= raster.height) {
+      pauseAudio();
+    } else {
+      const index = y * raster.width + x;
+      const value = raster.data.data[index];
+      const frequency =
+        ((value - raster.min) / (raster.max - raster.min)) * 660 + 220;
+      playAudio();
+      setAudioFrequency(frequency);
+    }
+  };
+
+  const parseRasterData = (
+    discriminant: number,
+    data: ArrayBuffer
+  ): RasterData => {
+    const offset = 48;
+    switch (discriminant) {
+      case 0:
+        return { type: "Int8", data: new Int8Array(data, offset) };
+      case 1:
+        return { type: "Uint8", data: new Uint8Array(data, offset) };
+      case 2:
+        return { type: "Int16", data: new Int16Array(data, offset) };
+      case 3:
+        return { type: "Uint16", data: new Uint16Array(data, offset) };
+      case 4:
+        return { type: "Int32", data: new Int32Array(data, offset) };
+      case 5:
+        return { type: "Uint32", data: new Uint32Array(data, offset) };
+      case 6:
+        return { type: "Float32", data: new Float32Array(data, offset) };
+      case 7:
+        return { type: "Float64", data: new Float64Array(data, offset) };
+      default:
+        throw new Error("Unsupported discriminant value");
+    }
+  };
+
+  const getRaster = async () => {
+    const res = await fetch("get_raster");
+    const dataArray = await res.arrayBuffer();
+    const view = new DataView(dataArray);
+    const width = view.getBigInt64(0, true);
+    const height = view.getBigInt64(8, true);
+    const dataType = view.getBigInt64(16, true);
+    const resolution = view.getBigInt64(24, true);
+    const topLeft = [
+      Number(view.getBigInt64(32, true)),
+      Number(view.getBigInt64(40, true)),
+    ];
+    console.log(`Width: ${width}, height: ${height}`);
+    const data: RasterData = parseRasterData(
+      parseInt(dataType.toString()),
+      dataArray
+    );
+    const { min, max } = getMinMax(data.data);
+    raster = {
+      data,
+      width: Number(width),
+      height: Number(height),
+      min,
+      max,
+      xResolution: Number(resolution),
+      yResolution: -Number(resolution),
+      topLeft,
+    };
+    image = rasterToGrey(raster);
+    renderRaster();
+  };
+  getRaster();
   return canvas;
 };
 
