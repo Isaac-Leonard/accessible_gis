@@ -3,47 +3,35 @@ use actix_web::{
     get,
     http::header::ContentType,
     web::{self, Data, Json},
-    App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
+    App, Either, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tokio::task::spawn_local;
 
 use crate::{
-    commands::{reproject_layer, Srs},
-    gdal_if::{read_raster_data_enum, RasterData},
+    commands::reproject_layer,
+    gdal_if::{RasterData, Srs},
     state::AppDataSync,
     web_socket::ws_handle,
 };
 
-#[get("/get_image")]
-async fn get_image(state: Data<AppDataSync>) -> HttpResponse {
-    let ((width, height), data) = state.with_lock(|state| {
-        let band = state.shared.get_raster_to_display().unwrap().band;
-        let size = band.band.size();
-        let data = read_raster_data_enum(&band.band).unwrap();
-        (size, data)
+#[get("/get_raster")]
+async fn get_raster(state: Data<AppDataSync>) -> impl Responder {
+    let raster_name = "raster.tif";
+    let result = state.with_lock(|state| -> Option<_> {
+        let output = state
+            .shared
+            .get_vector_to_display()?
+            .reproject(raster_name, Srs::Epsg(4326));
+        eprintln!("{:?}", output);
+        Some(())
     });
-
-    let body_data = vec![width, height]
-        .into_iter()
-        .map(|x| x.to_le_bytes())
-        .chain(data.to_f64().into_iter().map(|x| x.to_le_bytes()))
-        .flatten()
-        .collect_vec();
-    HttpResponse::Ok()
-        .content_type(ContentType::octet_stream())
-        .body(body_data)
-}
-
-#[get("/get_file")]
-async fn get_file(state: Data<AppDataSync>) -> impl Responder {
-    let name = state
-        .with_current_dataset_mut(|ds, _| ds.dataset.file_name.clone())
-        .ok_or_else(|| "Couldn't get raster file name".to_owned())
-        .unwrap();
-    NamedFile::open(name).unwrap()
+    if result.is_some() {
+        Either::Left(NamedFile::open(raster_name).unwrap())
+    } else {
+        Either::Right(HttpResponse::NotFound().body("No raster found"))
+    }
 }
 
 #[derive(Serialize)]
@@ -67,8 +55,7 @@ pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
         App::new()
             .app_data(Data::new(state.clone()))
             .app_data(Data::new(app_handle.clone()))
-            .service(get_image)
-            .service(get_file)
+            .service(get_raster)
             .service(get_info)
             .service(get_ocr)
             .service(get_vector)

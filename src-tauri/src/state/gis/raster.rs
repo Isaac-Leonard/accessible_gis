@@ -1,8 +1,13 @@
+use std::process::{Command, Output};
+
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 
-use crate::{gdal_if::WrappedRasterBand, state::settings::AudioSettings};
+use crate::{
+    gdal_if::{Srs, WrappedRasterBand},
+    state::settings::AudioSettings,
+};
 
 use super::shared::SharedInfo;
 
@@ -42,4 +47,14 @@ impl RenderMethod {
 pub struct StatefulRasterBand<'a> {
     pub band: WrappedRasterBand<'a>,
     pub info: &'a mut StatefulRasterInfo,
+}
+
+impl<'a> StatefulRasterBand<'a> {
+    pub fn reproject(&self, output_name: &str, srs: Srs) -> std::io::Result<Output> {
+        let srs = srs.try_to_gdal().unwrap();
+        let mut command = Command::new("gdalwarp");
+        command.arg("-t_srs").arg(&srs.to_wkt().unwrap());
+        command.arg(&self.info.shared.name).arg(output_name);
+        command.output()
+    }
 }

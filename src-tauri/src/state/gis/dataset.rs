@@ -8,7 +8,7 @@ use itertools::Itertools;
 use crate::{
     dataset_collection::{get_default_field_name, IndexedLayer},
     gdal_if::{LayerIndex, WrappedDataset},
-    state::settings::{AudioSettings, GlobalSettings},
+    state::settings::GlobalSettings,
     FeatureInfo,
 };
 
@@ -41,7 +41,9 @@ impl StatefulDataset {
             .map(|layer| StatefulVectorInfo {
                 selected_feature: layer.feature(0).map(|_| 0),
                 primary_field_name: get_default_field_name(&layer),
-                shared: SharedInfo,
+                shared: SharedInfo {
+                    name: dataset.file_name.clone(),
+                },
             })
             .collect_vec();
 
@@ -53,7 +55,9 @@ impl StatefulDataset {
             .rasterbands()
             .map(|_| StatefulRasterInfo {
                 audio_settings: settings.get_default_audio().clone(),
-                shared: SharedInfo,
+                shared: SharedInfo {
+                    name: dataset.file_name.clone(),
+                },
                 image_type: ImageType::default(),
                 render: render_method,
                 ocr: match render_method {

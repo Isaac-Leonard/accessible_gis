@@ -1,4 +1,6 @@
-use crate::gdal_if::WrappedLayer;
+use std::process::{Command, Output};
+
+use crate::gdal_if::{Srs, WrappedLayer};
 
 use super::shared::SharedInfo;
 
@@ -14,4 +16,14 @@ pub struct StatefulVectorInfo {
 pub struct StatefulVectorLayer<'a> {
     pub layer: WrappedLayer<'a>,
     pub info: &'a mut StatefulVectorInfo,
+}
+
+impl<'a> StatefulVectorLayer<'a> {
+    pub fn reproject(&self, output_name: &str, srs: Srs) -> std::io::Result<Output> {
+        let srs = srs.try_to_gdal().unwrap();
+        let mut command = Command::new("ogr2ogr");
+        command.arg("-t_srs").arg(&srs.to_wkt().unwrap());
+        command.arg(output_name).arg(&self.info.shared.name);
+        command.output()
+    }
 }

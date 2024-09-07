@@ -1,7 +1,9 @@
 use std::ffi::c_int;
 
-use gdal::{vector::Layer, Dataset, DriverManager};
+use gdal::{errors::GdalError, spatial_ref::SpatialRef, vector::Layer, Dataset, DriverManager};
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
+use strum::{EnumDiscriminants, EnumIter};
 
 use crate::dataset_collection::IndexedLayer;
 
@@ -142,5 +144,26 @@ impl WrappedDataset {
         spatial_ref: &gdal::spatial_ref::SpatialRef,
     ) -> gdal::errors::Result<()> {
         self.dataset.set_spatial_ref(spatial_ref)
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type, EnumDiscriminants)]
+#[strum_discriminants(derive(EnumIter, Deserialize, Serialize, specta::Type,))]
+#[serde(tag = "type", content = "value")]
+pub enum Srs {
+    Proj(String),
+    Wkt(String),
+    Esri(String),
+    Epsg(u32),
+}
+
+impl Srs {
+    pub fn try_to_gdal(self) -> Result<SpatialRef, GdalError> {
+        match self {
+            Srs::Proj(proj_string) => SpatialRef::from_proj4(&proj_string),
+            Srs::Wkt(wkt_string) => SpatialRef::from_wkt(&wkt_string),
+            Srs::Esri(esri_wkt) => SpatialRef::from_esri(&esri_wkt),
+            Srs::Epsg(epsg_code) => SpatialRef::from_epsg(epsg_code),
+        }
     }
 }
