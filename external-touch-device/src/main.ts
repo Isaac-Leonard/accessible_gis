@@ -1,3 +1,4 @@
+import { ReadRasterResult, TypedArray, fromUrl } from "geotiff";
 import type { ImageConstructorOptions } from "image-js";
 import * as ImageJs from "image-js";
 import Image from "image-js";
@@ -8,7 +9,6 @@ import { featureCollection } from "./geojson-parser";
 import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
 
-const { BitDepth, ColorModel, ImageKind } = ImageJs;
 const root = document.getElementById("image");
 
 const createButton = () => {
@@ -70,10 +70,10 @@ const rasterToGrey = (raster: Raster): Image => {
   const options: ImageConstructorOptions = {
     width: raster.width,
     height: raster.height,
-    kind: ImageKind.GREY,
-    colorModel: ColorModel.GREY,
+    kind: "GREY" as ImageJs.ImageKind,
+    colorModel: "GREY" as ImageJs.ColorModel,
     components: 1,
-    bitDepth: BitDepth.UINT8,
+    bitDepth: 8,
   };
   switch (data.type) {
     case "Uint8":
@@ -420,60 +420,47 @@ const launchGis = () => {
     }
   };
 
-  const parseRasterData = (
-    discriminant: number,
-    data: ArrayBuffer
-  ): RasterData => {
-    const offset = 48;
-    switch (discriminant) {
-      case 0:
-        return { type: "Int8", data: new Int8Array(data, offset) };
-      case 1:
-        return { type: "Uint8", data: new Uint8Array(data, offset) };
-      case 2:
-        return { type: "Int16", data: new Int16Array(data, offset) };
-      case 3:
-        return { type: "Uint16", data: new Uint16Array(data, offset) };
-      case 4:
-        return { type: "Int32", data: new Int32Array(data, offset) };
-      case 5:
-        return { type: "Uint32", data: new Uint32Array(data, offset) };
-      case 6:
-        return { type: "Float32", data: new Float32Array(data, offset) };
-      case 7:
-        return { type: "Float64", data: new Float64Array(data, offset) };
-      default:
-        throw new Error("Unsupported discriminant value");
+  const parseRasterData = (rasterData: ReadRasterResult): RasterData => {
+    const data: TypedArray = Array.isArray(rasterData)
+      ? rasterData[0]
+      : rasterData;
+    if (data instanceof Int8Array) {
+      return { type: "Int8", data: data };
+    } else if (data instanceof Uint8Array) {
+      return { type: "Uint8", data: data };
+    } else if (data instanceof Int16Array) {
+      return { type: "Int16", data };
+    } else if (data instanceof Uint16Array) {
+      return { type: "Uint16", data };
+    } else if (data instanceof Int32Array) {
+      return { type: "Int32", data };
+    } else if (data instanceof Uint32Array) {
+      return { type: "Uint32", data };
+    } else if (data instanceof Float32Array) {
+      return { type: "Float32", data };
+    } else if (data instanceof Float64Array) {
+      return { type: "Float64", data };
+    } else {
+      throw new Error("data not typed array");
     }
   };
 
   const getRaster = async () => {
-    const res = await fetch("get_raster");
-    const dataArray = await res.arrayBuffer();
-    const view = new DataView(dataArray);
-    const width = view.getBigInt64(0, true);
-    const height = view.getBigInt64(8, true);
-    const dataType = view.getBigInt64(16, true);
-    const resolution = view.getBigInt64(24, true);
-    const topLeft = [
-      Number(view.getBigInt64(32, true)),
-      Number(view.getBigInt64(40, true)),
-    ];
-    console.log(`Width: ${width}, height: ${height}`);
-    const data: RasterData = parseRasterData(
-      parseInt(dataType.toString()),
-      dataArray
-    );
+    const geotiff = await fromUrl("/get_raster");
+    const geotiffImage = await geotiff.getImage();
+    const rasterData = await geotiffImage.readRasters();
+    //    console.log(rasterData);
+    const data = parseRasterData(rasterData);
     const { min, max } = getMinMax(data.data);
     raster = {
       data,
-      width: Number(width),
-      height: Number(height),
+      width: geotiffImage.getWidth(),
+      height: geotiffImage.getHeight(),
       min,
       max,
-      xResolution: Number(resolution),
-      yResolution: -Number(resolution),
-      topLeft,
+      xResolution: geotiffImage.getResolution()[0],
+      yResolution: geotiffImage.getResolution()[1],
+      topLeft: geotiffImage.getOrigin(),
     };
     image = rasterToGrey(raster);
     renderRaster();
