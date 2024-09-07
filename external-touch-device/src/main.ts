@@ -36,10 +36,20 @@ const launchGis = () => {
   const ctx = canvas.getContext("2d")!;
   setAudioFrequency(440);
 
-  let leftLon = minLon,
-    rightLon = maxLon,
-    bottomLat = minLat,
-    topLat = maxLat;
+  let topLat = maxLat,
+    leftLon = minLon,
+    bottomLat: number,
+    rightLon: number;
+
+  if (canvas.width * 2 < canvas.height) {
+    rightLon = maxLon;
+    bottomLat = topLat - ((rightLon - leftLon) / canvas.width) * canvas.height;
+  } else {
+    bottomLat = minLat;
+    rightLon = minLon + ((maxLat - minLat) / canvas.height) * canvas.width;
+  }
+
+  rightLon = minLon + ((maxLat - minLat) / canvas.height) * canvas.width;
 
   const screenToCoords = (x: number, y: number): [number, number] => [
     (x / canvas.width) * (rightLon - leftLon) + leftLon,
@@ -64,6 +74,10 @@ const launchGis = () => {
 
   canvas.addEventListener("touchmove", (e) => {
     e.preventDefault();
+    if (e.targetTouches.length > 1) {
+      pauseAudio();
+      return;
+    }
     const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
     const coords = screenToCoords(screenX, screenY);
     speakFeatures(coords);
@@ -91,12 +105,14 @@ const launchGis = () => {
     speak("Zooming out");
     rightLon = Math.min(rightLon - leftLon, maxLon);
     bottomLat = Math.max(bottomLat - (topLat - bottomLat), minLat);
+    renderVectors();
   });
 
   gestureManager.addSpreadHandler(() => {
     speak("Zooming in");
     rightLon = (leftLon + rightLon) / 2;
     topLat = (bottomLat + topLat) / 2;
+    renderVectors();
   });
 
   gestureManager.addSwipeHandler("up", () => {
@@ -106,6 +122,7 @@ const launchGis = () => {
     const panDistance = top - topLat;
     topLat = top;
     bottomLat += panDistance;
+    renderVectors();
   });
 
   gestureManager.addSwipeHandler("down", () => {
@@ -115,6 +132,7 @@ const launchGis = () => {
     const panDistance = bottomLat - bottom;
     bottomLat = bottom;
     topLat -= panDistance;
+    renderVectors();
   });
 
   gestureManager.addSwipeHandler("left", () => {
@@ -124,6 +142,7 @@ const launchGis = () => {
     const panDistance = leftLon - left;
     leftLon = left;
     rightLon -= panDistance;
+    renderVectors();
   });
 
   gestureManager.addSwipeHandler("right", () => {
@@ -133,6 +152,7 @@ const launchGis = () => {
     const panDistance = right - rightLon;
     rightLon = right;
     leftLon += panDistance;
+    renderVectors();
   });
 
   const drawPoint = (p: Position) => {
@@ -149,11 +169,16 @@ const launchGis = () => {
     ctx.closePath();
   };
 
-  const renderVectors = async () => {
+  const getVectors = async () => {
     const res = await fetch("get_vector");
     const geojson = await res.json().then((x) => featureCollection.parse(x));
+    features = geojson.features;
+    renderVectors();
+  };
+
+  const renderVectors = () => {
     ctx.fillStyle = "#ffffff";
-    geojson.features.forEach(({ geometry }) => {
+    features.forEach(({ geometry }) => {
       switch (geometry.type) {
         case "Point":
           drawPoint(geometry.coordinates);
@@ -175,9 +200,9 @@ const launchGis = () => {
           return;
       }
     });
-    features = geojson.features;
   };
-  renderVectors();
+
+  getVectors();
 
   const radial = (rightLon - leftLon) / 20;
 
@@ -275,6 +300,7 @@ const launchGis = () => {
     }
     previousFeatures = foundFeatures;
   };
+
   return canvas;
 };
 
