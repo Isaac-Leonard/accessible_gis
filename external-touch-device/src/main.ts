@@ -1,9 +1,6 @@
-import ImageJS, {
-  BitDepth,
-  ColorModel,
-  ImageConstructorOptions,
-  ImageKind,
-} from "image-js";
+import type { ImageConstructorOptions } from "image-js";
+import * as ImageJs from "image-js";
+import Image from "image-js";
 import * as turf from "@turf/turf";
 import { Feature, Position } from "geojson";
 import { pauseAudio, playAudio, setAudioFrequency } from "./audio";
@@ -11,6 +8,7 @@ import { featureCollection } from "./geojson-parser";
 import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
 
+const { BitDepth, ColorModel, ImageKind } = ImageJs;
 const root = document.getElementById("image");
 
 const createButton = () => {
@@ -67,7 +65,7 @@ const getMinMax = (arr: ArrayLike<number>): { min: number; max: number } => {
   return { min, max };
 };
 
-const rasterToGrey = (raster: Raster): ImageJS => {
+const rasterToGrey = (raster: Raster): Image => {
   const data = raster.data;
   const options: ImageConstructorOptions = {
     width: raster.width,
@@ -79,12 +77,12 @@ const rasterToGrey = (raster: Raster): ImageJS => {
   };
   switch (data.type) {
     case "Uint8":
-      return new ImageJS({
+      return new Image({
         ...options,
         data: data.data,
       });
     case "Int8":
-      return new ImageJS({
+      return new Image({
         ...options,
         data: Uint8Array.from(data.data, (x) => x + 128),
       });
@@ -94,7 +92,7 @@ const rasterToGrey = (raster: Raster): ImageJS => {
       const scaledData = Uint8Array.from(data.data, (x) =>
         Math.round(((x - min) / range) * 256)
       );
-      return new ImageJS({ ...options, data: scaledData });
+      return new Image({ ...options, data: scaledData });
   }
 };
 
@@ -374,7 +372,7 @@ const launchGis = () => {
   };
 
   let raster: Raster;
-  let image: ImageJS;
+  let image: Image;
 
   const coordsToRaster = ([lon, lat]: [number, number]) => [
     Math.floor((lon - raster.topLeft[0]) * raster.xResolution),
