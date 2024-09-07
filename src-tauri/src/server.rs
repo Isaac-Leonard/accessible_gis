@@ -18,11 +18,12 @@ use crate::{
 
 #[get("/get_raster")]
 async fn get_raster(state: Data<AppDataSync>) -> impl Responder {
-    let raster_name = "raster.tif";
+    eprintln!("get_raster called");
+    let raster_name = "../raster.tif";
     let result = state.with_lock(|state| -> Option<_> {
         let output = state
             .shared
-            .get_vector_to_display()?
+            .get_raster_to_display()?
             .reproject(raster_name, Srs::Epsg(4326));
         eprintln!("{:?}", output);
         Some(())
