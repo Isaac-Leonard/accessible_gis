@@ -1,4 +1,3 @@
-import { ReadRasterResult, TypedArray, fromUrl } from "geotiff";
 import type { ImageConstructorOptions } from "image-js";
 import * as ImageJs from "image-js";
 import Image from "image-js";
@@ -420,49 +419,34 @@ const launchGis = () => {
     }
   };
 
-  const parseRasterData = (rasterData: ReadRasterResult): RasterData => {
-    const data: TypedArray = Array.isArray(rasterData)
-      ? rasterData[0]
-      : rasterData;
-    if (data instanceof Int8Array) {
-      return { type: "Int8", data: data };
-    } else if (data instanceof Uint8Array) {
-      return { type: "Uint8", data: data };
-    } else if (data instanceof Int16Array) {
-      return { type: "Int16", data };
-    } else if (data instanceof Uint16Array) {
-      return { type: "Uint16", data };
-    } else if (data instanceof Int32Array) {
-      return { type: "Int32", data };
-    } else if (data instanceof Uint32Array) {
-      return { type: "Uint32", data };
-    } else if (data instanceof Float32Array) {
-      return { type: "Float32", data };
-    } else if (data instanceof Float64Array) {
-      return { type: "Float64", data };
-    } else {
-      throw new Error("data not typed array");
-    }
-  };
-
   const getRaster = async () => {
-    const geotiff = await fromUrl("/get_raster");
-    const geotiffImage = await geotiff.getImage();
-    const rasterData = await geotiffImage.readRasters();
-    //    console.log(rasterData);
-    const data = parseRasterData(rasterData);
-    const { min, max } = getMinMax(data.data);
+    console.log("Called get raster");
+    const metadataRes = await fetch("get_raster_meta");
+    console.log("Got metadata");
+    const metadata = await metadataRes.json();
+    console.log("got metadata json");
+    console.log(metadata);
+    const dataRes = await fetch("/get_raster");
+    console.log("Fetched data");
+    const rasterData = await dataRes.arrayBuffer();
+    console.log("Got rasterData array buffer");
+    const data = new Float32Array(rasterData);
+    console.log("Parsed data");
+    const { min, max } = getMinMax(data);
+    console.log("Got min max");
     raster = {
-      data,
-      width: geotiffImage.getWidth(),
-      height: geotiffImage.getHeight(),
+      data: { type: "Float32", data },
+      width: metadata.width,
+      height: metadata.height,
       min,
       max,
-      xResolution: geotiffImage.getResolution()[0],
-      yResolution: geotiffImage.getResolution()[1],
-      topLeft: geotiffImage.getOrigin(),
+      xResolution: metadata.resolution,
+      yResolution: -metadata.resolution,
+      topLeft: metadata.origin,
     };
+
     image = rasterToGrey(raster);
+    console.log("Turned to grey image");
     renderRaster();
   };
   getRaster();

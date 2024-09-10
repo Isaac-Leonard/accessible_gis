@@ -1,17 +1,18 @@
-use actix_files::{self as fs, NamedFile};
+use actix_files::{self as fs};
 use actix_web::{
     get,
     http::header::ContentType,
     web::{self, Data, Json},
-    App, Either, Error, HttpRequest, HttpResponse, HttpServer, Responder,
+    App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tokio::task::spawn_local;
 
 use crate::{
     commands::reproject_layer,
-    gdal_if::{RasterData, Srs},
+    gdal_if::{read_raster_data_enum, RasterData, Srs},
     state::AppDataSync,
     web_socket::ws_handle,
 };
@@ -19,19 +20,17 @@ use crate::{
 #[get("/get_raster")]
 async fn get_raster(state: Data<AppDataSync>) -> impl Responder {
     eprintln!("get_raster called");
-    let raster_name = "../raster.tif";
-    let result = state.with_lock(|state| -> Option<_> {
-        let output = state
-            .shared
-            .get_raster_to_display()?
-            .reproject(raster_name, Srs::Epsg(4326));
-        eprintln!("{:?}", output);
-        Some(())
+    let data = state.with_lock(|state| -> Option<_> {
+        read_raster_data_enum(&state.shared.get_raster_to_display()?.band.band)
     });
-    if result.is_some() {
-        Either::Left(NamedFile::open(raster_name).unwrap())
-    } else {
-        Either::Right(HttpResponse::NotFound().body("No raster found"))
+    match data {
+        Some(data) => HttpResponse::Ok().body(
+            data.to_f64()
+                .into_iter()
+                .flat_map(|x| (x as f32).to_le_bytes())
+                .collect_vec(),
+        ),
+        None => HttpResponse::NotFound().finish(),
     }
 }
 
@@ -60,6 +59,7 @@ pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
             .service(get_info)
             .service(get_ocr)
             .service(get_vector)
+            .service(get_raster_meta)
             .service(web::resource("/ws").route(web::get().to(ws)))
             .service(
                 fs::Files::new("/", "../external-touch-device/dist/")
@@ -102,6 +102,13 @@ async fn ws(
 async fn get_info(state: Data<AppDataSync>) -> impl Responder {
     state.with_lock(|state| {
         Json::<Option<_>>(try { state.shared.get_raster_to_display()?.info.render })
+    })
+}
+
+#[get("/get_raster_meta")]
+async fn get_raster_meta(state: Data<AppDataSync>) -> impl Responder {
+    state.with_lock(|state| {
+        Json::<Option<_>>(try { state.shared.get_raster_to_display()?.get_info_for_display() })
     })
 }
 
