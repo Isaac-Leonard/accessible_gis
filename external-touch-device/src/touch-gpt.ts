@@ -1,3 +1,5 @@
+import { mean } from "./utils";
+
 /**
  * Type definition for a gesture handler function.
  * It receives the start, move, and end touches and performs an action.
@@ -74,7 +76,11 @@ export class GestureManager {
   private startHandler(ev: TouchEvent) {
     ev.preventDefault();
     for (const touch of Array.from(ev.touches)) {
-      this.startTouches.push(new Touches(touch, ev.timeStamp));
+      if (
+        this.startTouches.every((t) => t.touch.identifier !== touch.identifier)
+      ) {
+        this.startTouches.push(new Touches(touch, ev.timeStamp));
+      }
     }
   }
 
@@ -129,15 +135,12 @@ export class GestureManager {
     this.doubleSwipeHandlers[direction].push(fn);
   }
 
+  // @ts-ignore
   private calcTimeDifference(a: Touches, b: Touches): number {
     return Math.abs(a.timeStamp - b.timeStamp);
   }
 
   private handlePinchZoom(start: Touches[], _moves: Touches[], end: Touches[]) {
-    if (this.calcTimeDifference(start[0], start[start.length - 1]) > 15) {
-      return;
-    }
-
     const startTouches = start.map((x) => x.touch);
     const endTouches = end.map((x) => x.touch);
     if (startTouches.length !== 2 || endTouches.length !== 2) return;
@@ -145,10 +148,10 @@ export class GestureManager {
     const initialDistance = this.calculateDistance(startTouches);
     const finalDistance = this.calculateDistance(endTouches);
 
-    if (initialDistance > finalDistance * 2) {
+    if (initialDistance > finalDistance * 2 && initialDistance > 30) {
       this.gestureInProgress = true;
       this.pinchHandlers.forEach((handler) => handler());
-    } else if (finalDistance > initialDistance * 2) {
+    } else if (finalDistance > initialDistance * 2 && finalDistance > 30) {
       this.gestureInProgress = true;
       this.spreadHandlers.forEach((handler) => handler());
     }
@@ -160,30 +163,31 @@ export class GestureManager {
     return Math.hypot(xDistance, yDistance);
   }
 
-  private detectSwipe(start: Touches[], move: Touches[], _end: Touches[]) {
-    if (start.length < 2) return;
+  private detectSwipe(start: Touches[], _move: Touches[], end: Touches[]) {
+    if (start.length !== 3 || end.length !== 3) return;
 
-    const startX = start[0].touch.pageX;
-    const endX = move[move.length - 1].touch.pageX;
-    const startY = start[0].touch.pageY;
-    const endY = move[move.length - 1].touch.pageY;
+    const startX = mean(start.map((t) => t.touch.pageX));
+    const endX = mean(end.map((t) => t.touch.pageX));
+    const startY = mean(start.map((t) => t.touch.pageY));
+    const endY = mean(end.map((t) => t.touch.pageY));
 
     const xDiff = startX - endX;
     const yDiff = startY - endY;
 
     if (Math.abs(xDiff) > Math.abs(yDiff)) {
-      if (xDiff > 100) {
+      if (xDiff > 0) {
         this.gestureInProgress = true;
         this.doubleSwipeHandlers.left.forEach((handler) => handler());
-      } else if (xDiff < -100) {
+      } else {
         this.gestureInProgress = true;
         this.doubleSwipeHandlers.right.forEach((handler) => handler());
       }
     } else {
-      if (yDiff > 100) {
+      // Use > here because screen coordinates have the origin at the top left and increase towards the bottom.
+      if (yDiff > 0) {
         this.gestureInProgress = true;
         this.doubleSwipeHandlers.up.forEach((handler) => handler());
-      } else if (yDiff < -100) {
+      } else {
         this.gestureInProgress = true;
         this.doubleSwipeHandlers.down.forEach((handler) => handler());
       }
