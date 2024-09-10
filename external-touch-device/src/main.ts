@@ -102,6 +102,9 @@ const launchGis = () => {
   canvas.width = window.innerWidth;
   canvas.height = document.documentElement.clientHeight;
   const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#000000";
+  ctx.strokeStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   setAudioFrequency(440);
 
   let topLat = maxLat,
@@ -172,56 +175,60 @@ const launchGis = () => {
 
   gestureManager.addPinchHandler(() => {
     speak("Zooming out");
-    rightLon = Math.min(rightLon - leftLon, maxLon);
-    bottomLat = Math.max(bottomLat - (topLat - bottomLat), minLat);
-    renderVectors();
+    const lonRange = rightLon - leftLon;
+    rightLon += rightLon + lonRange;
+    const latRange = topLat - bottomLat;
+    bottomLat = bottomLat - latRange;
+    render();
   });
 
   gestureManager.addSpreadHandler(() => {
     speak("Zooming in");
-    rightLon = (leftLon + rightLon) / 2;
-    topLat = (bottomLat + topLat) / 2;
-    renderVectors();
-  });
-
-  gestureManager.addSwipeHandler("up", () => {
-    speak("Swiped up");
-    const range = topLat - bottomLat;
-    const top = Math.min(topLat + range, maxLat);
-    const panDistance = top - topLat;
-    topLat = top;
-    bottomLat += panDistance;
-    renderVectors();
+    const lonRange = rightLon - leftLon;
+    rightLon = leftLon + lonRange / 2;
+    const latRange = topLat - bottomLat;
+    bottomLat = topLat - latRange / 2;
+    render();
   });
 
   gestureManager.addSwipeHandler("down", () => {
     speak("Swiped down");
     const range = topLat - bottomLat;
+    const top = Math.min(topLat + range, maxLat);
+    const panDistance = top - topLat;
+    topLat = top;
+    bottomLat += panDistance;
+    render();
+  });
+
+  gestureManager.addSwipeHandler("up", () => {
+    speak("Swiped up");
+    const range = topLat - bottomLat;
     const bottom = Math.max(bottomLat - range, minLat);
     const panDistance = bottomLat - bottom;
     bottomLat = bottom;
     topLat -= panDistance;
-    renderVectors();
-  });
-
-  gestureManager.addSwipeHandler("left", () => {
-    speak("Swiped left");
-    const range = rightLon - leftLon;
-    const left = Math.max(leftLon - range, minLon);
-    const panDistance = leftLon - left;
-    leftLon = left;
-    rightLon -= panDistance;
-    renderVectors();
+    render();
   });
 
   gestureManager.addSwipeHandler("right", () => {
     speak("Swiped right");
     const range = rightLon - leftLon;
+    const left = Math.max(leftLon - range, minLon);
+    const panDistance = leftLon - left;
+    leftLon = left;
+    rightLon -= panDistance;
+    render();
+  });
+
+  gestureManager.addSwipeHandler("left", () => {
+    speak("Swiped left");
+    const range = rightLon - leftLon;
     const right = Math.min(rightLon + range, maxLon);
     const panDistance = right - rightLon;
     rightLon = right;
     leftLon += panDistance;
-    renderVectors();
+    render();
   });
 
   const drawPoint = (p: Position) => {
@@ -236,6 +243,7 @@ const launchGis = () => {
       ctx.lineTo(x, y);
     });
     ctx.closePath();
+    ctx.stroke();
   };
 
   const getVectors = async () => {
@@ -247,6 +255,7 @@ const launchGis = () => {
 
   const renderVectors = () => {
     ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#ffffff";
     features.forEach(({ geometry }) => {
       switch (geometry.type) {
         case "Point":
@@ -450,6 +459,14 @@ const launchGis = () => {
     renderRaster();
   };
   getRaster();
+
+  const render = () => {
+    ctx.fillStyle = "#000000";
+    ctx.strokeStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    renderVectors();
+    renderRaster();
+  };
   return canvas;
 };
 
