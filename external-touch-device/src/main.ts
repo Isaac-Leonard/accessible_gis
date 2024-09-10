@@ -7,6 +7,7 @@ import { pauseAudio, playAudio, setAudioFrequency } from "./audio";
 import { featureCollection } from "./geojson-parser";
 import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
+import { mean } from "./utils";
 
 const root = document.getElementById("image");
 
@@ -124,7 +125,7 @@ const launchGis = () => {
 
   const screenToCoords = (x: number, y: number): [number, number] => [
     (x / canvas.width) * (rightLon - leftLon) + leftLon,
-    (-y / canvas.height) * (topLat - bottomLat) + topLat,
+    -(y / canvas.height) * (topLat - bottomLat) + topLat,
   ];
 
   const coordsToScreen = ([lon, lat]: [number, number]): [number, number] => [
@@ -138,7 +139,9 @@ const launchGis = () => {
       return;
     }
     const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
+    console.log(`screen x: ${screenX}, screen y: ${screenY}`);
     const coords = screenToCoords(screenX, screenY);
+    console.log(`Lon: ${coords[0]}, lat: ${coords[1]}`);
     speakFeatures(coords);
     playAudioInRaster(coords);
   });
@@ -204,7 +207,10 @@ const launchGis = () => {
   gestureManager.addSwipeHandler("up", () => {
     speak("Swiped up");
     const range = topLat - bottomLat;
+    console.log("Range: " + range);
+    console.log("Bottom lat: " + bottomLat);
     const bottom = Math.max(bottomLat - range, minLat);
+    console.log(`Bottom: ${bottom}`);
     const panDistance = bottomLat - bottom;
     bottomLat = bottom;
     topLat -= panDistance;
@@ -383,8 +389,8 @@ const launchGis = () => {
   let image: Image;
 
   const coordsToRaster = ([lon, lat]: [number, number]) => [
-    Math.floor((lon - raster.topLeft[0]) * raster.xResolution),
-    Math.floor((lat - raster.topLeft[1]) * raster.yResolution),
+    Math.floor((lon - raster.topLeft[0]) / raster.xResolution),
+    Math.floor((lat - raster.topLeft[1]) / raster.yResolution),
   ];
 
   // @ts-ignore
@@ -396,14 +402,16 @@ const launchGis = () => {
   const renderRaster = () => {
     if (
       raster.topLeft[0] > rightLon ||
-      raster.topLeft[1] < topLat ||
+      raster.topLeft[1] < bottomLat ||
       raster.topLeft[0] + raster.width * raster.xResolution < leftLon ||
       raster.topLeft[1] + raster.height * raster.yResolution > topLat
     ) {
       // No raster data is visable
+      console.log("Raster off screen");
       return;
     }
-    const scale = (leftLon - rightLon) / canvas.width / raster.xResolution;
+    console.log("Rendering raster on screen");
+    const scale = (rightLon - leftLon) / canvas.width / raster.xResolution;
     const transformedImage = image.clone().resize({ factor: scale });
     const screenPosition = coordsToScreen(raster.topLeft as [number, number]);
     const imageData = new ImageData(
@@ -416,6 +424,7 @@ const launchGis = () => {
 
   const playAudioInRaster = (coords: [number, number]) => {
     const [x, y] = coordsToRaster(coords);
+    console.log(`lon: ${coords[0]}, x:${x}, lat:${coords[1]}, y:${y}`);
     if (x < 0 || x >= raster.width || y < 0 || y >= raster.height) {
       pauseAudio();
     } else {
@@ -442,7 +451,8 @@ const launchGis = () => {
     const data = new Float32Array(rasterData);
     console.log("Parsed data");
     const { min, max } = getMinMax(data);
-    console.log("Got min max");
+    console.log("Got min max " + min + " and " + max);
+    console.log("mean: " + mean(data));
     raster = {
       data: { type: "Float32", data },
       width: metadata.width,
