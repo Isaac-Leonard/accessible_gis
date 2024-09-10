@@ -176,9 +176,9 @@ const launchGis = () => {
   gestureManager.addPinchHandler(() => {
     speak("Zooming out");
     const lonRange = rightLon - leftLon;
-    rightLon += rightLon + lonRange;
+    rightLon += lonRange;
     const latRange = topLat - bottomLat;
-    bottomLat = bottomLat - latRange;
+    bottomLat -= latRange;
     render();
   });
 
