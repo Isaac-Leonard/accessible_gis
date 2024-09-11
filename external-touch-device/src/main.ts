@@ -180,17 +180,12 @@ const launchGis = () => {
     speak("Zooming out");
     const lonRange = rightLon - leftLon;
     const latRange = topLat - bottomLat;
-    let scale = 2;
     const maxXScale = (maxLon - leftLon) / lonRange;
-    if (maxXScale < scale) {
-      scale = maxXScale;
-    }
-    const maxYScale = (maxLat - topLat) / latRange;
-    if (maxYScale < scale) {
-      scale = maxYScale;
-    }
-    if (scale === 1) {
+    const maxYScale = (topLat - minLat) / latRange;
+    let scale = Math.min(maxXScale, maxYScale, 2);
+    if (scale <= 1) {
       speak("Cannot zoom out, you may need to swipe down or right");
+      return;
     }
     rightLon = leftLon + lonRange * scale;
     bottomLat = topLat - latRange * scale;
