@@ -113,13 +113,6 @@ pub async fn ws_handle(
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "type", content = "data")]
-enum Message {
-    Desktop,
-    Screen(AppMessage),
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-#[serde(tag = "type", content = "data")]
 enum AppMessage {
     Gis(GisMessage),
 }
@@ -146,36 +139,6 @@ enum DeviceMessage {}
 
 pub struct ExternalTouchDevice<'a> {
     ws_setion: &'a mut actix_ws::Session,
-}
-
-impl<'a> ExternalTouchDevice<'a> {
-    fn send(polygon: String) {}
-}
-
-fn get_current_polygon(point: Point, state: AppState) -> Option<String> {
-    // Point is in xy coordinates relative to a screen
-    // We need to transform it into coordinates relative to the current geometry layer.
-    let point = geo::Point::from(point).to_gdal().unwrap();
-    state
-        .with_current_vector_layer(|layer| -> Option<String> {
-            let feature = layer
-                .layer
-                .layer
-                .features()
-                .find(|x| x.geometry().unwrap().contains(&point))?;
-            let name = layer.info.primary_field_name.clone();
-            Some(match name {
-                None => format!("FID: {}", feature.fid().unwrap()),
-                Some(name) => {
-                    format!(
-                        "{}: {}",
-                        name,
-                        feature.field_as_string_by_name(&name).unwrap().unwrap()
-                    )
-                }
-            })
-        })
-        .unwrap()
 }
 
 fn process_device_message(_app: AppHandle, message: DeviceMessage) {
