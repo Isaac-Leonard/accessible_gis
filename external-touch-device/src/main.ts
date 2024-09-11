@@ -416,7 +416,7 @@ const launchGis = () => {
       .map((feature) => {
         const { properties } = feature;
         const name = properties === null ? null : Object.values(properties)[0];
-        return `Left ${name}`;
+        return `Leaving ${name}`;
       })
       .join();
     const text = foundText + "\n" + leftText;
