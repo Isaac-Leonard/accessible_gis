@@ -1,5 +1,6 @@
 use std::{
     pin::pin,
+    sync::Mutex,
     time::{Duration, Instant},
 };
 
@@ -12,7 +13,10 @@ use futures_util::{
 use gdal::vector::{LayerAccess, ToGdal};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
-use tokio::{sync::mpsc::unbounded_channel, time::interval};
+use tokio::{
+    sync::mpsc::{unbounded_channel, UnboundedSender},
+    time::interval,
+};
 
 use crate::{geometry::Point, state::AppState};
 
@@ -28,7 +32,9 @@ pub async fn ws_handle(
 ) {
     let mut last_heartbeat = Instant::now();
     let mut interval = interval(HEARTBEAT_INTERVAL);
-    let (_, mut connection_rx) = unbounded_channel::<()>();
+    let (app_sender, mut connection_rx) = unbounded_channel::<AppMessage>();
+    let device_sender = app.state::<TouchDevice>();
+    device_sender.connect(app_sender);
     let msg_stream = msg_stream
         .max_frame_size(128 * 1024)
         .aggregate_continuations()
@@ -84,7 +90,6 @@ pub async fn ws_handle(
                 // Messages received from the application
                 (Either::Right(right), _) => match right {
                     (Some(app_msg), _) => {
-                        // app_msg is empty for now so just send the empty string
                         session
                             .text(serde_json::to_string(&app_msg).unwrap())
                             .await
@@ -109,16 +114,17 @@ pub async fn ws_handle(
             }
         };
     };
+    device_sender.disconnect();
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "type", content = "data")]
-enum AppMessage {
+pub enum AppMessage {
     Gis(GisMessage),
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-struct GisMessage {
+pub struct GisMessage {
     raster: (),
     vector: (),
 }
@@ -143,4 +149,37 @@ pub struct ExternalTouchDevice<'a> {
 
 fn process_device_message(_app: AppHandle, message: DeviceMessage) {
     match message {}
+}
+
+#[derive(Default)]
+pub struct TouchDevice {
+    sender: Mutex<Option<UnboundedSender<AppMessage>>>,
+}
+
+impl TouchDevice {
+    /// Sends a message to the touch device if one is connected
+    /// If one is connected return true else return false
+    pub fn send(&self, message: AppMessage) -> bool {
+        let mut sender = self.sender.lock().unwrap();
+        let sent = match &*sender {
+            Some(sender) => sender.send(message).is_ok(),
+            None => true,
+        };
+        if !sent {
+            *sender = None
+        }
+        sent
+    }
+
+    pub fn is_connected(&self) -> bool {
+        self.sender.lock().unwrap().is_some()
+    }
+
+    pub fn disconnect(&self) {
+        *self.sender.lock().unwrap() = None
+    }
+
+    pub fn connect(&self, sender: UnboundedSender<AppMessage>) {
+        *self.sender.lock().unwrap() = Some(sender)
+    }
 }

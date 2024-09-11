@@ -17,6 +17,7 @@ mod tools;
 mod ui;
 mod web_socket;
 
+use commands::web_socket::TouchDevice;
 use geo_types::Polygon;
 pub use state::dataset_collection;
 
@@ -62,6 +63,7 @@ fn launch_gui() {
             data: Arc::new(Mutex::new(AppData::new())),
             default_data: PreloadedAppData { countries },
         })
+        .manage(TouchDevice::default())
         .invoke_handler(handlers)
         .setup(|app| {
             //            let window = app.get_webview_window("main").unwrap();
