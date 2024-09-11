@@ -3,6 +3,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use actix_web::web::Json;
 use actix_ws::AggregatedMessage;
 use futures_util::{
     future::{select, Either},
@@ -60,8 +61,8 @@ pub async fn ws_handle(
                             }
 
                             AggregatedMessage::Text(text) => {
-                                let message = serde_json::from_str(&text).unwrap();
-                                send_msg(app.clone(), &mut session, message).await;
+                                let message = serde_json::from_str::<DeviceMessage>(&text).unwrap();
+                                process_device_message(app.clone(), message);
                             }
 
                             AggregatedMessage::Binary(_bin) => {
@@ -84,7 +85,10 @@ pub async fn ws_handle(
                 (Either::Right(right), _) => match right {
                     (Some(app_msg), _) => {
                         // app_msg is empty for now so just send the empty string
-                        session.text("").await.unwrap();
+                        session
+                            .text(serde_json::to_string(&app_msg).unwrap())
+                            .await
+                            .unwrap();
                     }
 
                     // all connection's message senders were dropped
@@ -108,23 +112,37 @@ pub async fn ws_handle(
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(tag = "type", content = "data")]
 enum Message {
-    App,
-    Screen,
+    Desktop,
+    Screen(AppMessage),
 }
 
-async fn send_msg(app: AppHandle, external_display: &mut actix_ws::Session, msg: Message) {
-    match msg {
-        Message::Screen => external_display.text("message").await.unwrap(),
-        Message::App => {
-            app.emit("", "Message");
-        }
-    }
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(tag = "type", content = "data")]
+enum AppMessage {
+    Gis(GisMessage),
 }
 
-enum RecievedMessage {}
+#[derive(Clone, Serialize, Deserialize, Debug)]
+struct GisMessage {
+    raster: (),
+    vector: (),
+}
 
-fn handle_message() {}
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct RasterMessage {
+    min_freq: f64,
+    max_freq: f64,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+struct VectorMessage {}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(tag = "type", content = "data")]
+enum DeviceMessage {}
 
 pub struct ExternalTouchDevice<'a> {
     ws_setion: &'a mut actix_ws::Session,
@@ -158,4 +176,8 @@ fn get_current_polygon(point: Point, state: AppState) -> Option<String> {
             })
         })
         .unwrap()
+}
+
+fn process_device_message(_app: AppHandle, message: DeviceMessage) {
+    match message {}
 }
