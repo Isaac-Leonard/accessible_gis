@@ -179,9 +179,21 @@ const launchGis = () => {
   gestureManager.addPinchHandler(() => {
     speak("Zooming out");
     const lonRange = rightLon - leftLon;
-    rightLon += lonRange;
     const latRange = topLat - bottomLat;
-    bottomLat -= latRange;
+    let scale = 2;
+    const maxXScale = (maxLon - leftLon) / lonRange;
+    if (maxXScale < scale) {
+      scale = maxXScale;
+    }
+    const maxYScale = (maxLat - topLat) / latRange;
+    if (maxYScale < scale) {
+      scale = maxYScale;
+    }
+    if (scale === 1) {
+      speak("Cannot zoom out, you may need to swipe down or right");
+    }
+    rightLon = leftLon + lonRange * scale;
+    bottomLat = topLat - latRange * scale;
     render();
   });
 
