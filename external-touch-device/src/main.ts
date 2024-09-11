@@ -490,10 +490,10 @@ const launchGis = () => {
     console.log("Parsed data");
     raster = new Raster(
       { type: "Float32", data },
+      metadata.origin,
       metadata.width,
       metadata.height,
-      metadata.resolution,
-      metadata.origin
+      metadata.resolution
     );
 
     renderRaster();
