@@ -244,9 +244,17 @@ const launchGis = () => {
     render();
   });
 
+  const radius = 5;
+
   const drawPoint = (p: Position) => {
     const [x, y] = coordsToScreen(p as [number, number]);
-    ctx.fillRect(x, y, 1, 1);
+    ctx.save();
+    ctx.beginPath();
+    ctx.fillStyle = "#ffffff";
+    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   };
 
   const drawLine = (line: Position[]) => {
