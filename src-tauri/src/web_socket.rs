@@ -143,10 +143,6 @@ struct VectorMessage {}
 #[serde(tag = "type", content = "data")]
 enum DeviceMessage {}
 
-pub struct ExternalTouchDevice<'a> {
-    ws_setion: &'a mut actix_ws::Session,
-}
-
 fn process_device_message(_app: AppHandle, message: DeviceMessage) {
     match message {}
 }
@@ -163,7 +159,7 @@ impl TouchDevice {
         let mut sender = self.sender.lock().unwrap();
         let sent = match &*sender {
             Some(sender) => sender.send(message).is_ok(),
-            None => true,
+            None => false,
         };
         if !sent {
             *sender = None
@@ -180,6 +176,7 @@ impl TouchDevice {
     }
 
     pub fn connect(&self, sender: UnboundedSender<AppMessage>) {
+        eprintln!("Connected");
         *self.sender.lock().unwrap() = Some(sender)
     }
 }

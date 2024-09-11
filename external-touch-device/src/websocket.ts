@@ -48,7 +48,7 @@ export class WsConnection {
     console.log("Message recieved");
     console.log(e.data);
     try {
-      const message = messageParser.parse(e.data);
+      const message = messageParser.parse(JSON.parse(e.data));
       this.messageHandlers.forEach((handler) => handler(message));
     } catch (e) {
       console.log("An error occured while parsing message from websocket");
@@ -80,8 +80,7 @@ export class WsConnection {
 
 export type AppMessage =
   | { type: "Image"; data: ImageMessage }
-  | { type: "Gis"; data: GisMessage }
-  | null;
+  | { type: "Gis"; data: GisMessage };
 
 export type ImageMessage = { ocr: boolean };
 
@@ -111,5 +110,4 @@ const GisParser = z.object({
 const messageParser: ZodType<AppMessage> = z.union([
   z.object({ type: z.literal("Image"), data: z.object({ ocr: z.boolean() }) }),
   z.object({ type: z.literal("Gis"), data: GisParser }),
-  z.null(),
 ]);

@@ -68,7 +68,6 @@ pub fn generate_handlers<R: Runtime>(
             reproject_layer,
             copy_features,
             simplify_layer,
-            message_socket,
             calc_slope,
             calc_aspect,
             calc_roughness,
@@ -93,10 +92,4 @@ pub fn generate_handlers<R: Runtime>(
         )
         .build()
         .unwrap()
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn message_socket(handle: State<UnboundedSender<()>>) {
-    handle.send(()).unwrap();
 }
