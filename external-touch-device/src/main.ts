@@ -7,7 +7,6 @@ import { pauseAudio, playAudio, setAudioFrequency } from "./audio";
 import { featureCollection } from "./geojson-parser";
 import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
-import { mean } from "./utils";
 
 const root = document.getElementById("image");
 
@@ -41,16 +40,38 @@ type RasterData =
   | { type: "Float32"; data: Float32Array }
   | { type: "Float64"; data: Float64Array };
 
-type Raster = {
-  topLeft: Position;
+class Raster {
   xResolution: number;
   yResolution: number;
-  data: RasterData;
-  width: number;
-  height: number;
   min: number;
   max: number;
-};
+  image: Image;
+  constructor(
+    public data: RasterData,
+    public topLeft: Position,
+    public width: number,
+    public height: number,
+    public resolution: number
+  ) {
+    const { min, max } = getMinMax(data.data);
+    this.min = min;
+    this.max = max;
+    this.xResolution = resolution;
+    this.yResolution = -resolution;
+    this.image = rasterToGrey(data, width, height, min, max);
+  }
+  coordsToRaster([lon, lat]: [number, number]) {
+    return [
+      Math.floor((lon - this.topLeft[0]) / this.xResolution),
+      Math.floor((lat - this.topLeft[1]) / this.yResolution),
+    ];
+  }
+
+  rasterToCoords = (x: number, y: number): [number, number] => [
+    x / this.xResolution + this.topLeft[0],
+    y / this.yResolution + this.topLeft[1],
+  ];
+}
 
 const getMinMax = (arr: ArrayLike<number>): { min: number; max: number } => {
   let min = arr[0],
@@ -65,11 +86,16 @@ const getMinMax = (arr: ArrayLike<number>): { min: number; max: number } => {
   return { min, max };
 };
 
-const rasterToGrey = (raster: Raster): Image => {
-  const data = raster.data;
+const rasterToGrey = (
+  data: RasterData,
+  width: number,
+  height: number,
+  min: number,
+  max: number
+): Image => {
   const options: ImageConstructorOptions = {
-    width: raster.width,
-    height: raster.height,
+    width,
+    height,
     kind: "GREY" as ImageJs.ImageKind,
     colorModel: "GREY" as ImageJs.ColorModel,
     components: 1,
@@ -77,17 +103,13 @@ const rasterToGrey = (raster: Raster): Image => {
   };
   switch (data.type) {
     case "Uint8":
-      return new Image({
-        ...options,
-        data: data.data,
-      });
+      return new Image({ ...options, data: data.data });
     case "Int8":
       return new Image({
         ...options,
         data: Uint8Array.from(data.data, (x) => x + 128),
       });
     default:
-      const { min, max } = raster;
       const range = max - min;
       const scaledData = Uint8Array.from(data.data, (x) =>
         Math.round(((x - min) / range) * 256)
@@ -401,21 +423,12 @@ const launchGis = () => {
     previousFeatures = foundFeatures;
   };
 
-  let raster: Raster;
-  let image: Image;
-
-  const coordsToRaster = ([lon, lat]: [number, number]) => [
-    Math.floor((lon - raster.topLeft[0]) / raster.xResolution),
-    Math.floor((lat - raster.topLeft[1]) / raster.yResolution),
-  ];
-
-  // @ts-ignore
-  const rasterToCoords = (x: number, y: number): [number, number] => [
-    x / raster.xResolution + raster.topLeft[0],
-    y / raster.yResolution + raster.topLeft[1],
-  ];
+  let raster: Raster | null = null;
 
   const renderRaster = () => {
+    if (raster === null) {
+      return;
+    }
     if (
       raster.topLeft[0] > rightLon ||
       raster.topLeft[1] < bottomLat ||
@@ -428,7 +441,7 @@ const launchGis = () => {
     }
     console.log("Rendering raster on screen");
     const scale = (rightLon - leftLon) / canvas.width / raster.xResolution;
-    const transformedImage = image.clone().resize({ factor: scale });
+    const transformedImage = raster.image.clone().resize({ factor: scale });
     const screenPosition = coordsToScreen(raster.topLeft as [number, number]);
     const imageData = new ImageData(
       transformedImage.getRGBAData({ clamped: true }) as Uint8ClampedArray,
@@ -439,7 +452,10 @@ const launchGis = () => {
   };
 
   const playAudioInRaster = (coords: [number, number]) => {
-    const [x, y] = coordsToRaster(coords);
+    if (raster === null) {
+      return;
+    }
+    const [x, y] = raster.coordsToRaster(coords);
     console.log(`lon: ${coords[0]}, x:${x}, lat:${coords[1]}, y:${y}`);
     if (x < 0 || x >= raster.width || y < 0 || y >= raster.height) {
       pauseAudio();
@@ -466,22 +482,14 @@ const launchGis = () => {
     console.log("Got rasterData array buffer");
     const data = new Float32Array(rasterData);
     console.log("Parsed data");
-    const { min, max } = getMinMax(data);
-    console.log("Got min max " + min + " and " + max);
-    console.log("mean: " + mean(data));
-    raster = {
-      data: { type: "Float32", data },
-      width: metadata.width,
-      height: metadata.height,
-      min,
-      max,
-      xResolution: metadata.resolution,
-      yResolution: -metadata.resolution,
-      topLeft: metadata.origin,
-    };
+    raster = new Raster(
+      { type: "Float32", data },
+      metadata.width,
+      metadata.height,
+      metadata.resolution,
+      metadata.origin
+    );
 
-    image = rasterToGrey(raster);
-    console.log("Turned to grey image");
     renderRaster();
   };
   getRaster();
