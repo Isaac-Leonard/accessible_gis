@@ -7,6 +7,7 @@ import { pauseAudio, playAudio, setAudioFrequency } from "./audio";
 import { featureCollection } from "./geojson-parser";
 import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
+import { WsConnection } from "./websocket";
 
 const root = document.getElementById("image");
 
@@ -506,6 +507,12 @@ const launchGis = () => {
     renderVectors();
     renderRaster();
   };
+  const connection = new WsConnection();
+  connection.addMessageHandler((msg) => {
+    if (msg?.type === "Gis") {
+      settings = msg.data;
+    }
+  });
   return canvas;
 };
 

@@ -5,21 +5,21 @@ const wsUrl = `ws://${host}/ws`;
 
 export type DeviceMessage = never;
 
+export type MessageHandler = (message: AppMessage) => void;
+
 export class WsConnection {
+  messageHandlers: MessageHandler[] = [];
   // We assign this in the connect method and we call the connect method in the constructor
   socket!: WebSocket;
-  manager: any;
 
-  constructor(manager: any) {
-    this.manager = manager;
-    this.bindHandlers();
+  constructor() {
     this.connect();
   }
 
-  buffer: unknown[] = [];
+  buffer: string[] = [];
 
   send(message: DeviceMessage) {
-    this.socket.send(message);
+    this.socket.send(JSON.stringify(message));
   }
 
   connect() {
@@ -27,18 +27,11 @@ export class WsConnection {
     this.addListeners();
   }
 
-  bindHandlers() {
-    this.onError = this.onError.bind(this);
-    this.onOpen = this.onOpen.bind(this);
-    this.onMessage = this.onMessage.bind(this);
-    this.onClose = this.onClose.bind(this);
-  }
-
   addListeners() {
-    this.socket.addEventListener("open", this.onOpen);
-    this.socket.addEventListener("error", this.onError);
-    this.socket.addEventListener("message", this.onMessage);
-    this.socket.addEventListener("close", this.onClose);
+    this.socket.addEventListener("open", (e) => this.onOpen(e));
+    this.socket.addEventListener("error", (e) => this.onError(e));
+    this.socket.addEventListener("message", (e) => this.onMessage(e));
+    this.socket.addEventListener("close", (e) => this.onClose(e));
   }
 
   onOpen(_e: Event) {
@@ -56,7 +49,7 @@ export class WsConnection {
     console.log(e.data);
     try {
       const message = messageParser.parse(e.data);
-      this.manager.update(message);
+      this.messageHandlers.forEach((handler) => handler(message));
     } catch (e) {
       console.log("An error occured while parsing message from websocket");
       console.log(e);
@@ -79,6 +72,10 @@ export class WsConnection {
       }
     });
   }
+
+  addMessageHandler(handler: MessageHandler) {
+    this.messageHandlers.push(handler);
+  }
 }
 
 export type AppMessage =
@@ -95,36 +92,13 @@ export type VectorSettings = {};
 export type AudioSettings = {};
 
 export type RasterSettings = {
-  enableOcr: boolean;
-  image: boolean;
-  audio: AudioSettings;
-  geoTransform: GeoTransform;
-  invertedGeoTransform: GeoTransform;
-  min?: number;
-  max?: number;
-  clamp: boolean;
+  minFreq: number;
+  maxFreq: number;
 };
 
-const geoTransformParser = z
-  .tuple([
-    z.number(),
-    z.number(),
-    z.number(),
-    z.number(),
-    z.number(),
-    z.number(),
-  ])
-  .transform((gt) => new GeoTransform(gt));
-
-const rasterParser: MyZodType<RasterSettings> = z.object({
-  enableOcr: z.boolean(),
-  image: z.boolean(),
-  audio: z.object({}),
-  geoTransform: geoTransformParser,
-  invertedGeoTransform: geoTransformParser,
-  min: z.number().optional(),
-  max: z.number().optional(),
-  clamp: z.boolean().default(false),
+const rasterParser: ZodType<RasterSettings> = z.object({
+  minFreq: z.number(),
+  maxFreq: z.number(),
 });
 
 const vectorSettingsParser = z.object({});
@@ -134,21 +108,8 @@ const GisParser = z.object({
   raster: rasterParser,
 });
 
-const messageParser: MyZodType<AppMessage> = z.union([
+const messageParser: ZodType<AppMessage> = z.union([
   z.object({ type: z.literal("Image"), data: z.object({ ocr: z.boolean() }) }),
   z.object({ type: z.literal("Gis"), data: GisParser }),
   z.null(),
 ]);
-
-class GeoTransform {
-  constructor(private gt: [number, number, number, number, number, number]) {}
-
-  apply(x: number, y: number) {
-    return [
-      this.gt[0] + x * this.gt[1] + y * this.gt[2],
-      this.gt[3] + x * this.gt[4] + y * this.gt[5],
-    ];
-  }
-}
-
-type MyZodType<T> = ZodType<T, any, any>;
