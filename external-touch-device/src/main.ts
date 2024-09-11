@@ -269,6 +269,7 @@ const launchGis = () => {
   const renderVectors = () => {
     ctx.fillStyle = "#ffffff";
     ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
     features.forEach(({ geometry }) => {
       switch (geometry.type) {
         case "Point":
