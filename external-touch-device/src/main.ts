@@ -7,7 +7,7 @@ import { pauseAudio, playAudio, setAudioFrequency } from "./audio";
 import { featureCollection } from "./geojson-parser";
 import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
-import { WsConnection } from "./websocket";
+import { GisMessage, WsConnection } from "./websocket";
 
 const root = document.getElementById("image");
 
@@ -119,10 +119,10 @@ const rasterToGrey = (
   }
 };
 
-const defaultSettings = { raster: { minFreq: 220, maxFreq: 880 } };
+const defaultSettings = { raster: { minFreq: 220, maxFreq: 880 }, vector: {} };
 
 const launchGis = () => {
-  let settings = defaultSettings;
+  let settings: GisMessage = defaultSettings;
   let features: Feature[] = [];
   const canvas = document.createElement("canvas");
   document.body.appendChild(canvas);
@@ -511,6 +511,7 @@ const launchGis = () => {
   connection.addMessageHandler((msg) => {
     if (msg?.type === "Gis") {
       settings = msg.data;
+      speak("Updated settings");
     }
   });
   return canvas;

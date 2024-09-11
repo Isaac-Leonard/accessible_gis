@@ -2,12 +2,14 @@ use std::{cmp::Ordering, process::Command};
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use tauri::State;
 
 use crate::{
     dataset_collection::NonEmptyDelegatorImpl,
     gdal_if::{read_raster_data, read_raster_data_enum_as},
     geometry::Point,
     state::{settings::AudioSettings, AppState},
+    web_socket::{AppMessage, GisMessage, RasterMessage, TouchDevice, VectorMessage},
 };
 
 #[tauri::command]
@@ -98,9 +100,22 @@ pub fn set_display(state: AppState) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn set_current_audio_settings(settings: AudioSettings, state: AppState) {
+pub fn set_current_audio_settings(
+    settings: AudioSettings,
+    state: AppState,
+    device: State<TouchDevice>,
+) {
     state
-        .with_current_raster_band(|band| band.info.audio_settings = settings)
+        .with_current_raster_band(|band| {
+            band.info.audio_settings = settings.clone();
+            device.send(AppMessage::Gis(GisMessage {
+                vector: VectorMessage {},
+                raster: RasterMessage {
+                    min_freq: settings.min_freq,
+                    max_freq: settings.max_freq,
+                },
+            }));
+        })
         .expect("Tried to work on non selected raster band");
 }
 

@@ -4,13 +4,11 @@ use std::{
     time::{Duration, Instant},
 };
 
-use actix_web::web::Json;
 use actix_ws::AggregatedMessage;
 use futures_util::{
     future::{select, Either},
     StreamExt,
 };
-use gdal::vector::{LayerAccess, ToGdal};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tokio::{
@@ -18,7 +16,7 @@ use tokio::{
     time::interval,
 };
 
-use crate::{geometry::Point, state::AppState};
+use crate::commands::AppDataSync;
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -41,6 +39,19 @@ pub async fn ws_handle(
         .max_continuation_size(2 * 1024 * 1024);
 
     let mut msg_stream = pin!(msg_stream);
+
+    app.state::<AppDataSync>().with_lock(|state| {
+        let settings = &state.shared.get_raster_to_display()?.info.audio_settings;
+        device_sender.send(AppMessage::Gis(GisMessage {
+            raster: RasterMessage {
+                min_freq: settings.min_freq,
+                max_freq: settings.max_freq,
+            },
+            vector: VectorMessage {},
+        }));
+        Some(())
+    });
+
     let close_reason = loop {
         // most of the futures we process need to be stack-pinned to work with select()
 
@@ -125,19 +136,19 @@ pub enum AppMessage {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GisMessage {
-    raster: (),
-    vector: (),
+    pub raster: RasterMessage,
+    pub vector: VectorMessage,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct RasterMessage {
-    min_freq: f64,
-    max_freq: f64,
+pub struct RasterMessage {
+    pub min_freq: f64,
+    pub max_freq: f64,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-struct VectorMessage {}
+pub struct VectorMessage {}
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "type", content = "data")]
