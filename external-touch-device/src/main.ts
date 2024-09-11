@@ -118,7 +118,10 @@ const rasterToGrey = (
   }
 };
 
+const defaultSettings = { raster: { minFreq: 220, maxFreq: 880 } };
+
 const launchGis = () => {
+  let settings = defaultSettings;
   let features: Feature[] = [];
   const canvas = document.createElement("canvas");
   document.body.appendChild(canvas);
@@ -463,7 +466,9 @@ const launchGis = () => {
       const index = y * raster.width + x;
       const value = raster.data.data[index];
       const frequency =
-        ((value - raster.min) / (raster.max - raster.min)) * 660 + 220;
+        ((value - raster.min) / (raster.max - raster.min)) *
+          (settings.raster.maxFreq - settings.raster.minFreq) +
+        settings.raster.minFreq;
       playAudio();
       setAudioFrequency(frequency);
     }
