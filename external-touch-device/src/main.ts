@@ -69,8 +69,8 @@ class Raster {
   }
 
   rasterToCoords = (x: number, y: number): [number, number] => [
-    x / this.xResolution + this.topLeft[0],
-    y / this.yResolution + this.topLeft[1],
+    x * this.xResolution + this.topLeft[0],
+    y * this.yResolution + this.topLeft[1],
   ];
 }
 
@@ -444,15 +444,19 @@ const launchGis = () => {
       return;
     }
     console.log("Rendering raster on screen");
-    const scale = (rightLon - leftLon) / canvas.width / raster.xResolution;
+    const topLeftScreen = coordsToScreen(raster.topLeft as [number, number]);
+    const bottomRightScreen = coordsToScreen(
+      raster.rasterToCoords(raster.width, raster.height)
+    );
+    const width = bottomRightScreen[0] - topLeftScreen[0];
+    const scale = width / raster.width;
     const transformedImage = raster.image.clone().resize({ factor: scale });
-    const screenPosition = coordsToScreen(raster.topLeft as [number, number]);
     const imageData = new ImageData(
       transformedImage.getRGBAData({ clamped: true }) as Uint8ClampedArray,
       transformedImage.width,
       transformedImage.height
     );
-    ctx.putImageData(imageData, ...screenPosition);
+    ctx.putImageData(imageData, ...topLeftScreen);
   };
 
   const playAudioInRaster = (coords: [number, number]) => {
