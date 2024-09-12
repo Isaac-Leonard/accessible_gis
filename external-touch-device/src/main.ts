@@ -16,7 +16,7 @@ const createButton = () => {
     speak(
       "If you are using a screen reader please turn it off to use this application"
     );
-    launchGis();
+    new GisManager();
     btn.remove();
   };
   btn.textContent = "Start";
@@ -31,241 +31,260 @@ const minLon = -180,
 
 const defaultSettings = { raster: { minFreq: 220, maxFreq: 880 }, vector: {} };
 
-const launchGis = () => {
+class GisManager {
   // Required variables
-  let raster: Raster | null = null;
+  raster: Raster | null = null;
+  previousFeatures: Feature[] = [];
 
-  let previousFeatures: Feature[] = [];
+  radius = 5;
 
-  const radius = 5;
-
-  let topLat = maxLat,
-    leftLon = minLon,
-    bottomLat: number,
-    rightLon: number;
-  let settings: GisMessage = defaultSettings;
-  let features: Feature[] = [];
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d")!;
-  const gestureManager = new GestureManager(canvas);
-  const connection = new WsConnection();
+  topLat = maxLat;
+  leftLon = minLon;
+  bottomLat: number;
+  rightLon: number;
+  settings: GisMessage = defaultSettings;
+  features: Feature[] = [];
+  canvas = document.createElement("canvas");
+  ctx: CanvasRenderingContext2D;
+  gestureManager: GestureManager;
+  connection = new WsConnection();
 
   // Initial configuration
-  connection.addMessageHandler((msg) => {
-    if (msg?.type === "Gis") {
-      settings = msg.data;
-      speak("Updated settings");
-    }
-  });
-  document.body.appendChild(canvas);
-  canvas.width = window.innerWidth;
-  canvas.height = document.documentElement.clientHeight;
-  ctx.fillStyle = "#000000";
-  ctx.strokeStyle = "#ffffff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  setAudioFrequency(440);
+  constructor() {
+    this.ctx = this.canvas.getContext("2d")!;
+    this.gestureManager = new GestureManager(this.canvas);
+    this.connection.addMessageHandler((msg) => {
+      if (msg?.type === "Gis") {
+        this.settings = msg.data;
+        speak("Updated settings");
+      }
+    });
+    document.body.appendChild(this.canvas);
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = document.documentElement.clientHeight;
+    this.ctx.fillStyle = "#000000";
+    this.ctx.strokeStyle = "#ffffff";
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    setAudioFrequency(440);
 
-  if (canvas.width * 2 < canvas.height) {
-    rightLon = maxLon;
-    bottomLat = topLat - ((rightLon - leftLon) / canvas.width) * canvas.height;
-  } else {
-    bottomLat = minLat;
-    rightLon = minLon + ((maxLat - minLat) / canvas.height) * canvas.width;
+    if (this.canvas.width * 2 < this.canvas.height) {
+      this.rightLon = maxLon;
+      this.bottomLat =
+        this.topLat -
+        ((this.rightLon - this.leftLon) / this.canvas.width) *
+          this.canvas.height;
+    } else {
+      this.bottomLat = minLat;
+      this.rightLon =
+        minLon + ((maxLat - minLat) / this.canvas.height) * this.canvas.width;
+    }
+
+    this.rightLon =
+      minLon + ((maxLat - minLat) / this.canvas.height) * this.canvas.width;
+    this.canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      if (e.touches.length > 1) {
+        return;
+      }
+      const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
+      console.log(`screen x: ${screenX}, screen y: ${screenY}`);
+      const coords = this.screenToCoords(screenX, screenY);
+      console.log(`Lon: ${coords[0]}, lat: ${coords[1]}`);
+      this.speakFeatures(coords);
+      this.playAudioInRaster(coords);
+    });
+
+    this.canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      if (e.targetTouches.length > 1) {
+        pauseAudio();
+        return;
+      }
+      const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
+      const coords = this.screenToCoords(screenX, screenY);
+      this.speakFeatures(coords);
+      this.playAudioInRaster(coords);
+    });
+
+    this.canvas.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      if (e.touches.length > 1) {
+        return;
+      }
+      pauseAudio();
+    });
+
+    this.canvas.addEventListener("touchcancel", (e) => {
+      e.preventDefault();
+      if (e.touches.length > 1) {
+        return;
+      }
+      pauseAudio();
+    });
+
+    this.gestureManager.addPinchHandler(() => {
+      speak("Zooming out");
+      const lonRange = this.rightLon - this.leftLon;
+      const latRange = this.topLat - this.bottomLat;
+      const maxXScale = (maxLon - this.leftLon) / lonRange;
+      const maxYScale = (this.topLat - minLat) / latRange;
+      let scale = Math.min(maxXScale, maxYScale, 2);
+      if (scale <= 1) {
+        speak("Cannot zoom out, you may need to swipe down or right");
+        return;
+      }
+      this.rightLon = this.leftLon + lonRange * scale;
+      this.bottomLat = this.topLat - latRange * scale;
+      this.render();
+    });
+
+    this.gestureManager.addSpreadHandler(() => {
+      speak("Zooming in");
+      const lonRange = this.rightLon - this.leftLon;
+      this.rightLon = this.leftLon + lonRange / 2;
+      const latRange = this.topLat - this.bottomLat;
+      this.bottomLat = this.topLat - latRange / 2;
+      this.render();
+    });
+
+    this.gestureManager.addSwipeHandler("down", () => {
+      speak("Swiped down");
+      const range = this.topLat - this.bottomLat;
+      const top = Math.min(this.topLat + range, maxLat);
+      const panDistance = top - this.topLat;
+      this.topLat = top;
+      this.bottomLat += panDistance;
+      this.render();
+    });
+
+    this.gestureManager.addSwipeHandler("up", () => {
+      speak("Swiped up");
+      const range = this.topLat - this.bottomLat;
+      console.log("Range: " + range);
+      console.log("Bottom lat: " + this.bottomLat);
+      const bottom = Math.max(this.bottomLat - range, minLat);
+      console.log(`Bottom: ${bottom}`);
+      const panDistance = this.bottomLat - bottom;
+      this.bottomLat = bottom;
+      this.topLat -= panDistance;
+      this.render();
+    });
+
+    this.gestureManager.addSwipeHandler("right", () => {
+      speak("Swiped right");
+      const range = this.rightLon - this.leftLon;
+      const left = Math.max(this.leftLon - range, minLon);
+      const panDistance = this.leftLon - left;
+      this.leftLon = left;
+      this.rightLon -= panDistance;
+      this.render();
+    });
+
+    this.gestureManager.addSwipeHandler("left", () => {
+      speak("Swiped left");
+      const range = this.rightLon - this.leftLon;
+      const right = Math.min(this.rightLon + range, maxLon);
+      const panDistance = right - this.rightLon;
+      this.rightLon = right;
+      this.leftLon += panDistance;
+      this.render();
+    });
+
+    this.getVectors();
+    this.getRaster();
+  }
+  // Functions
+  screenToCoords(x: number, y: number): [number, number] {
+    return [
+      (x / this.canvas.width) * (this.rightLon - this.leftLon) + this.leftLon,
+      -(y / this.canvas.height) * (this.topLat - this.bottomLat) + this.topLat,
+    ];
   }
 
-  rightLon = minLon + ((maxLat - minLat) / canvas.height) * canvas.width;
-  canvas.addEventListener("touchstart", (e) => {
-    e.preventDefault();
-    if (e.touches.length > 1) {
-      return;
-    }
-    const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
-    console.log(`screen x: ${screenX}, screen y: ${screenY}`);
-    const coords = screenToCoords(screenX, screenY);
-    console.log(`Lon: ${coords[0]}, lat: ${coords[1]}`);
-    speakFeatures(coords);
-    playAudioInRaster(coords);
-  });
+  coordsToScreen([lon, lat]: [number, number]): [number, number] {
+    return [
+      ((lon - this.leftLon) * this.canvas.width) /
+        (this.rightLon - this.leftLon),
+      -((lat - this.topLat) * this.canvas.height) /
+        (this.topLat - this.bottomLat),
+    ];
+  }
 
-  canvas.addEventListener("touchmove", (e) => {
-    e.preventDefault();
-    if (e.targetTouches.length > 1) {
-      pauseAudio();
-      return;
-    }
-    const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
-    const coords = screenToCoords(screenX, screenY);
-    speakFeatures(coords);
-    playAudioInRaster(coords);
-  });
+  drawPoint(p: Position) {
+    const [x, y] = this.coordsToScreen(p as [number, number]);
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.fillStyle = "#ffffff";
+    this.ctx.arc(x, y, this.radius, 0, 2 * Math.PI);
+    this.ctx.closePath();
+    this.ctx.fill();
+    this.ctx.restore();
+  }
 
-  canvas.addEventListener("touchend", (e) => {
-    e.preventDefault();
-    if (e.touches.length > 1) {
-      return;
-    }
-    pauseAudio();
-  });
-
-  canvas.addEventListener("touchcancel", (e) => {
-    e.preventDefault();
-    if (e.touches.length > 1) {
-      return;
-    }
-    pauseAudio();
-  });
-
-  gestureManager.addPinchHandler(() => {
-    speak("Zooming out");
-    const lonRange = rightLon - leftLon;
-    const latRange = topLat - bottomLat;
-    const maxXScale = (maxLon - leftLon) / lonRange;
-    const maxYScale = (topLat - minLat) / latRange;
-    let scale = Math.min(maxXScale, maxYScale, 2);
-    if (scale <= 1) {
-      speak("Cannot zoom out, you may need to swipe down or right");
-      return;
-    }
-    rightLon = leftLon + lonRange * scale;
-    bottomLat = topLat - latRange * scale;
-    render();
-  });
-
-  gestureManager.addSpreadHandler(() => {
-    speak("Zooming in");
-    const lonRange = rightLon - leftLon;
-    rightLon = leftLon + lonRange / 2;
-    const latRange = topLat - bottomLat;
-    bottomLat = topLat - latRange / 2;
-    render();
-  });
-
-  gestureManager.addSwipeHandler("down", () => {
-    speak("Swiped down");
-    const range = topLat - bottomLat;
-    const top = Math.min(topLat + range, maxLat);
-    const panDistance = top - topLat;
-    topLat = top;
-    bottomLat += panDistance;
-    render();
-  });
-
-  gestureManager.addSwipeHandler("up", () => {
-    speak("Swiped up");
-    const range = topLat - bottomLat;
-    console.log("Range: " + range);
-    console.log("Bottom lat: " + bottomLat);
-    const bottom = Math.max(bottomLat - range, minLat);
-    console.log(`Bottom: ${bottom}`);
-    const panDistance = bottomLat - bottom;
-    bottomLat = bottom;
-    topLat -= panDistance;
-    render();
-  });
-
-  gestureManager.addSwipeHandler("right", () => {
-    speak("Swiped right");
-    const range = rightLon - leftLon;
-    const left = Math.max(leftLon - range, minLon);
-    const panDistance = leftLon - left;
-    leftLon = left;
-    rightLon -= panDistance;
-    render();
-  });
-
-  gestureManager.addSwipeHandler("left", () => {
-    speak("Swiped left");
-    const range = rightLon - leftLon;
-    const right = Math.min(rightLon + range, maxLon);
-    const panDistance = right - rightLon;
-    rightLon = right;
-    leftLon += panDistance;
-    render();
-  });
-
-  // Functions
-  const screenToCoords = (x: number, y: number): [number, number] => [
-    (x / canvas.width) * (rightLon - leftLon) + leftLon,
-    -(y / canvas.height) * (topLat - bottomLat) + topLat,
-  ];
-
-  const coordsToScreen = ([lon, lat]: [number, number]): [number, number] => [
-    ((lon - leftLon) * canvas.width) / (rightLon - leftLon),
-    -((lat - topLat) * canvas.height) / (topLat - bottomLat),
-  ];
-
-  const drawPoint = (p: Position) => {
-    const [x, y] = coordsToScreen(p as [number, number]);
-    ctx.save();
-    ctx.beginPath();
-    ctx.fillStyle = "#ffffff";
-    ctx.arc(x, y, radius, 0, 2 * Math.PI);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  };
-
-  const drawLine = (line: Position[]) => {
-    ctx.beginPath();
+  drawLine(line: Position[]) {
+    this.ctx.beginPath();
     line.forEach((p) => {
-      const [x, y] = coordsToScreen(p as [number, number]);
-      ctx.lineTo(x, y);
+      const [x, y] = this.coordsToScreen(p as [number, number]);
+      this.ctx.lineTo(x, y);
     });
-    ctx.closePath();
-    ctx.stroke();
-  };
+    this.ctx.closePath();
+    this.ctx.stroke();
+  }
 
-  const getVectors = async () => {
+  async getVectors() {
     const res = await fetch("get_vector");
     const geojson = await res.json().then((x) => featureCollection.parse(x));
-    features = geojson.features;
-    renderVectors();
-  };
+    this.features = geojson.features;
+    this.renderVectors();
+  }
 
-  const renderVectors = () => {
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 2;
-    features.forEach(({ geometry }) => {
+  renderVectors() {
+    this.ctx.fillStyle = "#ffffff";
+    this.ctx.strokeStyle = "#ffffff";
+    this.ctx.lineWidth = 2;
+    this.features.forEach(({ geometry }) => {
       switch (geometry.type) {
         case "Point":
-          drawPoint(geometry.coordinates);
+          this.drawPoint(geometry.coordinates);
           return;
         case "LineString":
-          drawLine(geometry.coordinates);
+          this.drawLine(geometry.coordinates);
           return;
         case "Polygon":
-          geometry.coordinates.forEach(drawLine);
+          geometry.coordinates.forEach(this.drawLine);
           return;
         case "MultiPoint":
-          geometry.coordinates.forEach(drawPoint);
+          geometry.coordinates.forEach(this.drawPoint);
           return;
         case "MultiLineString":
-          geometry.coordinates.forEach(drawLine);
+          geometry.coordinates.forEach(this.drawLine);
           return;
         case "MultiPolygon":
-          geometry.coordinates.forEach((poly) => poly.forEach(drawLine));
+          geometry.coordinates.forEach((poly) => poly.forEach(this.drawLine));
           return;
       }
     });
-  };
+  }
 
-  const speakFeatures = (coords: [number, number]) => {
+  speakFeatures(coords: [number, number]) {
     let foundFeatures: Feature[] = [];
     const degrees = { units: "degrees" } as const;
     const geodesic = { method: "geodesic" } as const;
-    for (let feature of features) {
+    for (let feature of this.features) {
       const { geometry } = feature;
       switch (geometry.type) {
         case "Point":
-          if (turf.distance(coords, geometry.coordinates, degrees) < radius) {
+          if (
+            turf.distance(coords, geometry.coordinates, degrees) < this.radius
+          ) {
             foundFeatures.push(feature);
           }
           return;
         case "MultiPoint":
           if (
             geometry.coordinates.some(
-              (position) => turf.distance(coords, position, degrees) < radius
+              (position) =>
+                turf.distance(coords, position, degrees) < this.radius
             )
           ) {
             foundFeatures.push(feature);
@@ -277,7 +296,7 @@ const launchGis = () => {
             geometry,
             geodesic
           );
-          if (distanceToLine < radius) {
+          if (distanceToLine < this.radius) {
             foundFeatures.push(feature);
           }
           continue;
@@ -289,7 +308,7 @@ const launchGis = () => {
                   coords,
                   turf.lineString(line),
                   geodesic
-                ) < radius
+                ) < this.radius
             )
           ) {
             foundFeatures.push(feature);
@@ -304,10 +323,10 @@ const launchGis = () => {
     }
 
     const featuresToSpeak = foundFeatures.filter(
-      (feature) => !previousFeatures.includes(feature)
+      (feature) => !this.previousFeatures.includes(feature)
     );
 
-    const leftFeatures = previousFeatures.filter(
+    const leftFeatures = this.previousFeatures.filter(
       (feature) => !foundFeatures.includes(feature)
     );
 
@@ -340,60 +359,66 @@ const launchGis = () => {
     if (text.length > 1) {
       speak(text);
     }
-    previousFeatures = foundFeatures;
-  };
+    this.previousFeatures = foundFeatures;
+  }
 
-  const renderRaster = () => {
-    if (raster === null) {
+  renderRaster() {
+    if (this.raster === null) {
       return;
     }
     if (
-      raster.topLeft[0] > rightLon ||
-      raster.topLeft[1] < bottomLat ||
-      raster.topLeft[0] + raster.width * raster.xResolution < leftLon ||
-      raster.topLeft[1] + raster.height * raster.yResolution > topLat
+      this.raster.topLeft[0] > this.rightLon ||
+      this.raster.topLeft[1] < this.bottomLat ||
+      this.raster.topLeft[0] + this.raster.width * this.raster.xResolution <
+        this.leftLon ||
+      this.raster.topLeft[1] + this.raster.height * this.raster.yResolution >
+        this.topLat
     ) {
       // No raster data is visable
       console.log("Raster off screen");
       return;
     }
     console.log("Rendering raster on screen");
-    const topLeftScreen = coordsToScreen(raster.topLeft as [number, number]);
-    const bottomRightScreen = coordsToScreen(
-      raster.rasterToCoords(raster.width, raster.height)
+    const topLeftScreen = this.coordsToScreen(
+      this.raster.topLeft as [number, number]
+    );
+    const bottomRightScreen = this.coordsToScreen(
+      this.raster.rasterToCoords(this.raster.width, this.raster.height)
     );
     const width = bottomRightScreen[0] - topLeftScreen[0];
-    const scale = width / raster.width;
-    const transformedImage = raster.image.clone().resize({ factor: scale });
+    const scale = width / this.raster.width;
+    const transformedImage = this.raster.image
+      .clone()
+      .resize({ factor: scale });
     const imageData = new ImageData(
       transformedImage.getRGBAData({ clamped: true }) as Uint8ClampedArray,
       transformedImage.width,
       transformedImage.height
     );
-    ctx.putImageData(imageData, ...topLeftScreen);
-  };
+    this.ctx.putImageData(imageData, ...topLeftScreen);
+  }
 
-  const playAudioInRaster = (coords: [number, number]) => {
-    if (raster === null) {
+  playAudioInRaster(coords: [number, number]) {
+    if (this.raster === null) {
       return;
     }
-    const [x, y] = raster.coordsToRaster(coords);
+    const [x, y] = this.raster.coordsToRaster(coords);
     console.log(`lon: ${coords[0]}, x:${x}, lat:${coords[1]}, y:${y}`);
-    if (x < 0 || x >= raster.width || y < 0 || y >= raster.height) {
+    if (x < 0 || x >= this.raster.width || y < 0 || y >= this.raster.height) {
       pauseAudio();
     } else {
-      const index = y * raster.width + x;
-      const value = raster.data.data[index];
+      const index = y * this.raster.width + x;
+      const value = this.raster.data.data[index];
       const frequency =
-        ((value - raster.min) / (raster.max - raster.min)) *
-          (settings.raster.maxFreq - settings.raster.minFreq) +
-        settings.raster.minFreq;
+        ((value - this.raster.min) / (this.raster.max - this.raster.min)) *
+          (this.settings.raster.maxFreq - this.settings.raster.minFreq) +
+        this.settings.raster.minFreq;
       playAudio();
       setAudioFrequency(frequency);
     }
-  };
+  }
 
-  const getRaster = async () => {
+  async getRaster() {
     console.log("Called get raster");
     const metadataRes = await fetch("get_raster_meta");
     console.log("Got metadata");
@@ -406,7 +431,7 @@ const launchGis = () => {
     console.log("Got rasterData array buffer");
     const data = new Float32Array(rasterData);
     console.log("Parsed data");
-    raster = new Raster(
+    this.raster = new Raster(
       { type: "Float32", data },
       metadata.origin,
       metadata.width,
@@ -414,18 +439,16 @@ const launchGis = () => {
       metadata.resolution
     );
 
-    renderRaster();
-  };
+    this.renderRaster();
+  }
 
-  const render = () => {
-    ctx.fillStyle = "#000000";
-    ctx.strokeStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    renderVectors();
-    renderRaster();
-  };
-  getVectors();
-  getRaster();
-};
+  render() {
+    this.ctx.fillStyle = "#000000";
+    this.ctx.strokeStyle = "#ffffff";
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.renderVectors();
+    this.renderRaster();
+  }
+}
 
 createButton();
