@@ -32,22 +32,38 @@ const minLon = -180,
 const defaultSettings = { raster: { minFreq: 220, maxFreq: 880 }, vector: {} };
 
 const launchGis = () => {
-  let settings: GisMessage = defaultSettings;
-  let features: Feature[] = [];
-  const canvas = document.createElement("canvas");
-  document.body.appendChild(canvas);
-  canvas.width = window.innerWidth;
-  canvas.height = document.documentElement.clientHeight;
-  const ctx = canvas.getContext("2d")!;
-  ctx.fillStyle = "#000000";
-  ctx.strokeStyle = "#ffffff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  setAudioFrequency(440);
+  // Required variables
+  let raster: Raster | null = null;
+
+  let previousFeatures: Feature[] = [];
+
+  const radius = 5;
 
   let topLat = maxLat,
     leftLon = minLon,
     bottomLat: number,
     rightLon: number;
+  let settings: GisMessage = defaultSettings;
+  let features: Feature[] = [];
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d")!;
+  const gestureManager = new GestureManager(canvas);
+  const connection = new WsConnection();
+
+  // Initial configuration
+  connection.addMessageHandler((msg) => {
+    if (msg?.type === "Gis") {
+      settings = msg.data;
+      speak("Updated settings");
+    }
+  });
+  document.body.appendChild(canvas);
+  canvas.width = window.innerWidth;
+  canvas.height = document.documentElement.clientHeight;
+  ctx.fillStyle = "#000000";
+  ctx.strokeStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  setAudioFrequency(440);
 
   if (canvas.width * 2 < canvas.height) {
     rightLon = maxLon;
@@ -58,17 +74,6 @@ const launchGis = () => {
   }
 
   rightLon = minLon + ((maxLat - minLat) / canvas.height) * canvas.width;
-
-  const screenToCoords = (x: number, y: number): [number, number] => [
-    (x / canvas.width) * (rightLon - leftLon) + leftLon,
-    -(y / canvas.height) * (topLat - bottomLat) + topLat,
-  ];
-
-  const coordsToScreen = ([lon, lat]: [number, number]): [number, number] => [
-    ((lon - leftLon) * canvas.width) / (rightLon - leftLon),
-    -((lat - topLat) * canvas.height) / (topLat - bottomLat),
-  ];
-
   canvas.addEventListener("touchstart", (e) => {
     e.preventDefault();
     if (e.touches.length > 1) {
@@ -109,8 +114,6 @@ const launchGis = () => {
     }
     pauseAudio();
   });
-
-  const gestureManager = new GestureManager(canvas);
 
   gestureManager.addPinchHandler(() => {
     speak("Zooming out");
@@ -180,7 +183,16 @@ const launchGis = () => {
     render();
   });
 
-  const radius = 5;
+  // Functions
+  const screenToCoords = (x: number, y: number): [number, number] => [
+    (x / canvas.width) * (rightLon - leftLon) + leftLon,
+    -(y / canvas.height) * (topLat - bottomLat) + topLat,
+  ];
+
+  const coordsToScreen = ([lon, lat]: [number, number]): [number, number] => [
+    ((lon - leftLon) * canvas.width) / (rightLon - leftLon),
+    -((lat - topLat) * canvas.height) / (topLat - bottomLat),
+  ];
 
   const drawPoint = (p: Position) => {
     const [x, y] = coordsToScreen(p as [number, number]);
@@ -238,12 +250,6 @@ const launchGis = () => {
     });
   };
 
-  getVectors();
-
-  const radial = (rightLon - leftLon) / 20;
-
-  let previousFeatures: Feature[] = [];
-
   const speakFeatures = (coords: [number, number]) => {
     let foundFeatures: Feature[] = [];
     const degrees = { units: "degrees" } as const;
@@ -252,14 +258,14 @@ const launchGis = () => {
       const { geometry } = feature;
       switch (geometry.type) {
         case "Point":
-          if (turf.distance(coords, geometry.coordinates, degrees) < radial) {
+          if (turf.distance(coords, geometry.coordinates, degrees) < radius) {
             foundFeatures.push(feature);
           }
           return;
         case "MultiPoint":
           if (
             geometry.coordinates.some(
-              (position) => turf.distance(coords, position, degrees) < radial
+              (position) => turf.distance(coords, position, degrees) < radius
             )
           ) {
             foundFeatures.push(feature);
@@ -271,7 +277,7 @@ const launchGis = () => {
             geometry,
             geodesic
           );
-          if (distanceToLine < radial) {
+          if (distanceToLine < radius) {
             foundFeatures.push(feature);
           }
           continue;
@@ -283,7 +289,7 @@ const launchGis = () => {
                   coords,
                   turf.lineString(line),
                   geodesic
-                ) < radial
+                ) < radius
             )
           ) {
             foundFeatures.push(feature);
@@ -336,8 +342,6 @@ const launchGis = () => {
     }
     previousFeatures = foundFeatures;
   };
-
-  let raster: Raster | null = null;
 
   const renderRaster = () => {
     if (raster === null) {
@@ -412,7 +416,6 @@ const launchGis = () => {
 
     renderRaster();
   };
-  getRaster();
 
   const render = () => {
     ctx.fillStyle = "#000000";
@@ -421,14 +424,8 @@ const launchGis = () => {
     renderVectors();
     renderRaster();
   };
-  const connection = new WsConnection();
-  connection.addMessageHandler((msg) => {
-    if (msg?.type === "Gis") {
-      settings = msg.data;
-      speak("Updated settings");
-    }
-  });
-  return canvas;
+  getVectors();
+  getRaster();
 };
 
 createButton();
