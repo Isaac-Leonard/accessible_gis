@@ -44,15 +44,18 @@ class GisManager {
   rightLon: number;
   settings: GisMessage = defaultSettings;
   features: Feature[] = [];
-  canvas = document.createElement("canvas");
+  canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   gestureManager: GestureManager;
-  connection = new WsConnection();
+  connection: WsConnection;
 
   // Initial configuration
   constructor() {
+    this.canvas = document.createElement("canvas");
     this.ctx = this.canvas.getContext("2d")!;
+    console.log(this.ctx);
     this.gestureManager = new GestureManager(this.canvas);
+    this.connection = new WsConnection();
     this.connection.addMessageHandler((msg) => {
       if (msg?.type === "Gis") {
         this.settings = msg.data;
@@ -60,7 +63,7 @@ class GisManager {
       }
     });
     document.body.appendChild(this.canvas);
-    this.canvas.width = window.innerWidth;
+    this.canvas.width = document.documentElement.clientWidth;
     this.canvas.height = document.documentElement.clientHeight;
     this.ctx.fillStyle = "#000000";
     this.ctx.strokeStyle = "#ffffff";
@@ -251,16 +254,18 @@ class GisManager {
           this.drawLine(geometry.coordinates);
           return;
         case "Polygon":
-          geometry.coordinates.forEach(this.drawLine);
+          geometry.coordinates.forEach((ring) => this.drawLine(ring));
           return;
         case "MultiPoint":
-          geometry.coordinates.forEach(this.drawPoint);
+          geometry.coordinates.forEach((p) => this.drawPoint(p));
           return;
         case "MultiLineString":
-          geometry.coordinates.forEach(this.drawLine);
+          geometry.coordinates.forEach((line) => this.drawLine(line));
           return;
         case "MultiPolygon":
-          geometry.coordinates.forEach((poly) => poly.forEach(this.drawLine));
+          geometry.coordinates.forEach((poly) =>
+            poly.forEach((ring) => this.drawLine(ring))
+          );
           return;
       }
     });
@@ -279,7 +284,7 @@ class GisManager {
           ) {
             foundFeatures.push(feature);
           }
-          return;
+          continue;
         case "MultiPoint":
           if (
             geometry.coordinates.some(
@@ -355,6 +360,7 @@ class GisManager {
       })
       .join();
     const text = foundText + "\n" + leftText;
+    console.log(text);
     // Speaking empty text while moving affectively makes any speach while moving impossible.
     if (text.length > 1) {
       speak(text);
