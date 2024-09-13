@@ -1,8 +1,11 @@
-use std::ffi::CStr;
+use std::{
+    ffi::{CStr, OsStr},
+    process::{Command, Output},
+};
 
 use gdal::vector::{Layer, LayerAccess};
 
-use super::field_schema::FieldSchema;
+use super::{dataset::Srs, field_schema::FieldSchema};
 
 pub struct WrappedLayer<'a> {
     pub layer: Layer<'a>,
@@ -60,4 +63,26 @@ fn get_layer_name(layer: &Layer) -> Option<String> {
             Some(CStr::from_ptr(ptr).to_string_lossy().to_string())
         }
     }
+}
+
+pub fn merge_layers(
+    names: Vec<impl AsRef<OsStr>>,
+    single: bool,
+    srs: Srs,
+    output_name: impl AsRef<OsStr>,
+    overwrite: bool,
+) -> std::io::Result<Output> {
+    let mut command = Command::new("ogrmerge");
+    if single {
+        command.arg("-single");
+    }
+    if overwrite {
+        command.arg("-overwrite");
+    }
+    command
+        .arg("-t_srs")
+        .arg(srs.try_to_gdal().unwrap().to_wkt().unwrap());
+    command.arg("-o").arg(output_name);
+    command.args(names);
+    command.output()
 }
