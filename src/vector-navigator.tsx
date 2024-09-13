@@ -25,7 +25,7 @@ export const VectorNavigator = ({ layer }: VectorLayerProp) => {
       {layer.display ? (
         <div>Displayed</div>
       ) : (
-        <button onClick={client.setDisplay}>Show on screen</button>
+        <button onClick={client.setDisplayVector}>Show on screen</button>
       )}
       <NameFieldPicker layer={layer} />
       <FeaturePicker layer={layer} />

@@ -12,7 +12,6 @@ use tauri::{AppHandle, Manager};
 use tokio::task::spawn_local;
 
 use crate::{
-    commands::reproject_layer,
     gdal_if::{read_raster_data_enum, RasterData, Srs},
     state::AppDataSync,
     web_socket::ws_handle,
@@ -87,13 +86,25 @@ pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
 async fn get_vector(app: Data<AppHandle>) -> impl Responder {
     eprintln!("get_vector called");
     let json_name = "../vector.json";
-    reproject_layer(Srs::Epsg(4326), json_name, app.state::<AppDataSync>());
-    let data = std::fs::read(json_name).unwrap();
-    HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .body(String::from_utf8_lossy(&data).to_string())
+    let state = app.state::<AppDataSync>();
+    let succeeded = state.with_lock(|state| {
+        let layer = state.shared.get_vector_to_display()?;
+        let output = layer.reproject(json_name, Srs::Epsg(4326)).unwrap();
+        eprintln!("{:?}", output);
+        Some(())
+    });
+    if succeeded.is_some() {
+        let data = std::fs::read(json_name).unwrap();
+        HttpResponse::Ok()
+            .content_type(ContentType::json())
+            .body(String::from_utf8_lossy(&data).to_string())
+    } else {
+        // Send empty array there is no vector layer
+        HttpResponse::Ok()
+            .content_type(ContentType::json())
+            .body("[]")
+    }
 }
-
 /// Handshake and start WebSocket handler with heartbeats.
 async fn ws(
     req: HttpRequest,

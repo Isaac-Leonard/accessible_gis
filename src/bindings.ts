@@ -204,8 +204,11 @@ export const commands = {
   async getWaveForms(): Promise<Waveform[]> {
     return await TAURI_INVOKE("get_wave_forms");
   },
-  async setDisplay(): Promise<void> {
-    await TAURI_INVOKE("set_display");
+  async setDisplayRaster(): Promise<void> {
+    await TAURI_INVOKE("set_display_raster");
+  },
+  async setDisplayVector(): Promise<void> {
+    await TAURI_INVOKE("set_display_vector");
   },
   async setCurrentOcr(enabled: boolean): Promise<void> {
     await TAURI_INVOKE("set_current_ocr", { enabled });

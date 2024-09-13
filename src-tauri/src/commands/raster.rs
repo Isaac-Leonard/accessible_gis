@@ -94,7 +94,7 @@ impl Classification {
 
 #[tauri::command]
 #[specta::specta]
-pub fn set_display(state: AppState) {
+pub fn set_display_raster(state: AppState) {
     state.with_lock(|state| state.shared.display_current_raster())
 }
 

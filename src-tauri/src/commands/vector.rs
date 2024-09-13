@@ -132,3 +132,9 @@ pub fn set_layer_index(index: LayerIndex, state: AppState) {
         })
         .expect("Tried to set layer index on nonexistant dataset");
 }
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_display_vector(state: AppState) {
+    state.with_lock(|state| state.shared.display_current_vector())
+}

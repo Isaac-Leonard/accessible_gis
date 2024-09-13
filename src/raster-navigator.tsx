@@ -144,7 +144,7 @@ const RasterNavigatorInner = ({
       <button
         aria-checked={layer.display}
         role="switch"
-        onClick={() => client.setDisplay()}
+        onClick={() => client.setDisplayRaster()}
       >
         Display
       </button>
