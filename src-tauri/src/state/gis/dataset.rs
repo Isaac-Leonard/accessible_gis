@@ -44,6 +44,7 @@ impl StatefulDataset {
                 shared: SharedInfo {
                     name: dataset.file_name.clone(),
                 },
+                display: false,
             })
             .collect_vec();
 
@@ -90,8 +91,16 @@ impl StatefulDataset {
         self.dataset.get_all_layers()
     }
 
-    pub fn layers(&mut self) -> LayerIterator {
+    pub fn layers_raw(&mut self) -> LayerIterator {
         self.dataset.dataset.layers()
+    }
+
+    pub fn layers(&mut self) -> impl Iterator<Item = StatefulVectorLayer<'_>> {
+        self.dataset
+            .vectors()
+            .into_iter()
+            .zip(&mut self.layer_info)
+            .map(|(layer, info)| StatefulVectorLayer { layer, info })
     }
 
     pub fn raster_bands(&mut self) -> impl Iterator<Item = gdal::errors::Result<RasterBand>> {

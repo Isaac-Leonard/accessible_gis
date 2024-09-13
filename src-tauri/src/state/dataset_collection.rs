@@ -81,6 +81,12 @@ pub trait NonEmptyDelegatorImpl: NonEmptyDelegator {
             .map(|x| x.datasets.iter_mut())
             .unwrap_or_default()
     }
+
+    fn get_vectors(&mut self) -> impl Iterator<Item = StatefulVectorLayer<'_>> {
+        let non_empty = self.get_non_empty_mut().into_iter();
+        let datasets = non_empty.flat_map(|x| &mut x.datasets);
+        datasets.flat_map(|ds| ds.layers())
+    }
 }
 
 impl<T: NonEmptyDelegator> NonEmptyDelegatorImpl for T {}

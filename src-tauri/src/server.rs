@@ -12,7 +12,7 @@ use tauri::{AppHandle, Manager};
 use tokio::task::spawn_local;
 
 use crate::{
-    gdal_if::{read_raster_data_enum, RasterData, Srs},
+    gdal_if::{merge_layers, read_raster_data_enum, RasterData, Srs},
     state::AppDataSync,
     web_socket::ws_handle,
 };
@@ -88,12 +88,20 @@ async fn get_vector(app: Data<AppHandle>) -> impl Responder {
     let json_name = "../vector.json";
     let state = app.state::<AppDataSync>();
     let succeeded = state.with_lock(|state| {
-        let layer = state.shared.get_vector_to_display()?;
-        let output = layer.reproject(json_name, Srs::Epsg(4326)).unwrap();
+        let layers = state.shared.get_vectors_for_display();
+        if layers.is_empty() {
+            return false;
+        }
+        let layer_names = layers
+            .into_iter()
+            .map(|layer| layer.info.shared.name.clone())
+            .dedup()
+            .collect_vec();
+        let output = merge_layers(layer_names, true, Srs::Epsg(4326), json_name, true).unwrap();
         eprintln!("{:?}", output);
-        Some(())
+        true
     });
-    if succeeded.is_some() {
+    if succeeded {
         let data = std::fs::read(json_name).unwrap();
         HttpResponse::Ok()
             .content_type(ContentType::json())

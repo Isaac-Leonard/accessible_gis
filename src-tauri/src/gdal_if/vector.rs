@@ -77,7 +77,7 @@ pub fn merge_layers(
         command.arg("-single");
     }
     if overwrite {
-        command.arg("-overwrite");
+        command.arg("-overwrite_ds");
     }
     command
         .arg("-t_srs")

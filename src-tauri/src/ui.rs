@@ -6,10 +6,7 @@ use crate::{
     gdal_if::{FieldSchema, FieldValue, LayerExt, LayerIndex},
     geometry::Point,
     state::{
-        gis::{
-            combined::{RasterIndex, VectorIndex},
-            raster::RenderMethod,
-        },
+        gis::{combined::RasterIndex, raster::RenderMethod},
         settings::{AudioSettings, GlobalSettings},
         AppData,
     },
@@ -94,7 +91,6 @@ impl AppData {
             .into_iter()
             .map_into()
             .collect_vec();
-        let visible_vector_index = self.shared.get_vector_index_to_display();
         let visible_raster_index = self.shared.get_raster_index_to_display();
         let layer_info = self
             .shared
@@ -116,11 +112,7 @@ impl AppData {
                         .collect_vec();
                     Some(LayerScreenInfo::Vector(VectorScreenData {
                         name_field: primary_field_name.cloned(),
-                        display: visible_vector_index
-                            == Some(VectorIndex {
-                                dataset: ds_index,
-                                layer: index,
-                            }),
+                        display: layer.info.display,
                         dataset_index: ds_index,
                         srs: try { layer.layer.layer.spatial_ref()?.to_wkt().ok()? },
                         field_schema: layer.layer.get_field_schema(),

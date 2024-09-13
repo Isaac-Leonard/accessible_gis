@@ -1,17 +1,14 @@
-use gdal::vector::LayerAccess;
+use itertools::Itertools;
 
 use crate::{
     dataset_collection::{DatasetCollection, NonEmptyDelegatorImpl},
-    gdal_if::{get_fields, WrappedDataset},
+    gdal_if::WrappedDataset,
     tools::ToolList,
-    FeatureInfo,
 };
 
 use super::{
     gis::{
-        combined::{RasterIndex, VectorIndex},
-        dataset::StatefulDataset,
-        raster::StatefulRasterBand,
+        combined::RasterIndex, dataset::StatefulDataset, raster::StatefulRasterBand,
         vector::StatefulVectorLayer,
     },
     settings::GlobalSettings,
@@ -22,7 +19,6 @@ pub struct UserState {
     pub datasets: DatasetCollection,
     pub tools_data: ToolList,
     pub raster_to_display: Option<RasterIndex>,
-    pub vector_to_display: Option<VectorIndex>,
 }
 
 impl UserState {
@@ -30,46 +26,19 @@ impl UserState {
         self.raster_to_display = self.datasets.get_current_raster_index();
     }
 
-    pub fn display_current_vector(&mut self) {
-        self.vector_to_display = self.datasets.get_current_vector_index();
-    }
-
     pub fn get_raster_to_display(&mut self) -> Option<StatefulRasterBand> {
         self.datasets.get_raster(self.raster_to_display?)
-    }
-
-    pub fn get_vector_to_display(&mut self) -> Option<StatefulVectorLayer> {
-        self.datasets.get_vector(self.vector_to_display?)
-    }
-
-    pub fn get_vector_index_to_display(&mut self) -> Option<VectorIndex> {
-        self.vector_to_display
     }
 
     pub fn get_raster_index_to_display(&mut self) -> Option<RasterIndex> {
         self.raster_to_display
     }
 
-    pub fn get_vectors_for_display(&mut self) -> Vec<FeatureInfo> {
-        let main_srs = self
-            .with_current_dataset_mut(|ds, _| ds.dataset.dataset.spatial_ref().unwrap())
-            .unwrap();
+    pub fn get_vectors_for_display(&mut self) -> Vec<StatefulVectorLayer> {
         self.datasets
-            .iter_mut()
-            // .filter(|ds| ds.display)
-            .filter_map(|ds| ds.get_current_layer()?.try_into_vector().ok())
-            .flat_map(|mut layer| {
-                layer
-                    .layer
-                    .layer()
-                    .features()
-                    .map(|feature| {
-                        let geom = feature.geometry().unwrap().transform_to(&main_srs).unwrap();
-                        FeatureInfo::new(geom.to_geo().unwrap().into(), get_fields(&feature))
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect()
+            .get_vectors()
+            .filter(|layer| layer.info.display)
+            .collect_vec()
     }
 
     pub fn create_from_current_dataset<E, F>(

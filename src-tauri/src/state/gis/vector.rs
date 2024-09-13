@@ -11,6 +11,7 @@ pub struct StatefulVectorInfo {
     /// The name of the field used to identify features
     pub primary_field_name: Option<String>,
     pub shared: SharedInfo,
+    pub display: bool,
 }
 
 pub struct StatefulVectorLayer<'a> {

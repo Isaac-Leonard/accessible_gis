@@ -136,5 +136,7 @@ pub fn set_layer_index(index: LayerIndex, state: AppState) {
 #[tauri::command]
 #[specta::specta]
 pub fn set_display_vector(state: AppState) {
-    state.with_lock(|state| state.shared.display_current_vector())
+    state
+        .with_current_vector_layer(|layer| layer.info.display = true)
+        .expect("No vector found when trying to set display");
 }
