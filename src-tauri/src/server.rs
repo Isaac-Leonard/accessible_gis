@@ -5,6 +5,7 @@ use actix_web::{
     web::{self, Data, Json},
     App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
+use gdal::Dataset;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
@@ -20,8 +21,16 @@ use crate::{
 #[get("/get_raster")]
 async fn get_raster(state: Data<AppDataSync>) -> impl Responder {
     eprintln!("get_raster called");
+    let raster_name = "../data/raster.tif";
     let data = state.with_lock(|state| -> Option<_> {
-        read_raster_data_enum(&state.shared.get_raster_to_display()?.band.band)
+        let output = state
+            .shared
+            .get_raster_to_display()?
+            .reproject(raster_name, Srs::Epsg(4326));
+        eprintln!("{:?}", output);
+        let wgs84_raster = Dataset::open(raster_name).unwrap();
+        let band = wgs84_raster.rasterband(1).unwrap();
+        read_raster_data_enum(&band)
     });
     match data {
         Some(data) => HttpResponse::Ok().body(

@@ -40,6 +40,7 @@ pub async fn ws_handle(
 
     let mut msg_stream = pin!(msg_stream);
 
+    // Ensure the device has the right settings for the current data on start
     app.state::<AppDataSync>().with_lock(|state| {
         let settings = &state.shared.get_raster_to_display()?.info.audio_settings;
         device_sender.send(AppMessage::Gis(GisMessage {
