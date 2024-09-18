@@ -1,10 +1,9 @@
 import { useState } from "preact/hooks";
 import { Drawer, useDrawer } from "./drawer";
-import { load, loadFile, openFile } from "./files";
-import { client } from "./api";
+import { load, loadFile } from "./files";
 
 export const OpenDatasetDialog = () => {
-  const { open, setOpen, innerRef } = useDrawer();
+  const { open, setOpen, innerRef } = useDrawer<HTMLButtonElement>();
 
   const fileHandler = () => {
     load();
@@ -22,7 +21,7 @@ export const OpenDatasetDialog = () => {
 };
 
 const OpenLink = () => {
-  const { open, setOpen, innerRef } = useDrawer();
+  const { open, setOpen, innerRef } = useDrawer<HTMLInputElement>();
   const [url, setUrl] = useState("");
   return (
     <Drawer

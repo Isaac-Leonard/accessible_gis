@@ -3,6 +3,7 @@ import { FeatureIdentifier, VectorScreenData } from "./bindings";
 import { SaveButton } from "./save-button";
 import { client } from "./api";
 import { Dialog, useDialog } from "./dialog";
+import { H, Section } from "react-headings";
 
 export const FeatureCoppier = ({ layer }: { layer: VectorScreenData }) => {
   const features = layer.features;
@@ -66,7 +67,7 @@ export const FeatureCoppierDialog = ({
 }: {
   layer: VectorScreenData;
 }) => {
-  const { open, setOpen, innerRef } = useDialog();
+  const { open, setOpen, innerRef } = useDialog<HTMLHeadingElement>();
   return (
     <Dialog
       modal={true}
@@ -74,7 +75,9 @@ export const FeatureCoppierDialog = ({
       open={open}
       setOpen={setOpen}
     >
-      <FeatureCoppier layer={layer} />
+      <Section component={<H ref={innerRef}>Copy Features</H>}>
+        <FeatureCoppier layer={layer} />
+      </Section>
     </Dialog>
   );
 };

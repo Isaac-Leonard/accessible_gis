@@ -3,9 +3,10 @@ import { client } from "./api";
 import { Classification } from "./bindings";
 import { SaveButton } from "./save-button";
 import { Dialog, useDialog } from "./dialog";
+import { H, Section } from "react-headings";
 
 export const ClassificationDialog = () => {
-  const { open, innerRef, setOpen } = useDialog();
+  const { open, innerRef, setOpen } = useDialog<HTMLHeadingElement>();
 
   return (
     <Dialog
@@ -14,7 +15,9 @@ export const ClassificationDialog = () => {
       setOpen={setOpen}
       openText="Classify raster"
     >
-      <ClassificationScreen onClassify={() => setOpen(false)} />
+      <Section component={<H ref={innerRef}>Classify Cells in Raster</H>}>
+        <ClassificationScreen onClassify={() => setOpen(false)} />
+      </Section>
     </Dialog>
   );
 };

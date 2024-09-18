@@ -5,7 +5,7 @@ import { SaveButton } from "./save-button";
 import { SrsSelector, defaultSrs } from "./srs-selector";
 
 export const ReprojectionDialog = () => {
-  const { open, setOpen, innerRef } = useDialog();
+  const { open, setOpen, innerRef } = useDialog<HTMLDivElement>();
   const [srs, setSrs] = useState(defaultSrs());
   return (
     <Dialog
