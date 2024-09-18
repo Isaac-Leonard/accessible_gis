@@ -221,6 +221,12 @@ export const commands = {
   },
 };
 
+export const events = __makeEvents__<{
+  messageEvent: MessageEvent;
+}>({
+  messageEvent: "message-event",
+});
+
 /** user-defined types **/
 
 export type AudioIndicator =
@@ -374,6 +380,7 @@ export type LineDescription =
   | ({ type: "Closed" } & ClosedLineDescription)
   | ({ type: "Open" } & OpenLineDescription);
 export type LineString = { points: Point[] };
+export type MessageEvent = null;
 export type MultiLineString = { lines: LineString[] };
 export type MultiPoint = { points: Point[] };
 export type MultiPolygon = { polygons: Polygon[] };

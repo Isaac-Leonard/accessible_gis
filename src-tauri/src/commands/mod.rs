@@ -14,9 +14,8 @@ mod vector;
 use std::path::Path;
 
 use specta::ts::{formatter::prettier, BigIntExportBehavior, ExportConfig};
-use tauri::{ipc::Invoke, Runtime, State};
-use tauri_specta::{collect_commands, ts};
-use tokio::sync::mpsc::UnboundedSender;
+use tauri::{ipc::Invoke, App, Runtime};
+use tauri_specta::{collect_commands, collect_events, ts};
 
 pub use crate::*;
 pub use audio::*;
@@ -31,6 +30,9 @@ pub use settings::*;
 pub use thiessen_polygons::*;
 pub use ui::*;
 pub use vector::*;
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, specta::Type, tauri_specta::Event)]
+pub struct MessageEvent;
 
 pub fn generate_handlers<R: Runtime>(
     s: impl AsRef<Path>,
@@ -85,12 +87,14 @@ pub fn generate_handlers<R: Runtime>(
             set_current_render_method,
             set_current_audio_settings,
         ])
+        .events(collect_events![MessageEvent])
         .path(s)
         .config(
             ExportConfig::new()
                 .bigint(BigIntExportBehavior::Number)
                 .formatter(prettier),
         )
-        .build()
+        .build::<App<R>>()
         .unwrap()
+        .0
 }
