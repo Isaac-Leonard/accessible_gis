@@ -5,7 +5,10 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420"
   },
-  "bundle": {
+    "bundle": {
+	"resources":{
+	    "../data":"data"
+	},
     "active": true,
     "targets": "all",
     "icon": ["icons/icon.icns"]

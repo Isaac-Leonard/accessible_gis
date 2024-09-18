@@ -1,4 +1,6 @@
 {
+    
+  "$schema": "./schemas/desktop-schema.json",
   "identifier": "migrated",
   "description": "permissions that were migrated from v1",
   "local": true,
@@ -6,13 +8,6 @@
     "main"
   ],
   "permissions": [
-    "path:default",
-    "event:default",
-    "window:default",
-    "app:default",
-    "resources:default",
-    "menu:default",
-    "tray:default",
     "fs:allow-read-file",
     "fs:allow-write-file",
     "fs:allow-read-dir",

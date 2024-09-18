@@ -13,9 +13,9 @@ mod vector;
 
 use std::path::Path;
 
-use specta::ts::{formatter::prettier, BigIntExportBehavior, ExportConfig};
-use tauri::{ipc::Invoke, App, Runtime};
-use tauri_specta::{collect_commands, collect_events, ts};
+use specta_typescript::{formatter::prettier, BigIntExportBehavior, Typescript};
+use tauri::{ipc::Invoke, Runtime};
+use tauri_specta::{collect_commands, collect_events, Builder};
 
 pub use crate::*;
 pub use audio::*;
@@ -36,8 +36,8 @@ pub struct MessageEvent;
 
 pub fn generate_handlers<R: Runtime>(
     s: impl AsRef<Path>,
-) -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static {
-    ts::builder()
+) -> impl (Fn(Invoke<R>) -> bool) + Send + Sync + 'static {
+    let mut builder = Builder::<R>::new()
         .commands(collect_commands![
             load_file,
             get_app_info,
@@ -87,14 +87,15 @@ pub fn generate_handlers<R: Runtime>(
             set_current_render_method,
             set_current_audio_settings,
         ])
-        .events(collect_events![MessageEvent])
-        .path(s)
-        .config(
-            ExportConfig::new()
+        .events(collect_events![MessageEvent]);
+    #[cfg(debug_assertions)] // <- Only export on non-release builds
+    builder
+        .export(
+            Typescript::new()
                 .bigint(BigIntExportBehavior::Number)
                 .formatter(prettier),
+            s,
         )
-        .build::<App<R>>()
-        .unwrap()
-        .0
+        .expect("Failed to export typescript bindings");
+    builder.invoke_handler()
 }
