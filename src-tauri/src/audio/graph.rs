@@ -183,16 +183,22 @@ impl Playable for RasterGraph {
                             .or(graph.no_data_value)
                             .unwrap_or(f64::NAN)
                     });
-                    let min = *data
-                        .iter()
-                        .filter(|x| x.is_finite() && Some(**x) != graph.no_data_value)
-                        .min_by(|a, b| a.partial_cmp(b).unwrap())
-                        .unwrap();
-                    let max = *data
-                        .iter()
-                        .filter(|x| x.is_finite() && Some(**x) != graph.no_data_value)
-                        .max_by(|a, b| a.partial_cmp(b).unwrap())
-                        .unwrap();
+                    let min = match min_value {
+                        Some(min) => min,
+                        None => *data
+                            .iter()
+                            .filter(|x| x.is_finite() && Some(**x) != graph.no_data_value)
+                            .min_by(|a, b| a.partial_cmp(b).unwrap())
+                            .unwrap(),
+                    };
+                    let max = match min_value {
+                        Some(min) => min,
+                        None => *data
+                            .iter()
+                            .filter(|x| x.is_finite() && Some(**x) != graph.no_data_value)
+                            .max_by(|a, b| a.partial_cmp(b).unwrap())
+                            .unwrap(),
+                    };
                     let self_with_data = RasterGraphInner {
                         data,
                         ..graph.clone()
