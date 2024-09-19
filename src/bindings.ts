@@ -138,9 +138,6 @@ export const commands = {
       else return { status: "error", error: e as any };
     }
   },
-  async selectToolForCurrentIndex(tool: ToolDataDiscriminants): Promise<void> {
-    await TAURI_INVOKE("select_tool_for_current_index", { tool });
-  },
   async getImagePixels(): Promise<Result<number[], string>> {
     try {
       return { status: "ok", data: await TAURI_INVOKE("get_image_pixels") };
@@ -426,7 +423,6 @@ export type RasterScreenData = {
   cols: number;
   rows: number;
   srs: string | null;
-  tool: UiToolData | null;
   display: boolean;
   render_method: RenderMethod;
   ocr: boolean;
@@ -454,20 +450,11 @@ export type ThiessenPolygonRecord = {
   start_line: number;
   column: number;
 };
-/**
- * Auto-generated discriminant enum variants
- */
-export type ToolDataDiscriminants = "TraceGeometries";
 export type UiScreen =
   | ({ name: "Layers" } & LayerScreen)
   | { name: "ThiessenPolygons" }
   | ({ name: "NewDataset" } & NewDatasetScreenData)
   | ({ name: "Settings" } & GlobalSettings);
-export type UiToolData = {
-  type: "TracingGeometry";
-  points: Point[];
-  geometrys_count: number;
-};
 export type VectorScreenData = {
   field_schema: FieldSchema[];
   features: FeatureIdentifier[];
