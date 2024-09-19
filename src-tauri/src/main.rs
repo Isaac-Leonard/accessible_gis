@@ -65,7 +65,7 @@ fn launch_gui() {
             let resolver = app.path();
             let countries = load_countries(resolver);
             app.manage(AppDataSync {
-                data: Arc::new(Mutex::new(AppData::new())),
+                data: Arc::new(Mutex::new(AppData::new(resolver))),
                 default_data: PreloadedAppData { countries },
             });
 

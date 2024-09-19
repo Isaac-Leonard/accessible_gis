@@ -4,6 +4,7 @@ use gdal::{vector::LayerAccess, Dataset};
 use geo::{Closest, ClosestPoint, Contains, GeodesicDistance};
 use geo_types::{LineString, Point, Polygon};
 use itertools::Itertools;
+use tauri::{path::PathResolver, Runtime};
 
 use crate::{
     dataset_collection::DatasetCollection,
@@ -34,13 +35,13 @@ impl AppData {
         self.shared.datasets.open(name, &self.settings)
     }
 
-    pub fn new() -> Self {
+    pub fn new<R: Runtime>(resolver: &PathResolver<R>) -> Self {
         Self {
             towns: HashMap::new(),
             screen: Screen::Main,
             shared: UserState::default(),
             errors: Vec::new(),
-            settings: GlobalSettings::read(),
+            settings: GlobalSettings::read(resolver),
         }
     }
 
@@ -171,13 +172,13 @@ impl AppData {
         &self.settings
     }
 
-    pub fn set_settings(&mut self, settings: GlobalSettings) -> &GlobalSettings {
+    pub fn set_settings<R: Runtime>(
+        &mut self,
+        settings: GlobalSettings,
+        resolver: &PathResolver<R>,
+    ) -> &GlobalSettings {
         self.settings = settings;
-        std::fs::write(
-            DEFAULT_SETTINGS_FILE_NAME,
-            serde_json::to_string_pretty(&self.settings).expect("Could not serialise settings"),
-        )
-        .expect("Could not save settings");
+        self.settings.write_to_file(resolver);
         &self.settings
     }
 }

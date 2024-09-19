@@ -14,7 +14,7 @@ mod vector;
 use std::path::Path;
 
 use specta_typescript::{formatter::prettier, BigIntExportBehavior, Typescript};
-use tauri::{ipc::Invoke, Runtime};
+use tauri::{ipc::Invoke, Wry};
 use tauri_specta::{collect_commands, collect_events, Builder};
 
 pub use crate::*;
@@ -34,10 +34,10 @@ pub use vector::*;
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, specta::Type, tauri_specta::Event)]
 pub struct MessageEvent;
 
-pub fn generate_handlers<R: Runtime>(
+pub fn generate_handlers(
     s: impl AsRef<Path>,
-) -> impl (Fn(Invoke<R>) -> bool) + Send + Sync + 'static {
-    let mut builder = Builder::<R>::new()
+) -> impl (Fn(Invoke<Wry>) -> bool) + Send + Sync + 'static {
+    let builder = Builder::new()
         .commands(collect_commands![
             load_file,
             get_app_info,
