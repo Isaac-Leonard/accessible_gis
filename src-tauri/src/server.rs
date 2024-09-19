@@ -8,7 +8,7 @@ use actix_web::{
 use gdal::Dataset;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager};
+use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::task::spawn_local;
 
 use crate::{
@@ -18,14 +18,17 @@ use crate::{
 };
 
 #[get("/get_raster")]
-async fn get_raster(state: Data<AppDataSync>) -> impl Responder {
+async fn get_raster(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Responder {
     eprintln!("get_raster called");
-    let raster_name = "../data/raster.tif";
+    let raster_name = app
+        .path()
+        .resolve("../data/raster.tif", BaseDirectory::Temp)
+        .unwrap();
     let data = state.with_lock(|state| -> Option<_> {
         let output = state
             .shared
             .get_raster_to_display()?
-            .reproject(raster_name, Srs::Epsg(4326));
+            .reproject(&raster_name, Srs::Epsg(4326));
         eprintln!("{:?}", output);
         let wgs84_raster = Dataset::open(raster_name).unwrap();
         let band = wgs84_raster.rasterband(1).unwrap();
@@ -85,7 +88,10 @@ pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
 #[get("/get_vector")]
 async fn get_vector(app: Data<AppHandle>) -> impl Responder {
     eprintln!("get_vector called");
-    let json_name = "../vector.json";
+    let json_name = app
+        .path()
+        .resolve("../vector.json", BaseDirectory::Temp)
+        .unwrap();
     let state = app.state::<AppDataSync>();
     let succeeded = state.with_lock(|state| {
         let layers = state.shared.get_vectors_for_display();
@@ -97,7 +103,7 @@ async fn get_vector(app: Data<AppHandle>) -> impl Responder {
             .map(|layer| layer.info.shared.name.clone())
             .dedup()
             .collect_vec();
-        let output = merge_layers(layer_names, true, Srs::Epsg(4326), json_name, true).unwrap();
+        let output = merge_layers(layer_names, true, Srs::Epsg(4326), &json_name, true).unwrap();
         eprintln!("{:?}", output);
         true
     });
