@@ -191,7 +191,7 @@ impl Playable for RasterGraph {
                             .min_by(|a, b| a.partial_cmp(b).unwrap())
                             .unwrap(),
                     };
-                    let max = match min_value {
+                    let max = match max_value {
                         Some(min) => min,
                         None => *data
                             .iter()
