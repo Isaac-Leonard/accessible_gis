@@ -8,7 +8,7 @@ use crate::audio::low_level::AudioWave;
 
 use super::{low_level::Playable, Waveform};
 
-pub fn play_rasta(vals: Vec<(Array2<f64>, f64, f64, Option<f64>, RasterGraphSettings)>) {
+pub fn play_rasta(vals: RasterGraphCreationData) {
     let rasta_graph = RasterGraph::new(vals);
     rasta_graph.play();
 }
@@ -137,8 +137,10 @@ impl RasterGraphInner {
     }
 }
 
+type RasterGraphCreationData = Vec<(Array2<f64>, f64, f64, Option<f64>, RasterGraphSettings)>;
+
 impl RasterGraph {
-    pub fn new(vals: Vec<(Array2<f64>, f64, f64, Option<f64>, RasterGraphSettings)>) -> Self {
+    pub fn new(vals: RasterGraphCreationData) -> Self {
         Self {
             inner: vals
                 .into_iter()

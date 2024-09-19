@@ -62,7 +62,6 @@ pub fn generate_handlers(
             add_field_to_schema,
             edit_dataset,
             add_feature_to_layer,
-            select_tool_for_current_index,
             get_image_pixels,
             set_name_field,
             classify_current_raster,

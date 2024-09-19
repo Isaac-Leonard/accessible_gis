@@ -20,8 +20,6 @@ use super::{
     CountryImpl, Screen,
 };
 
-const DEFAULT_SETTINGS_FILE_NAME: &str = "settings.json";
-
 pub struct AppData {
     pub towns: HashMap<String, Vec<LocalFeatureInfo>>,
     pub screen: Screen,

@@ -3,7 +3,6 @@ use gdal::spatial_ref::SpatialRef;
 use crate::{
     gdal_if::Srs,
     state::{gis::combined::StatefulLayerEnum, AppState},
-    tools::ToolDataDiscriminants,
 };
 
 #[tauri::command]
@@ -36,10 +35,4 @@ pub fn set_srs(srs: Srs, state: AppState) {
     }
     .unwrap();
     state.with_current_dataset_mut(|ds, _| ds.dataset.dataset.set_spatial_ref(&srs).unwrap());
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn select_tool_for_current_index(tool: ToolDataDiscriminants, state: AppState) {
-    state.with_lock(|state| state.shared.tools_data.add_tool(tool))
 }

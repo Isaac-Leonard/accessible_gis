@@ -3,7 +3,6 @@ use itertools::Itertools;
 use crate::{
     dataset_collection::{DatasetCollection, NonEmptyDelegatorImpl},
     gdal_if::WrappedDataset,
-    tools::ToolList,
 };
 
 use super::{
@@ -17,7 +16,6 @@ use super::{
 #[derive(Default)]
 pub struct UserState {
     pub datasets: DatasetCollection,
-    pub tools_data: ToolList,
     pub raster_to_display: Option<RasterIndex>,
 }
 
