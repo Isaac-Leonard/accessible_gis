@@ -37,7 +37,7 @@ async fn get_raster(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Resp
     });
     match data {
         Some(data) => HttpResponse::Ok().body(
-            data.to_f64()
+            data.into_f64_vec()
                 .into_iter()
                 .flat_map(|x| (x as f32).to_le_bytes())
                 .collect_vec(),

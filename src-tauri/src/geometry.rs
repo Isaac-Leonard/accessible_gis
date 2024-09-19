@@ -296,7 +296,7 @@ pub enum SingleGeometry {
 impl From<SingleGeometry> for Geometry {
     fn from(value: SingleGeometry) -> Self {
         match value {
-            SingleGeometry::Point(point) => Geometry::Point(point.into()),
+            SingleGeometry::Point(point) => Geometry::Point(point),
             SingleGeometry::Line(line) => Geometry::Line(line),
             SingleGeometry::LineString(line) => Geometry::LineString(line),
             SingleGeometry::Polygon(poly) => Geometry::Polygon(poly),
@@ -308,7 +308,7 @@ impl TryFrom<Geometry> for SingleGeometry {
     type Error = ();
     fn try_from(value: Geometry) -> Result<Self, ()> {
         Ok(match value {
-            Geometry::Point(point) => SingleGeometry::Point(point.into()),
+            Geometry::Point(point) => SingleGeometry::Point(point),
             Geometry::Line(line) => SingleGeometry::Line(line),
             Geometry::LineString(line) => SingleGeometry::LineString(line),
             Geometry::Polygon(poly) => SingleGeometry::Polygon(poly),
@@ -421,15 +421,10 @@ pub fn points_to_single_geometry(
                 Ok(GeoSingleGeometry::Point(points[0]))
             }
         }
-        SingleGeometryType::Line => {
-            if points.len() != 2 {
-                Err(format!("Cannot make line from {} points", points.len()))
-            } else {
-                let start = points[0].clone();
-                let end = points[1].clone();
-                Ok(GeoSingleGeometry::Line(GeoLine::new(start, end)))
-            }
-        }
+        SingleGeometryType::Line => match points[..] {
+            [start, end] => Ok(GeoSingleGeometry::Line(GeoLine::new(start, end))),
+            _ => Err(format!("Cannot make line from {} points", points.len())),
+        },
         SingleGeometryType::Polygon => {
             if points.len() < 3 {
                 Err("A polygon needs at least 3 points".to_owned())

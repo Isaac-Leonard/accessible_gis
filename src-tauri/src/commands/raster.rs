@@ -56,7 +56,7 @@ pub fn classify_current_raster(
 ) {
     let classifications = classifications
         .into_iter()
-        .map(Classification::to_calc_string)
+        .map(Classification::into_calc_string)
         .join("+");
     state.with_current_dataset_mut(|dataset, _| {
         let mut cmd = Command::new("gdal_calc.py");
@@ -87,7 +87,7 @@ pub struct Classification {
 }
 
 impl Classification {
-    fn to_calc_string(self) -> String {
+    fn into_calc_string(self) -> String {
         format!("{}*(A>{})*(A<={})", self.target, self.min, self.max)
     }
 }
@@ -209,7 +209,7 @@ pub fn get_value_at_point(point: Point, state: AppState) -> Option<f64> {
                 (1, 1),
                 None,
             )?
-            .to_f64()[0];
+            .into_f64_vec()[0];
             if band.band.no_data_value().is_some_and(|ndv| val == ndv) {
                 None
             } else {

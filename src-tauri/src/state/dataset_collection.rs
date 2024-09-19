@@ -22,7 +22,7 @@ pub struct NonEmptyDatasetCollection {
     index: usize,
 }
 
-trait NonEmptyDelegator {
+pub trait NonEmptyDelegator {
     fn get_non_empty(&self) -> Option<&NonEmptyDatasetCollection>;
     fn get_non_empty_mut(&mut self) -> Option<&mut NonEmptyDatasetCollection>;
 }

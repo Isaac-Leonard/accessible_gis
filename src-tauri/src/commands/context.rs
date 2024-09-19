@@ -308,7 +308,7 @@ pub fn get_polygons_around_point(point: Point, layer: usize, state: AppState) ->
                 })
                 .collect()
         })
-        .unwrap_or_else(Vec::new)
+        .unwrap_or_default()
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, specta::Type)]
