@@ -1,4 +1,5 @@
 use std::sync::MutexGuard;
+use tauri::Manager;
 
 use gdal::vector::LayerAccess;
 use geo::{
@@ -11,6 +12,7 @@ use proj::Transform;
 use rstar::RTreeObject;
 use serde::{Deserialize, Serialize};
 use statrs::statistics::Statistics;
+use tauri::AppHandle;
 
 use crate::{
     dataset_collection::NonEmptyDelegatorImpl,
@@ -126,6 +128,7 @@ pub fn describe_line(
     distance: f64,
     towns: usize,
     state: AppState,
+    app: AppHandle,
 ) -> LineDescription {
     let line = GeoLineString::from(line);
     let line = match srs {
@@ -144,7 +147,7 @@ pub fn describe_line(
         .flat_map(|x| x.get_field("ADMIN"))
         .collect();
     let towns = guard
-        .get_towns_near_line(&line, countries.into_iter(), distance)
+        .get_towns_near_line(&line, countries.into_iter(), distance, app.path())
         .take(towns)
         .flat_map(|town| town.get_name())
         .collect();
@@ -219,7 +222,7 @@ pub struct OpenLineDescription {
 
 #[tauri::command]
 #[specta::specta]
-pub fn describe_polygon(polygon: Polygon, state: AppState) -> String {
+pub fn describe_polygon(polygon: Polygon, state: AppState, app: AppHandle) -> String {
     let polygon = GeoPolygon::from(polygon);
     let number_of_exteria_points = polygon.exterior().0.len();
     let area = polygon.chamberlain_duquette_unsigned_area() / 1000000.0;
@@ -233,7 +236,7 @@ pub fn describe_polygon(polygon: Polygon, state: AppState) -> String {
         .flat_map(|x| x.get_field("ADMIN"))
         .join(", ");
     let towns = guard
-        .get_towns_in_polygon(&polygon, countries.into_iter())
+        .get_towns_in_polygon(&polygon, countries.into_iter(), app.path())
         .take(20)
         .flat_map(|town| town.get_name())
         .join(", ");
@@ -316,12 +319,12 @@ pub struct PolygonInfo {
 
 #[tauri::command]
 #[specta::specta]
-pub fn nearest_town(point: Point, state: AppState) -> Option<DistanceFromBoarder> {
+pub fn nearest_town(point: Point, state: AppState, app: AppHandle) -> Option<DistanceFromBoarder> {
     let mut guard = state.data.lock().unwrap();
     let point = guard.raster_point_to_wgs84(point.into());
     let country = state.default_data.find_country(&point)?;
     let code = country.get_code();
-    let towns = guard.get_towns_by_code(code);
+    let towns = guard.get_towns_by_code(code, app.path());
     towns
         .iter()
         .flat_map(|town| Some((town, town.nearest_point(&point)?)))

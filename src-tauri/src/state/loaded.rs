@@ -4,7 +4,7 @@ use gdal::{vector::LayerAccess, Dataset};
 use geo::{Closest, ClosestPoint, Contains, GeodesicDistance};
 use geo_types::{LineString, Point, Polygon};
 use itertools::Itertools;
-use tauri::{path::PathResolver, Runtime};
+use tauri::{path::PathResolver, Runtime, Wry};
 
 use crate::{
     dataset_collection::DatasetCollection,
@@ -99,13 +99,18 @@ impl AppData {
         &self.shared.datasets
     }
 
-    pub fn get_towns_by_code(&mut self, code: String) -> &Vec<LocalFeatureInfo> {
+    pub fn get_towns_by_code(
+        &mut self,
+        code: String,
+        resolver: &PathResolver<Wry>,
+    ) -> &Vec<LocalFeatureInfo> {
         self.towns.entry(code).or_insert_with_key(|code| {
-            let dataset_path = std::env::current_dir()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .join(format!("data/countries/{code}.geojson"));
+            let dataset_path = resolver
+                .resolve(
+                    format!("data/countries/{code}.geojson"),
+                    tauri::path::BaseDirectory::Resource,
+                )
+                .unwrap();
             let towns_dataset = Dataset::open(dataset_path).unwrap();
             let mut layer = towns_dataset.layer(0).unwrap();
             layer.features().map_into::<LocalFeatureInfo>().collect()
@@ -116,11 +121,12 @@ impl AppData {
         &mut self,
         polygon: &Polygon,
         countries: impl Iterator<Item = &'a Country>,
+        resolver: &PathResolver<Wry>,
     ) -> IntoIter<LocalFeatureInfo> {
         countries
             .flat_map(move |country| {
                 let polygon2 = polygon.clone();
-                self.get_towns_by_code(country.get_code())
+                self.get_towns_by_code(country.get_code(), resolver)
                     .clone()
                     .into_iter()
                     .filter(move |town| polygon2.contains(&town.geometry))
@@ -139,11 +145,12 @@ impl AppData {
         polygon: &LineString,
         countries: impl Iterator<Item = &'a Country>,
         distance: f64,
+        resolver: &PathResolver<Wry>,
     ) -> IntoIter<LocalFeatureInfo> {
         countries
             .flat_map(move |country| {
                 let polygon2 = polygon.clone();
-                self.get_towns_by_code(country.get_code())
+                self.get_towns_by_code(country.get_code(), resolver)
                     .clone()
                     .into_iter()
                     .filter(move |town| {
