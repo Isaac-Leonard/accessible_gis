@@ -48,9 +48,9 @@ export const Dialog = ({
   );
 };
 
-export const useDialog = () => {
+export const useDialog = <T extends HTMLElement>() => {
   const [open, setOpen] = useState(false);
-  const innerRef = useRef<HTMLElement>(null);
+  const innerRef = useRef<T>(null);
   useEffect(() => {
     if (open) {
       innerRef.current?.focus();

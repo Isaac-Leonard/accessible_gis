@@ -13,7 +13,6 @@ mod math;
 mod server;
 mod state;
 mod stats;
-mod tools;
 mod ui;
 mod web_socket;
 
@@ -43,6 +42,7 @@ use crate::{
 };
 
 fn main() {
+    let _ = fix_path_env::fix();
     match commandline::Input::try_parse() {
         Ok(args) => commandline::launch_commandline_app(args),
         Err(err) => {
@@ -54,18 +54,20 @@ fn main() {
 
 fn launch_gui() {
     let handlers = generate_handlers("../src/bindings.ts");
-    let countries = load_countries();
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .manage(AppDataSync {
-            data: Arc::new(Mutex::new(AppData::new())),
-            default_data: PreloadedAppData { countries },
-        })
         .manage(TouchDevice::default())
         .invoke_handler(handlers)
         .setup(|app| {
+            let resolver = app.path();
+            let countries = load_countries(resolver);
+            app.manage(AppDataSync {
+                data: Arc::new(Mutex::new(AppData::new(resolver))),
+                default_data: PreloadedAppData { countries },
+            });
+
             //            let window = app.get_webview_window("main").unwrap();
             //            window.open_devtools();
             let audio = get_audio();
@@ -109,12 +111,15 @@ impl FeatureInfo {
     }
 }
 
-fn load_countries() -> RTree<GeomWithData<Polygon, Vec<Field>>> {
-    let countries_path = std::env::current_dir()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("data/countries.geojson");
+fn load_countries<R: tauri::Runtime>(
+    resolver: &tauri::path::PathResolver<R>,
+) -> RTree<GeomWithData<Polygon, Vec<Field>>> {
+    let countries_path = resolver
+        .resolve(
+            "data/countries.geojson",
+            tauri::path::BaseDirectory::Resource,
+        )
+        .unwrap();
     let countries = RTree::bulk_load(
         Dataset::open(countries_path)
             .unwrap()

@@ -93,6 +93,7 @@ pub async fn ws_handle(
 
                     // client WebSocket stream error
                     (Some(Err(err)), _) => {
+                        eprintln!("Socket error: {:?}", err);
                         break None;
                     }
 
@@ -126,6 +127,7 @@ pub async fn ws_handle(
             }
         };
     };
+    eprintln!("Socket closed: {:?}", close_reason);
     device_sender.disconnect();
 }
 
@@ -153,10 +155,17 @@ pub struct VectorMessage {}
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "type", content = "data")]
-enum DeviceMessage {}
+enum DeviceMessage {
+    Data(DeviceData),
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct DeviceData {
+    voices: Vec<String>,
+}
 
 fn process_device_message(_app: AppHandle, message: DeviceMessage) {
-    match message {}
+    eprintln!("Message: {:?}", message);
 }
 
 #[derive(Default)]

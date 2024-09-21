@@ -2,7 +2,7 @@ import { VectorNavigator } from "./vector-navigator";
 import { RasterNavigator } from "./raster-navigator";
 import { LayerDescriptor, LayerScreen, LayerScreenInfo } from "./bindings";
 import { IndexedOptionPicker } from "./option-picker";
-import { client, state } from "./api";
+import { client } from "./api";
 import { OpenDatasetDialog } from "./open-screen";
 
 export const MainScreen = ({ state }: { state: LayerScreen }) => {
@@ -62,7 +62,6 @@ const Metadata = ({ layer }: { layer: LayerScreenInfo }) => {
     <div>
       {" "}
       <div>SRS: {layer.srs}</div>
-      <div>Projection: {layer.projection}</div>
     </div>
   );
 };

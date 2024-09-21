@@ -3,6 +3,9 @@ import prefresh from "@prefresh/vite";
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
+  build: {
+    target: "esnext",
+  },
   esbuild: {
     jsxFactory: "h",
     jsxFragment: "Fragment",

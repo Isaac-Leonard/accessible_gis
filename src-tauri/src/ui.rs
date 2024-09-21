@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     gdal_if::{FieldSchema, FieldValue, LayerExt, LayerIndex},
-    geometry::Point,
     state::{
         gis::{combined::RasterIndex, raster::RenderMethod},
         settings::{AudioSettings, GlobalSettings},
@@ -25,15 +24,6 @@ pub enum UiScreen {
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
 pub struct NewDatasetScreenData {
     pub drivers: Vec<String>,
-}
-
-#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
-#[serde(tag = "type")]
-pub enum UiToolData {
-    TracingGeometry {
-        points: Vec<Point>,
-        geometrys_count: usize,
-    },
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -75,7 +65,6 @@ pub struct RasterScreenData {
     pub cols: usize,
     pub rows: usize,
     pub srs: Option<String>,
-    pub tool: Option<UiToolData>,
     pub display: bool,
     pub render_method: RenderMethod,
     pub ocr: bool,
@@ -131,7 +120,6 @@ impl AppData {
                         cols,
                         rows,
                         srs: band.band.srs.clone(),
-                        tool: None,
                         display: visible_raster_index
                             == Some(RasterIndex {
                                 dataset: ds_index,

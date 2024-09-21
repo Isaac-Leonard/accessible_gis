@@ -48,7 +48,7 @@ pub enum RasterData {
 }
 
 impl RasterData {
-    pub fn to_f64(self) -> Vec<f64> {
+    pub fn into_f64_vec(self) -> Vec<f64> {
         match self {
             RasterData::UInt8(data) => data.into_iter().map_into().collect_vec(),
             RasterData::Int8(data) => data.into_iter().map_into().collect_vec(),

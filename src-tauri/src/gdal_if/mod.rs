@@ -52,7 +52,6 @@ pub fn get_driver_for_file<P: AsRef<Path>>(path: P) -> Option<Driver> {
         .find(|driver| {
             let meta = driver
                 .metadata()
-                .into_iter()
                 .find(|meta| meta.key == "gdal.DMD_EXTENSIONS");
             let Some(meta) = meta else { return false };
             let mut extentions = meta.value.split(' ');

@@ -1,18 +1,22 @@
 {
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run build&npm run build --prefix external-touch-device",
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420"
   },
-  "bundle": {
+    "bundle": {
+	"resources":{
+	    "../data": "data",
+	    "../external-touch-device/dist": "external-touch-device"
+	},
     "active": true,
     "targets": "all",
     "icon": ["icons/icon.icns"]
   },
   "productName": "accessible_gis",
   "version": "0.0.0",
-  "identifier": "accessible_gis",
+  "identifier": "accessible-gis",
   "plugins": {},
   "app": {
     "security": {

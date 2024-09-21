@@ -2,6 +2,7 @@ import { useSignal } from "@preact/signals";
 import { SaveButton } from "./save-button";
 import { client } from "./api";
 import { Dialog, useDialog } from "./dialog";
+import { H, Section } from "react-headings";
 
 export const LayerSimplifier = () => {
   const tolerance = useSignal<string>("");
@@ -27,7 +28,7 @@ export const LayerSimplifier = () => {
 };
 
 export const LayerSimplifierDialog = () => {
-  const { open, setOpen, innerRef } = useDialog();
+  const { open, setOpen, innerRef } = useDialog<HTMLHeadingElement>();
   return (
     <Dialog
       modal={true}
@@ -35,7 +36,9 @@ export const LayerSimplifierDialog = () => {
       open={open}
       setOpen={setOpen}
     >
-      <LayerSimplifier />
+      <Section component={<H ref={innerRef}>Simplify Feature Geometries</H>}>
+        <LayerSimplifier />
+      </Section>
     </Dialog>
   );
 };

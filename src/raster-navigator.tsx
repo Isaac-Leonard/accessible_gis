@@ -1,5 +1,5 @@
 import { AudioSettings, Point, RasterScreenData } from "./bindings";
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { client } from "./api";
 import { ReprojectionDialog } from "./reprojection-dialog";
 import { DemMethodsDialog } from "./dem_methods";
@@ -54,11 +54,6 @@ const RasterNavigatorInner = ({
   layer: RasterScreenData;
   savePoints: (points: Point[]) => void;
 }) => {
-  const [data, setData] = useState<number[]>([]);
-  useMemo(async () => {
-    let img = await client.getImagePixels();
-    setData(img);
-  }, []);
   let { cols, rows } = layer;
   const [showCoords, setShowCoords] = useState(true);
   const [{ x, y }, setCoords] = useState({ x: 0, y: 0 });
@@ -201,23 +196,6 @@ function coordinateArrowHandler(
     }
   };
 }
-
-const SaveScreen = ({
-  points,
-  done,
-  cancel,
-}: {
-  points: Point[];
-  done: () => void;
-  cancel: () => void;
-}) => {
-  return (
-    <div>
-      <button onClick={cancel}>Cancel</button>
-      <button onClick={done}>Done</button>
-    </div>
-  );
-};
 
 const AudioSettingsDialog = ({ settings }: { settings: AudioSettings }) => {
   const { open, setOpen } = useDialog();

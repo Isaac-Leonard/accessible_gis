@@ -4,6 +4,7 @@ use gdal::{vector::LayerAccess, Dataset};
 use geo::{Closest, ClosestPoint, Contains, GeodesicDistance};
 use geo_types::{LineString, Point, Polygon};
 use itertools::Itertools;
+use tauri::{path::PathResolver, Runtime, Wry};
 
 use crate::{
     dataset_collection::DatasetCollection,
@@ -19,8 +20,6 @@ use super::{
     CountryImpl, Screen,
 };
 
-const DEFAULT_SETTINGS_FILE_NAME: &str = "settings.json";
-
 pub struct AppData {
     pub towns: HashMap<String, Vec<LocalFeatureInfo>>,
     pub screen: Screen,
@@ -34,13 +33,13 @@ impl AppData {
         self.shared.datasets.open(name, &self.settings)
     }
 
-    pub fn new() -> Self {
+    pub fn new<R: Runtime>(resolver: &PathResolver<R>) -> Self {
         Self {
             towns: HashMap::new(),
             screen: Screen::Main,
             shared: UserState::default(),
             errors: Vec::new(),
-            settings: GlobalSettings::read(),
+            settings: GlobalSettings::read(resolver),
         }
     }
 
@@ -98,13 +97,18 @@ impl AppData {
         &self.shared.datasets
     }
 
-    pub fn get_towns_by_code(&mut self, code: String) -> &Vec<LocalFeatureInfo> {
+    pub fn get_towns_by_code(
+        &mut self,
+        code: String,
+        resolver: &PathResolver<Wry>,
+    ) -> &Vec<LocalFeatureInfo> {
         self.towns.entry(code).or_insert_with_key(|code| {
-            let dataset_path = std::env::current_dir()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .join(format!("data/countries/{code}.geojson"));
+            let dataset_path = resolver
+                .resolve(
+                    format!("data/countries/{code}.geojson"),
+                    tauri::path::BaseDirectory::Resource,
+                )
+                .unwrap();
             let towns_dataset = Dataset::open(dataset_path).unwrap();
             let mut layer = towns_dataset.layer(0).unwrap();
             layer.features().map_into::<LocalFeatureInfo>().collect()
@@ -115,11 +119,12 @@ impl AppData {
         &mut self,
         polygon: &Polygon,
         countries: impl Iterator<Item = &'a Country>,
+        resolver: &PathResolver<Wry>,
     ) -> IntoIter<LocalFeatureInfo> {
         countries
             .flat_map(move |country| {
                 let polygon2 = polygon.clone();
-                self.get_towns_by_code(country.get_code())
+                self.get_towns_by_code(country.get_code(), resolver)
                     .clone()
                     .into_iter()
                     .filter(move |town| polygon2.contains(&town.geometry))
@@ -138,11 +143,12 @@ impl AppData {
         polygon: &LineString,
         countries: impl Iterator<Item = &'a Country>,
         distance: f64,
+        resolver: &PathResolver<Wry>,
     ) -> IntoIter<LocalFeatureInfo> {
         countries
             .flat_map(move |country| {
                 let polygon2 = polygon.clone();
-                self.get_towns_by_code(country.get_code())
+                self.get_towns_by_code(country.get_code(), resolver)
                     .clone()
                     .into_iter()
                     .filter(move |town| {
@@ -171,13 +177,13 @@ impl AppData {
         &self.settings
     }
 
-    pub fn set_settings(&mut self, settings: GlobalSettings) -> &GlobalSettings {
+    pub fn set_settings<R: Runtime>(
+        &mut self,
+        settings: GlobalSettings,
+        resolver: &PathResolver<R>,
+    ) -> &GlobalSettings {
         self.settings = settings;
-        std::fs::write(
-            DEFAULT_SETTINGS_FILE_NAME,
-            serde_json::to_string_pretty(&self.settings).expect("Could not serialise settings"),
-        )
-        .expect("Could not save settings");
+        self.settings.write_to_file(resolver);
         &self.settings
     }
 }

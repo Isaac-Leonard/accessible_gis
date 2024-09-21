@@ -98,7 +98,7 @@ const DescriptionParserEditor = ({
   description: string;
   setDescription: (description: string) => void;
 }) => {
-  const { open, setOpen, innerRef } = useDrawer();
+  const { open, setOpen, innerRef } = useDrawer<HTMLTextAreaElement>();
   const [internalDescription, setInternalDescription] = useState(description);
   return (
     <Drawer openText="Open description editor" open={open} setOpen={setOpen}>

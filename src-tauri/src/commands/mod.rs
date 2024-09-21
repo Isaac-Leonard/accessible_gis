@@ -13,10 +13,9 @@ mod vector;
 
 use std::path::Path;
 
-use specta::ts::{formatter::prettier, BigIntExportBehavior, ExportConfig};
-use tauri::{ipc::Invoke, Runtime, State};
-use tauri_specta::{collect_commands, ts};
-use tokio::sync::mpsc::UnboundedSender;
+use specta_typescript::{formatter::prettier, BigIntExportBehavior, Typescript};
+use tauri::{ipc::Invoke, Wry};
+use tauri_specta::{collect_commands, collect_events, Builder};
 
 pub use crate::*;
 pub use audio::*;
@@ -32,10 +31,13 @@ pub use thiessen_polygons::*;
 pub use ui::*;
 pub use vector::*;
 
-pub fn generate_handlers<R: Runtime>(
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, specta::Type, tauri_specta::Event)]
+pub struct MessageEvent;
+
+pub fn generate_handlers(
     s: impl AsRef<Path>,
-) -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static {
-    ts::builder()
+) -> impl (Fn(Invoke<Wry>) -> bool) + Send + Sync + 'static {
+    let builder = Builder::new()
         .commands(collect_commands![
             load_file,
             get_app_info,
@@ -60,7 +62,6 @@ pub fn generate_handlers<R: Runtime>(
             add_field_to_schema,
             edit_dataset,
             add_feature_to_layer,
-            select_tool_for_current_index,
             get_image_pixels,
             set_name_field,
             classify_current_raster,
@@ -85,12 +86,15 @@ pub fn generate_handlers<R: Runtime>(
             set_current_render_method,
             set_current_audio_settings,
         ])
-        .path(s)
-        .config(
-            ExportConfig::new()
+        .events(collect_events![MessageEvent]);
+    #[cfg(debug_assertions)] // <- Only export on non-release builds
+    builder
+        .export(
+            Typescript::new()
                 .bigint(BigIntExportBehavior::Number)
                 .formatter(prettier),
+            s,
         )
-        .build()
-        .unwrap()
+        .expect("Failed to export typescript bindings");
+    builder.invoke_handler()
 }
