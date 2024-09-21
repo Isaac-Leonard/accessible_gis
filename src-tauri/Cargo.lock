@@ -649,29 +649,6 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
 name = "bindgen"
-version = "0.66.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2b84e06fc203107bfbad243f4aba2af864eb7db3b1cf46ea0a023b0b433d2a7"
-dependencies = [
- "bitflags 2.6.0",
- "cexpr",
- "clang-sys",
- "lazy_static",
- "lazycell",
- "log",
- "peeking_take_while",
- "prettyplease",
- "proc-macro2",
- "quote",
- "regex",
- "rustc-hash",
- "shlex",
- "syn 2.0.77",
- "which",
-]
-
-[[package]]
-name = "bindgen"
 version = "0.69.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a00dc851838a2120612785d195287475a3ac45514741da670b735818822129a0"
@@ -1862,8 +1839,8 @@ dependencies = [
 
 [[package]]
 name = "gdal"
-version = "0.16.0"
-source = "git+https://github.com/Isaac-Leonard/gdal-rs?rev=ea7e085521303ba7b4dccfda6ec539fde43f0852#ea7e085521303ba7b4dccfda6ec539fde43f0852"
+version = "0.17.1"
+source = "git+https://github.com/Isaac-Leonard/gdal-rs?rev=dcdc37b75c589288d0b4fd283e27ca1e7c2de65a#dcdc37b75c589288d0b4fd283e27ca1e7c2de65a"
 dependencies = [
  "bitflags 2.6.0",
  "chrono",
@@ -1877,11 +1854,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "gdal-src"
+version = "0.1.0"
+source = "git+https://github.com/Isaac-Leonard/gdal-rs?rev=dcdc37b75c589288d0b4fd283e27ca1e7c2de65a#dcdc37b75c589288d0b4fd283e27ca1e7c2de65a"
+dependencies = [
+ "cmake",
+ "link-cplusplus",
+ "proj-sys",
+]
+
+[[package]]
 name = "gdal-sys"
-version = "0.9.1"
-source = "git+https://github.com/Isaac-Leonard/gdal-rs?rev=ea7e085521303ba7b4dccfda6ec539fde43f0852#ea7e085521303ba7b4dccfda6ec539fde43f0852"
+version = "0.10.0"
+source = "git+https://github.com/Isaac-Leonard/gdal-rs?rev=dcdc37b75c589288d0b4fd283e27ca1e7c2de65a#dcdc37b75c589288d0b4fd283e27ca1e7c2de65a"
 dependencies = [
  "bindgen 0.69.4",
+ "gdal-src",
  "libc",
  "pkg-config",
  "semver",
@@ -2021,7 +2009,6 @@ dependencies = [
  "geographiclib-rs",
  "log",
  "num-traits",
- "proj",
  "robust",
  "rstar",
  "serde",
@@ -2826,6 +2813,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "libsqlite3-sys"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c10584274047cb335c23d3e61bcef8e323adae7c5c8c760540f73610177fc3f"
+dependencies = [
+ "pkg-config",
+ "vcpkg",
+]
+
+[[package]]
+name = "link-cplusplus"
+version = "1.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d240c6f7e1ba3a28b0249f774e6a9dd0175054b52dfbb61b16eb8505c3785c9"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3620,12 +3626,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8835116a5c179084a830efb3adc117ab007512b535bc1a21c991d3b32a6b44dd"
 
 [[package]]
-name = "peeking_take_while"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
-
-[[package]]
 name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3957,8 +3957,7 @@ dependencies = [
 [[package]]
 name = "proj"
 version = "0.27.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ad1830ad8966eba22c76e78440458f07bd812bef5c3efdf335dec55cd1085ab"
+source = "git+https://github.com/Isaac-Leonard/proj-rs#bfb4c1799e74e60f6abe58abe1c1f8db70bc83b3"
 dependencies = [
  "geo-types",
  "libc",
@@ -3969,13 +3968,13 @@ dependencies = [
 
 [[package]]
 name = "proj-sys"
-version = "0.23.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "601bf4fa1e17fde1a56d303f7bed5c65969cf1822c6baf5d6c2c12c593638fec"
+version = "0.24.0"
+source = "git+https://github.com/Isaac-Leonard/proj-rs#bfb4c1799e74e60f6abe58abe1c1f8db70bc83b3"
 dependencies = [
- "bindgen 0.66.1",
  "cmake",
  "flate2",
+ "libsqlite3-sys",
+ "link-cplusplus",
  "pkg-config",
  "tar",
 ]
@@ -5991,6 +5990,12 @@ name = "valuable"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
+
+[[package]]
+name = "vcpkg"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
 name = "version-compare"
