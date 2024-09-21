@@ -39,7 +39,7 @@ jobs:
         # with:
           # targets: ${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' ||  matrix.args == '--target x86_64-apple-darwin' && 'x86_64-apple-darwin' || '' }}
 
-      -name Install x86_64 rust target on x86_64 mac
+      - name: Install x86_64 rust target on x86_64 mac
         if: matrix.args == '--target x86_64-apple-darwin'
         run: |
           rustup target add x86_64-apple-darwin
