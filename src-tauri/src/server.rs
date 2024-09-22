@@ -143,21 +143,17 @@ async fn ws(
 
 #[get("/get_info")]
 async fn get_info(state: Data<AppDataSync>) -> impl Responder {
-    state.with_lock(|state| {
-        Json::<Option<_>>(try { state.shared.get_raster_to_display()?.info.render })
-    })
+    Json(state.with_lock(|state| Some(state.shared.get_raster_to_display()?.info.render)))
 }
 
 #[get("/get_raster_meta")]
 async fn get_raster_meta(state: Data<AppDataSync>) -> impl Responder {
-    state.with_lock(|state| {
-        Json::<Option<_>>(try { state.shared.get_raster_to_display()?.get_info_for_display() })
-    })
+    Json(
+        state.with_lock(|state| Some(state.shared.get_raster_to_display()?.get_info_for_display())),
+    )
 }
 
 #[get("/get_ocr")]
 async fn get_ocr(state: Data<AppDataSync>) -> impl Responder {
-    state.with_lock(|state| {
-        Json::<Option<_>>(try { state.shared.get_raster_to_display()?.info.ocr })
-    })
+    Json(state.with_lock(|state| Some(state.shared.get_raster_to_display()?.info.ocr)))
 }

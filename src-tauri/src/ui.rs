@@ -103,7 +103,11 @@ impl AppData {
                         name_field: primary_field_name.cloned(),
                         display: layer.info.display,
                         dataset_index: ds_index,
-                        srs: try { layer.layer.layer.spatial_ref()?.to_wkt().ok()? },
+                        srs: layer
+                            .layer
+                            .layer
+                            .spatial_ref()
+                            .and_then(|x| x.to_wkt().ok()),
                         field_schema: layer.layer.get_field_schema(),
                         features,
                         feature,

@@ -1,7 +1,5 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-#![feature(try_blocks)]
-#![feature(iter_map_windows)]
 
 mod audio;
 mod commandline;

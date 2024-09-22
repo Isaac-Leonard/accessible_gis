@@ -32,7 +32,8 @@ fn describe_polygon_internal(
     let distances = points
         .clone()
         .iter()
-        .map_windows(|[a, b]| a.geodesic_distance(b))
+        .tuple_windows()
+        .map(|(a, b)| a.geodesic_distance(b))
         .mean();
     let (x, y) = {
         let envelope = line.envelope();
@@ -49,7 +50,8 @@ fn describe_polygon_internal(
     }
     let internal_angles = points
         .into_iter()
-        .map_windows(|[start, mid, end]| start.geodesic_bearing(*mid) - mid.geodesic_bearing(*end));
+        .tuple_windows::<(_, _, _)>()
+        .map(|(start, mid, end)| start.geodesic_bearing(mid) - mid.geodesic_bearing(end));
     let waviness = internal_angles
         .clone()
         .filter(|x| !(*x == 0.0 || *x == -0.0))
@@ -85,7 +87,8 @@ fn describe_open_line(
     let distances = points
         .clone()
         .iter()
-        .map_windows(|[a, b]| a.geodesic_distance(b))
+        .tuple_windows::<(_, _)>()
+        .map(|(a, b)| a.geodesic_distance(b))
         .mean();
     let (x, y) = {
         let a = points[0];
@@ -98,7 +101,8 @@ fn describe_open_line(
     };
     let internal_angles = points
         .into_iter()
-        .map_windows(|[start, mid, end]| start.geodesic_bearing(*mid) - mid.geodesic_bearing(*end));
+        .tuple_windows::<(_, _, _)>()
+        .map(|(start, mid, end)| start.geodesic_bearing(mid) - mid.geodesic_bearing(end));
     let waviness = internal_angles
         .clone()
         .filter(|x| !(*x == 0.0 || *x == -0.0))
