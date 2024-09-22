@@ -54,6 +54,7 @@ proj = {"git" = "https://github.com/Isaac-Leonard/proj-rs", "ref" = "bfb4c1799e7
 [patch.crates-io]
 proj-sys= {"git" = "https://github.com/Isaac-Leonard/proj-rs", "ref" = "bfb4c1799e74e60f6abe58abe1c1f8db70bc83b3"}
 hdf5-src = {"git" = "https://github.com/Isaac-Leonard/hdf5-rust", "ref" = "9b5fc5b1cdc774a4363a97e4f5e72ce399a67a9e"}
+hdf5-sys = {"git" = "https://github.com/Isaac-Leonard/hdf5-rust", "ref" = "9b5fc5b1cdc774a4363a97e4f5e72ce399a67a9e"}
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

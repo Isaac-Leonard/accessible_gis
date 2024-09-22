@@ -1485,7 +1485,7 @@ dependencies = [
  "rustc_version",
  "toml 0.8.2",
  "vswhom",
- "winreg 0.52.0",
+ "winreg",
 ]
 
 [[package]]
@@ -2336,18 +2336,17 @@ dependencies = [
 [[package]]
 name = "hdf5-sys"
 version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4842d5980dc311a7c8933c7b45534fdae84df5ae7939a0ae8e449a56d4beb3d2"
+source = "git+https://github.com/Isaac-Leonard/hdf5-rust#43015ddaa87e62b63dc1b1ae7fed49a430e1b53a"
 dependencies = [
  "hdf5-src",
  "libc",
- "libloading 0.7.4",
+ "libloading 0.8.5",
  "libz-sys",
  "pkg-config",
  "regex",
  "serde",
  "serde_derive",
- "winreg 0.10.1",
+ "winreg",
 ]
 
 [[package]]
@@ -6793,21 +6792,12 @@ dependencies = [
 
 [[package]]
 name = "winreg"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "80d0f4e272c85def139476380b12f9ac60926689dd2e01d4923222f40580869d"
-dependencies = [
- "serde",
- "winapi",
-]
-
-[[package]]
-name = "winreg"
 version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a277a57398d4bfa075df44f501a17cfdf8542d224f0d36095a2adc7aee4ef0a5"
 dependencies = [
  "cfg-if",
+ "serde",
  "windows-sys 0.48.0",
 ]
 
