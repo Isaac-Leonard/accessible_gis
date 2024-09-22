@@ -15,6 +15,7 @@ tauri = { version = "2.0.0-rc.15", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ndarray = "0.15.6"
+rusqlite = { version = "0.31.0", features = ["bundled"] }
 geo = {"version" = "0.28.0", "features" = ["serde"] }
 geo-types = {"version" = "0.7.13", "features" = ["serde", "use-rstar_0_12"] }
 itertools = "0.12.1"
