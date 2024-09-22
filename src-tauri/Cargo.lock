@@ -2327,8 +2327,7 @@ dependencies = [
 [[package]]
 name = "hdf5-src"
 version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e01493db39ddc0519cf2a83d620d2c037fee60f4fed724cb72dc23763f1727a8"
+source = "git+https://github.com/Isaac-Leonard/hdf5-rust#43015ddaa87e62b63dc1b1ae7fed49a430e1b53a"
 dependencies = [
  "cmake",
  "libz-sys",
