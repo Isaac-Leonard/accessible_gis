@@ -56,7 +56,7 @@ jobs:
         run: |
           git config --system core.longpaths true
 
-      - name: Enable long file paths
+      - name: install sqlite on windows
         if: matrix.platform == 'windows-latest'
         uses: actions/setup-sqlite@v1
   
