@@ -51,6 +51,10 @@ jobs:
         # webkitgtk 4.0 is for Tauri v1 - webkitgtk 4.1 is for Tauri v2.
         # You can remove the one that doesn't apply to your app to speed up the workflow a bit.
 
+      - name: Install SQLite for windows
+        if: matrix.platform == 'windows-latest'
+        run: choco install sqlite
+
       - name: Enable long file paths
         if: matrix.platform == 'windows-latest'
         run: |
