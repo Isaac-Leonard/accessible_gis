@@ -37,7 +37,7 @@ jobs:
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{'x86_64-apple-darwin'}}
+          targets: ${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' ||  matrix.args == '--target x86_64-apple-darwin' && ''}}
 
       - name: Install x86_64 rust target on x86_64 mac
         run: |
