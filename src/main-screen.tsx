@@ -4,6 +4,7 @@ import { LayerDescriptor, LayerScreen, LayerScreenInfo } from "./bindings";
 import { IndexedOptionPicker } from "./option-picker";
 import { client } from "./api";
 import { OpenDatasetDialog } from "./open-screen";
+import { Dialog, useDialog } from "./dialog";
 
 export const MainScreen = ({ state }: { state: LayerScreen }) => {
   const layersInfo = state.layers;
@@ -17,6 +18,7 @@ export const MainScreen = ({ state }: { state: LayerScreen }) => {
   return (
     <div className="container">
       <OpenDatasetDialog />
+      <IpDialog ip={state.ip} />
       <LayerSelector layers={state.layers} selectedIndex={selectedLayerIndex} />
       <LayerView layer={state.layer_info} />
     </div>
@@ -63,6 +65,20 @@ const Metadata = ({ layer }: { layer: LayerScreenInfo }) => {
       {" "}
       <div>SRS: {layer.srs}</div>
     </div>
+  );
+};
+
+const IpDialog = ({ ip }: { ip: string }) => {
+  const { open, setOpen, innerRef } = useDialog<HTMLParagraphElement>();
+  return (
+    <Dialog
+      open={open}
+      setOpen={setOpen}
+      openText="Check current IP to connect a touch device"
+    >
+      <p ref={innerRef}>{ip}</p>
+      <button onClick={() => setOpen(false)}>Close</button>
+    </Dialog>
   );
 };
 

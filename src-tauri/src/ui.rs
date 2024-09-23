@@ -1,5 +1,6 @@
 use gdal::vector::LayerAccess;
 use itertools::Itertools;
+use local_ip_address::local_ip;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -30,6 +31,7 @@ pub struct NewDatasetScreenData {
 pub struct LayerScreen {
     pub layers: Vec<LayerDescriptor>,
     pub layer_info: Option<LayerScreenInfo>,
+    pub ip: String,
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -137,7 +139,14 @@ impl AppData {
                 None => None,
             })
             .flatten();
-        LayerScreen { layers, layer_info }
+        let port = 80;
+        LayerScreen {
+            layers,
+            layer_info,
+            ip: local_ip()
+                .map(|ip| format!("Server running at http://{}:{}/", ip, port))
+                .unwrap_or_else(|e| format!("Unable to get local IP address, got error: {}", e)),
+        }
     }
 }
 

@@ -23,7 +23,6 @@ use files::get_csv;
 use gdal::{vector::LayerAccess, Dataset};
 use gdal_if::Field;
 use geometry::Geometry;
-use local_ip_address::local_ip;
 use rstar::{primitives::GeomWithData, RTree};
 use serde::{Deserialize, Serialize};
 use state::AppData;
@@ -76,16 +75,6 @@ fn launch_gui() {
                 state.clone(),
                 handle.clone(),
             )));
-            match local_ip() {
-                Ok(local_ip) => {
-                    // Print the IP address and port
-                    let port = 80;
-                    println!("Server running at http://{}:{}/", local_ip, port);
-                    println!("cwd {:?}", std::env::current_dir());
-                }
-                Err(error) => println!("Unable to retrieve local IP address, got error: {}", error),
-            };
-
             Ok(())
         })
         .run(tauri::generate_context!())

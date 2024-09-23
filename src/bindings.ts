@@ -374,6 +374,7 @@ export type LayerIndex =
 export type LayerScreen = {
   layers: LayerDescriptor[];
   layer_info: LayerScreenInfo | null;
+  ip: string;
 };
 export type LayerScreenInfo =
   | ({ type: "Vector" } & VectorScreenData)
