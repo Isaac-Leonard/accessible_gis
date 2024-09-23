@@ -12,7 +12,7 @@
 	},
     "active": true,
     "targets": "all",
-    "icon": ["icons/icon.icns"]
+	"icon": ["icons/icon.icns", "icons/icon.ico"]
   },
   "productName": "accessible_gis",
   "version": "0.0.0",
