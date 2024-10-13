@@ -85,6 +85,7 @@ pub fn generate_handlers(
             set_current_ocr,
             set_current_render_method,
             set_current_audio_settings,
+            focus_raster,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds

@@ -68,8 +68,9 @@ impl<'a> StatefulRasterBand<'a> {
     pub fn reproject<S: AsRef<OsStr>>(&self, output_name: S, srs: Srs) -> std::io::Result<Output> {
         let srs = srs.try_to_gdal().unwrap();
         let mut command = Command::new("gdalwarp");
-        command.arg("-t_srs").arg(&srs.to_wkt().unwrap());
+        command.arg("-t_srs").arg(srs.to_wkt().unwrap());
         command.arg(&self.info.shared.name).arg(output_name);
+        eprintln!("{:?}", command);
         command.output()
     }
 }

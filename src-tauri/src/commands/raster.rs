@@ -248,3 +248,9 @@ pub struct RasterSize {
     length: usize,
     bands: usize,
 }
+
+#[tauri::command]
+#[specta::specta]
+pub fn focus_raster(device: State<TouchDevice>) {
+    device.send(AppMessage::FocusRaster);
+}

@@ -135,6 +135,7 @@ pub async fn ws_handle(
 #[serde(tag = "type", content = "data")]
 pub enum AppMessage {
     Gis(GisMessage),
+    FocusRaster,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

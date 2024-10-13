@@ -218,6 +218,9 @@ export const commands = {
   async setCurrentAudioSettings(settings: AudioSettings): Promise<void> {
     await TAURI_INVOKE("set_current_audio_settings", { settings });
   },
+  async focusRaster(): Promise<void> {
+    await TAURI_INVOKE("focus_raster");
+  },
 };
 
 /** user-defined events **/
