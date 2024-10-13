@@ -1,4 +1,3 @@
-import { Position } from "geojson";
 import type { ImageConstructorOptions } from "image-js";
 import * as ImageJs from "image-js";
 import Image from "image-js";
@@ -21,7 +20,7 @@ export class Raster {
   image: Image;
   constructor(
     public data: RasterData,
-    public topLeft: Position,
+    public topLeft: [number, number],
     public width: number,
     public height: number,
     public resolution: number
@@ -44,6 +43,10 @@ export class Raster {
     x * this.xResolution + this.topLeft[0],
     y * this.yResolution + this.topLeft[1],
   ];
+
+  bottomRight(): [number, number] {
+    return this.rasterToCoords(this.width, this.height);
+  }
 }
 
 const getMinMax = (arr: ArrayLike<number>): { min: number; max: number } => {

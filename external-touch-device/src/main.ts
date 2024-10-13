@@ -40,8 +40,8 @@ class GisManager {
 
   topLat = maxLat;
   leftLon = minLon;
-  bottomLat: number;
-  rightLon: number;
+  bottomLat: number = minLat;
+  rightLon: number = maxLon;
   settings: GisMessage = defaultSettings;
   features: Feature[] = [];
   canvas: HTMLCanvasElement;
@@ -60,6 +60,13 @@ class GisManager {
       if (msg?.type === "Gis") {
         this.settings = msg.data;
         speak("Updated settings");
+      } else if (msg.type === "FocusRaster") {
+        if (this.raster) {
+          speak("Focusing raster");
+          this.focusScreen(this.raster?.topLeft, this.raster?.bottomRight());
+        } else {
+          speak("Tried to focus raster but no raster is loaded");
+        }
       }
     });
     document.body.appendChild(this.canvas);
@@ -69,21 +76,7 @@ class GisManager {
     this.ctx.strokeStyle = "#ffffff";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     setAudioFrequency(440);
-
-    if (this.canvas.width * 2 < this.canvas.height) {
-      this.rightLon = maxLon;
-      this.bottomLat =
-        this.topLat -
-        ((this.rightLon - this.leftLon) / this.canvas.width) *
-          this.canvas.height;
-    } else {
-      this.bottomLat = minLat;
-      this.rightLon =
-        minLon + ((maxLat - minLat) / this.canvas.height) * this.canvas.width;
-    }
-
-    this.rightLon =
-      minLon + ((maxLat - minLat) / this.canvas.height) * this.canvas.width;
+    this.focusScreen([minLon, maxLat], [maxLon, minLat]);
     this.canvas.addEventListener("touchstart", (e) => {
       e.preventDefault();
       if (e.touches.length > 1) {
@@ -196,7 +189,30 @@ class GisManager {
     this.getVectors();
     this.getRaster();
   }
+
   // Functions
+
+  focusScreen(
+    [minLon, maxLat]: [number, number],
+    [maxLon, minLat]: [number, number]
+  ) {
+    const screenWidth = this.canvas.width;
+    const screenHeight = this.canvas.height;
+    const lonRange = maxLon - minLon;
+    const latRange = maxLat - minLat;
+    this.topLat = maxLat;
+    this.leftLon = minLon;
+    const latOverLon = latRange / lonRange;
+    const widthOverHeight = screenWidth / screenHeight;
+    if (widthOverHeight < latOverLon) {
+      this.rightLon = maxLon;
+      this.bottomLat = maxLat - (lonRange / screenWidth) * screenHeight;
+    } else {
+      this.bottomLat = minLat;
+      this.rightLon = minLon + (latRange / screenHeight) * screenWidth;
+    }
+  }
+
   screenToCoords(x: number, y: number): [number, number] {
     return [
       (x / this.canvas.width) * (this.rightLon - this.leftLon) + this.leftLon,
