@@ -80,7 +80,8 @@ export class WsConnection {
 
 export type AppMessage =
   | { type: "Image"; data: ImageMessage }
-  | { type: "Gis"; data: GisMessage };
+  | { type: "Gis"; data: GisMessage }
+  | { type: "FocusRaster" };
 
 export type ImageMessage = { ocr: boolean };
 
@@ -110,4 +111,5 @@ const GisParser = z.object({
 const messageParser: ZodType<AppMessage> = z.union([
   z.object({ type: z.literal("Image"), data: z.object({ ocr: z.boolean() }) }),
   z.object({ type: z.literal("Gis"), data: GisParser }),
+  z.object({ type: z.literal("FocusRaster") }),
 ]);
