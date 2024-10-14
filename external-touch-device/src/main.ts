@@ -11,7 +11,7 @@ const root = document.getElementById("image");
 
 const createButton = () => {
   const btn = document.createElement("button");
-  btn.onclick = () => {
+  btn.onclick = async () => {
     // Speech needs to be ran on a explicit button click to allow it to work for other interactions to work on certain browsers
     speak(
       "If you are using a screen reader please turn it off to use this application"
@@ -64,14 +64,21 @@ class GisManager {
         if (this.raster) {
           speak("Focusing raster");
           this.focusScreen(this.raster?.topLeft, this.raster?.bottomRight());
+          this.render();
         } else {
           speak("Tried to focus raster but no raster is loaded");
         }
       }
     });
     document.body.appendChild(this.canvas);
-    this.canvas.width = document.documentElement.clientWidth;
-    this.canvas.height = document.documentElement.clientHeight;
+    this.canvas.width = Math.max(
+      document.documentElement.clientWidth,
+      window.innerWidth
+    );
+    this.canvas.height = Math.max(
+      document.documentElement.clientHeight,
+      window.innerHeight
+    );
     this.ctx.fillStyle = "#000000";
     this.ctx.strokeStyle = "#ffffff";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -97,6 +104,7 @@ class GisManager {
         return;
       }
       const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
+      console.log(`screen x: ${screenX}, screen y: ${screenY}`);
       const coords = this.screenToCoords(screenX, screenY);
       this.speakFeatures(coords);
       this.playAudioInRaster(coords);
@@ -202,9 +210,9 @@ class GisManager {
     const latRange = maxLat - minLat;
     this.topLat = maxLat;
     this.leftLon = minLon;
-    const latOverLon = latRange / lonRange;
+    const lonOverLat = lonRange / latRange;
     const widthOverHeight = screenWidth / screenHeight;
-    if (widthOverHeight < latOverLon) {
+    if (widthOverHeight > lonOverLat) {
       this.rightLon = maxLon;
       this.bottomLat = maxLat - (lonRange / screenWidth) * screenHeight;
     } else {
