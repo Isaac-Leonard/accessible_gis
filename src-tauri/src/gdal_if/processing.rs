@@ -7,7 +7,8 @@ use gdal::{
 };
 
 use super::WrappedDataset;
-macro_rules! dem_proccessing_function {
+
+macro_rules! dem_processing_function {
     ($gdal_name:ident, $app_name:ident, $options_name:ident) => {
         pub fn $app_name(
             dataset: &WrappedDataset,
@@ -22,8 +23,8 @@ macro_rules! dem_proccessing_function {
     };
 }
 
-dem_proccessing_function!(gdal_roughness, roughness, RoughnessOptions);
+dem_processing_function!(gdal_roughness, roughness, RoughnessOptions);
 
-dem_proccessing_function!(gdal_slope, slope, SlopeOptions);
+dem_processing_function!(gdal_slope, slope, SlopeOptions);
 
-dem_proccessing_function!(gdal_aspect, aspect, AspectOptions);
+dem_processing_function!(gdal_aspect, aspect, AspectOptions);
