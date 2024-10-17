@@ -18,7 +18,11 @@ pub fn generate_counts_report(name: String, state: AppState) {
     let pixels = state
         .with_current_raster_band(|band| read_raster_data(&band.band.band))
         .unwrap();
-    let counts = pixels.into_iter().counts_by(|x| x.to_le_bytes());
+    let counts = pixels
+        .into_iter()
+        // We need to filter out NANs because we sort the results later
+        .filter(|x| !x.is_nan())
+        .counts_by(|x| x.to_le_bytes());
     let total: f64 = counts.values().sum::<usize>() as f64;
     let mut report = counts
         .into_iter()
