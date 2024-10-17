@@ -10,7 +10,7 @@ macro_rules! gen_processing_command {
         pub fn $command_name(name: String, state: AppState) {
             state.with_lock(|state| {
                 let res = state
-        					.create_from_current_dataset(|ds| $processing_name(&ds.dataset, name, &Default::default()))
+        					.create_from_current_dataset(|ds| $processing_name(&ds.dataset, name))
         					.expect(
         						"Attempted to operate on current dataset but there is no current dataset selected",
         					);

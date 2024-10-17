@@ -1,4 +1,4 @@
-use std::ffi::c_int;
+use std::{ffi::c_int, path::Path};
 
 use gdal::{errors::GdalError, spatial_ref::SpatialRef, vector::Layer, Dataset, DriverManager};
 use itertools::Itertools;
@@ -75,10 +75,10 @@ impl WrappedDataset {
         self.dataset.flush_cache()
     }
 
-    pub fn open(name: String) -> Result<Self, String> {
+    pub fn open(name: impl AsRef<Path>) -> Result<Self, String> {
         let dataset = Dataset::open(&name).map_err(|_| "Something went wrong".to_owned())?;
         Ok(WrappedDataset {
-            file_name: name.to_owned(),
+            file_name: name.as_ref().to_str().unwrap().to_owned(),
             dataset,
             editable: false,
         })

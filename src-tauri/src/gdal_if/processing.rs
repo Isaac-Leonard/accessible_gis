@@ -1,30 +1,55 @@
-use gdal::{
-    errors::GdalError,
-    raster::processing::dem::{
-        aspect as gdal_aspect, roughness as gdal_roughness, slope as gdal_slope, AspectOptions,
-        RoughnessOptions, SlopeOptions,
-    },
-};
+use std::{path::Path, process::Command};
 
 use super::WrappedDataset;
 
-macro_rules! dem_processing_function {
-    ($gdal_name:ident, $app_name:ident, $options_name:ident) => {
-        pub fn $app_name(
-            dataset: &WrappedDataset,
-            name: String,
-            options: &$options_name,
-        ) -> Result<WrappedDataset, GdalError> {
-            Ok(WrappedDataset::wrap_existing(
-                $gdal_name(&dataset.dataset, &name, options)?,
-                name,
-            ))
-        }
-    };
+pub fn gdal_dem(
+    mode: &'static str,
+    dataset: &WrappedDataset,
+    name: impl AsRef<Path>,
+) -> Result<WrappedDataset, String> {
+    let mut command = Command::new("gdaldem");
+    command.arg(mode).arg(&dataset.file_name).arg(name.as_ref());
+    let output = command.output().map_err(|e| e.to_string())?;
+    if output.status.success() {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    } else {
+        WrappedDataset::open(name)
+    }
 }
 
-dem_processing_function!(gdal_roughness, roughness, RoughnessOptions);
+pub fn hillshade(
+    dataset: &WrappedDataset,
+    name: impl AsRef<Path>,
+) -> Result<WrappedDataset, String> {
+    gdal_dem("hillshade", dataset, name)
+}
 
-dem_processing_function!(gdal_slope, slope, SlopeOptions);
+pub fn slope(dataset: &WrappedDataset, name: impl AsRef<Path>) -> Result<WrappedDataset, String> {
+    gdal_dem("slope", dataset, name)
+}
 
-dem_processing_function!(gdal_aspect, aspect, AspectOptions);
+pub fn aspect(dataset: &WrappedDataset, name: impl AsRef<Path>) -> Result<WrappedDataset, String> {
+    gdal_dem("aspect", dataset, name)
+}
+
+pub fn color_relief(
+    dataset: &WrappedDataset,
+    name: impl AsRef<Path>,
+) -> Result<WrappedDataset, String> {
+    gdal_dem("color-relief", dataset, name)
+}
+
+pub fn tri(dataset: &WrappedDataset, name: impl AsRef<Path>) -> Result<WrappedDataset, String> {
+    gdal_dem("tri", dataset, name)
+}
+
+pub fn tpi(dataset: &WrappedDataset, name: impl AsRef<Path>) -> Result<WrappedDataset, String> {
+    gdal_dem("tpi", dataset, name)
+}
+
+pub fn roughness(
+    dataset: &WrappedDataset,
+    name: impl AsRef<Path>,
+) -> Result<WrappedDataset, String> {
+    gdal_dem("roughness", dataset, name)
+}
