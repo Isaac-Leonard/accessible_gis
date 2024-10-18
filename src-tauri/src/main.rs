@@ -59,6 +59,7 @@ fn launch_gui() {
         .invoke_handler(handlers)
         .setup(|app| {
             let resolver = app.path();
+            std::fs::create_dir_all(resolver.temp_dir().unwrap()).unwrap();
             let countries = load_countries(resolver);
             app.manage(AppDataSync {
                 data: Arc::new(Mutex::new(AppData::new(resolver))),

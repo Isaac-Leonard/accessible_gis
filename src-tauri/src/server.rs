@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use actix_files::{self as fs};
 use actix_web::{
     get,
@@ -8,6 +10,7 @@ use actix_web::{
 use gdal::Dataset;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::task::spawn_local;
 
@@ -17,14 +20,16 @@ use crate::{
     web_socket::ws_handle,
 };
 
+fn get_raster_path(app: &AppHandle) -> PathBuf {
+    app.path()
+        .resolve("raster.tif", BaseDirectory::Temp)
+        .unwrap()
+}
+
 #[get("/get_raster")]
 async fn get_raster(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Responder {
-    std::fs::create_dir_all(app.path().temp_dir().unwrap()).unwrap();
     eprintln!("get_raster called");
-    let raster_name = app
-        .path()
-        .resolve("raster.tif", BaseDirectory::Temp)
-        .unwrap();
+    let raster_name = get_raster_path(&app);
     let data = state.with_lock(|state| -> Option<_> {
         let output = state
             .shared
@@ -44,6 +49,23 @@ async fn get_raster(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Resp
         ),
         None => HttpResponse::NotFound().finish(),
     }
+}
+
+#[get("/get_raster_meta")]
+async fn get_raster_meta(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Responder {
+    eprintln!("get_raster_meta called");
+    let raster_name = get_raster_path(&app);
+    Json(state.with_lock(|state| {
+        let output = state
+            .shared
+            .get_raster_to_display()?
+            .reproject(&raster_name, Srs::Epsg(4326));
+        eprintln!("{:?}", output);
+        let wgs84_raster = state
+            .open_dataset(raster_name.to_str().unwrap().to_string())
+            .unwrap();
+        Some(wgs84_raster.get_raster(1).unwrap().get_info_for_display())
+    }))
 }
 
 #[derive(Serialize)]
@@ -122,9 +144,9 @@ async fn get_vector(app: Data<AppHandle>) -> impl Responder {
             .body(String::from_utf8_lossy(&data).to_string())
     } else {
         // Send empty array there is no vector layer
-        HttpResponse::Ok()
-            .content_type(ContentType::json())
-            .body("[]")
+        HttpResponse::Ok().json(json! ({
+            "type":"FeatureCollection", "features":[]
+        }))
     }
 }
 
@@ -144,13 +166,6 @@ async fn ws(
 #[get("/get_info")]
 async fn get_info(state: Data<AppDataSync>) -> impl Responder {
     Json(state.with_lock(|state| Some(state.shared.get_raster_to_display()?.info.render)))
-}
-
-#[get("/get_raster_meta")]
-async fn get_raster_meta(state: Data<AppDataSync>) -> impl Responder {
-    Json(
-        state.with_lock(|state| Some(state.shared.get_raster_to_display()?.get_info_for_display())),
-    )
 }
 
 #[get("/get_ocr")]
