@@ -1,3 +1,4 @@
+import z from "zod";
 import * as turf from "@turf/turf";
 import { Feature, Position } from "geojson";
 import { pauseAudio, playAudio, setAudioFrequency } from "./audio";
@@ -449,27 +450,31 @@ class GisManager {
   }
 
   async getRaster() {
-    console.log("Called get raster");
-    const metadataRes = await fetch("get_raster_meta");
-    console.log("Got metadata");
-    const metadata = await metadataRes.json();
-    console.log("got metadata json");
-    console.log(metadata);
-    const dataRes = await fetch("/get_raster");
-    console.log("Fetched data");
-    const rasterData = await dataRes.arrayBuffer();
-    console.log("Got rasterData array buffer");
-    const data = new Float32Array(rasterData);
-    console.log("Parsed data");
-    this.raster = new Raster(
-      { type: "Float32", data },
-      metadata.origin,
-      metadata.width,
-      metadata.height,
-      metadata.resolution
-    );
+    try {
+      console.log("Called get raster");
+      const metadataRes = await fetch("get_raster_meta");
+      console.log("Got metadata");
+      const metadata = metadataParser.parse(await metadataRes.json());
+      console.log("got metadata json");
+      console.log(metadata);
+      const dataRes = await fetch("/get_raster");
+      console.log("Fetched data");
+      const rasterData = await dataRes.arrayBuffer();
+      console.log("Got rasterData array buffer");
+      const data = new Float32Array(rasterData);
+      console.log("Parsed data");
+      this.raster = new Raster(
+        { type: "Float32", data },
+        metadata.origin,
+        metadata.width,
+        metadata.height,
+        metadata.resolution
+      );
 
-    this.renderRaster();
+      this.renderRaster();
+    } catch (e) {
+      speak(`Something went wrong when getting raster data: ${e}`);
+    }
   }
 
   render() {
@@ -482,3 +487,10 @@ class GisManager {
 }
 
 createButton();
+
+const metadataParser = z.object({
+  resolution: z.number(),
+  width: z.number(),
+  height: z.number(),
+  origin: z.tuple([z.number(), z.number()]),
+});
