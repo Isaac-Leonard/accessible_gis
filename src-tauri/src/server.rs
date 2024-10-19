@@ -1,13 +1,12 @@
-use std::path::PathBuf;
+use std::{io::Write, path::PathBuf};
 
 use actix_files::{self as fs};
 use actix_web::{
     get,
     http::header::ContentType,
-    web::{self, Data, Json},
+    web::{self, Data, Json, PayloadConfig},
     App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
-use gdal::Dataset;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -15,7 +14,7 @@ use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::task::spawn_local;
 
 use crate::{
-    gdal_if::{merge_layers, read_raster_data_enum, RasterData, Srs},
+    gdal_if::{merge_layers, read_raster_data_enum, Srs},
     state::AppDataSync,
     web_socket::ws_handle,
 };
@@ -30,32 +29,7 @@ fn get_raster_path(app: &AppHandle) -> PathBuf {
 async fn get_raster(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Responder {
     eprintln!("get_raster called");
     let raster_name = get_raster_path(&app);
-    let data = state.with_lock(|state| -> Option<_> {
-        let output = state
-            .shared
-            .get_raster_to_display()?
-            .reproject(&raster_name, Srs::Epsg(4326));
-        eprintln!("{:?}", output);
-        let wgs84_raster = Dataset::open(raster_name).unwrap();
-        let band = wgs84_raster.rasterband(1).unwrap();
-        read_raster_data_enum(&band)
-    });
-    match data {
-        Some(data) => HttpResponse::Ok().body(
-            data.into_f64_vec()
-                .into_iter()
-                .flat_map(|x| (x as f32).to_le_bytes())
-                .collect_vec(),
-        ),
-        None => HttpResponse::NotFound().finish(),
-    }
-}
-
-#[get("/get_raster_meta")]
-async fn get_raster_meta(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Responder {
-    eprintln!("get_raster_meta called");
-    let raster_name = get_raster_path(&app);
-    Json(state.with_lock(|state| {
+    let Some((metadata, data)) = state.with_lock(|state| -> Option<(_, _)> {
         let output = state
             .shared
             .get_raster_to_display()?
@@ -64,17 +38,37 @@ async fn get_raster_meta(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl
         let wgs84_raster = state
             .open_dataset(raster_name.to_str().unwrap().to_string())
             .unwrap();
-        Some(wgs84_raster.get_raster(1).unwrap().get_info_for_display())
-    }))
-}
+        let band = wgs84_raster.get_raster(1).unwrap();
+        let data = read_raster_data_enum(&band.band.band)?;
+        let metadata = band.get_info_for_display();
+        Some((metadata, data))
+    }) else {
+        return HttpResponse::NotFound().finish();
+    };
+    eprintln!("Metadata: {:?}", metadata);
 
-#[derive(Serialize)]
-struct ImageData {
-    pub width: usize,
-    pub height: usize,
-    #[serde(flatten)]
-    pub data: RasterData,
-    pub no_data_value: Option<f64>,
+    let mut bytes = Vec::<u8>::new();
+    bytes
+        .write_all(metadata.resolution.to_le_bytes().as_slice())
+        .unwrap();
+    bytes
+        .write_all(metadata.width.to_le_bytes().as_slice())
+        .unwrap();
+    bytes
+        .write_all(metadata.height.to_le_bytes().as_slice())
+        .unwrap();
+    bytes
+        .write_all(metadata.origin.0.to_le_bytes().as_slice())
+        .unwrap();
+    bytes
+        .write_all(metadata.origin.1.to_le_bytes().as_slice())
+        .unwrap();
+    data.into_f64_vec().into_iter().for_each(|x| {
+        if let Err(e) = bytes.write_all((x as f32).to_le_bytes().as_slice()) {
+            panic!("Got error when writing response: {:?}", e)
+        }
+    });
+    HttpResponse::Ok().body(bytes)
 }
 
 #[derive(Serialize, Deserialize, specta::Type)]
@@ -89,11 +83,11 @@ pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
         App::new()
             .app_data(Data::new(state.clone()))
             .app_data(Data::new(app_handle.clone()))
+            .app_data(Data::new(PayloadConfig::new(1024 * 1024 * 1024)))
             .service(get_raster)
             .service(get_info)
             .service(get_ocr)
             .service(get_vector)
-            .service(get_raster_meta)
             .service(web::resource("/ws").route(web::get().to(ws)))
             .service(
                 fs::Files::new(

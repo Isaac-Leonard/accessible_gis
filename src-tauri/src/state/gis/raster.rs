@@ -53,7 +53,7 @@ pub struct StatefulRasterBand<'a> {
 }
 
 impl<'a> StatefulRasterBand<'a> {
-    pub fn get_info_for_display(&mut self) -> RasterMetadata {
+    pub fn get_info_for_display(&self) -> RasterMetadata {
         let (width, height) = self.band.band().size();
         let geo_transform = self.band.geo_transform.unwrap();
         RasterMetadata {
@@ -77,8 +77,8 @@ impl<'a> StatefulRasterBand<'a> {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct RasterMetadata {
-    resolution: f64,
-    width: usize,
-    height: usize,
-    origin: (f64, f64),
+    pub resolution: f64,
+    pub width: usize,
+    pub height: usize,
+    pub origin: (f64, f64),
 }

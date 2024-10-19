@@ -1,4 +1,3 @@
-import z from "zod";
 import * as turf from "@turf/turf";
 import { Feature, Position } from "geojson";
 import { pauseAudio, playAudio, setAudioFrequency } from "./audio";
@@ -452,16 +451,22 @@ class GisManager {
   async getRaster() {
     try {
       console.log("Called get raster");
-      const metadataRes = await fetch("get_raster_meta");
-      console.log("Got metadata");
-      const metadata = metadataParser.parse(await metadataRes.json());
-      console.log("got metadata json");
-      console.log(metadata);
       const dataRes = await fetch("/get_raster");
       console.log("Fetched data");
       const rasterData = await dataRes.arrayBuffer();
       console.log("Got rasterData array buffer");
-      const data = new Float32Array(rasterData);
+      const dataView = new DataView(rasterData);
+      const metadata = {
+        resolution: dataView.getFloat64(0, true),
+        width: Number(dataView.getBigUint64(8, true)),
+        height: Number(dataView.getBigUint64(16, true)),
+        origin: [
+          dataView.getFloat64(24, true),
+          dataView.getFloat64(32, true),
+        ] as [number, number],
+      };
+      console.log(metadata);
+      const data = new Float32Array(rasterData, 40);
       console.log("Parsed data");
       this.raster = new Raster(
         { type: "Float32", data },
@@ -487,10 +492,3 @@ class GisManager {
 }
 
 createButton();
-
-const metadataParser = z.object({
-  resolution: z.number(),
-  width: z.number(),
-  height: z.number(),
-  origin: z.tuple([z.number(), z.number()]),
-});
