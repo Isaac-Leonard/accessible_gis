@@ -9,7 +9,7 @@ use crate::{
     gdal_if::{read_raster_data, read_raster_data_enum_as},
     geometry::Point,
     state::{settings::AudioSettings, AppState},
-    web_socket::{AppMessage, GisMessage, RasterMessage, TouchDevice, VectorMessage},
+    web_socket::{AppMessage, TouchDevice},
 };
 
 #[tauri::command]
@@ -109,18 +109,15 @@ pub fn set_current_audio_settings(
     state: AppState,
     device: State<TouchDevice>,
 ) {
-    state
-        .with_current_raster_band(|band| {
-            band.info.audio_settings = settings.clone();
-            device.send(AppMessage::Gis(GisMessage {
-                vector: VectorMessage {},
-                raster: RasterMessage {
-                    min_freq: settings.min_freq,
-                    max_freq: settings.max_freq,
-                },
-            }));
-        })
-        .expect("Tried to work on non selected raster band");
+    state.with_lock(|state| {
+        state
+            .with_current_raster_band(|band| {
+                band.info.audio_settings = settings.clone();
+            })
+            .expect("Tried to work on non selected raster band");
+        // We already used expect above for the same band so we are safe to unwrap here
+        device.send(AppMessage::Gis(state.get_touch_device_settings().unwrap()));
+    });
 }
 
 #[tauri::command]

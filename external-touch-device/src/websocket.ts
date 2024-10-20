@@ -87,7 +87,7 @@ export type ImageMessage = { ocr: boolean };
 
 export type GisMessage = { vector: VectorSettings; raster: RasterSettings };
 
-export type VectorSettings = {};
+export type VectorSettings = { preferedKeys: string[] };
 
 export type AudioSettings = {};
 
@@ -101,7 +101,7 @@ const rasterParser: ZodType<RasterSettings> = z.object({
   maxFreq: z.number(),
 });
 
-const vectorSettingsParser = z.object({});
+const vectorSettingsParser = z.object({ preferedKeys: z.string().array() });
 
 const GisParser = z.object({
   vector: vectorSettingsParser,

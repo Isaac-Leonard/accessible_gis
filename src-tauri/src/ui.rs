@@ -32,6 +32,7 @@ pub struct LayerScreen {
     pub layers: Vec<LayerDescriptor>,
     pub layer_info: Option<LayerScreenInfo>,
     pub ip: String,
+    prefered_display_fields: Vec<String>,
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -146,6 +147,7 @@ impl AppData {
             ip: local_ip()
                 .map(|ip| format!("Server running at http://{}:{}/", ip, port))
                 .unwrap_or_else(|e| format!("Unable to get local IP address, got error: {}", e)),
+            prefered_display_fields: self.prefered_display_fields.clone(),
         }
     }
 }

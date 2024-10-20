@@ -29,7 +29,10 @@ const minLon = -180,
   maxLon = 180,
   maxLat = 90;
 
-const defaultSettings = { raster: { minFreq: 220, maxFreq: 880 }, vector: {} };
+const defaultSettings: GisMessage = {
+  raster: { minFreq: 220, maxFreq: 880 },
+  vector: { preferedKeys: [] },
+};
 
 class GisManager {
   // Required variables
@@ -59,7 +62,7 @@ class GisManager {
     this.connection.addMessageHandler((msg) => {
       if (msg?.type === "Gis") {
         this.settings = msg.data;
-        speak("Updated settings");
+        // speak("Updated settings");
       } else if (msg.type === "FocusRaster") {
         if (this.raster) {
           speak("Focusing raster");
@@ -370,7 +373,7 @@ class GisManager {
     const foundText = featuresToSpeak
       .map((feature) => {
         const { geometry, properties } = feature;
-        const name = properties === null ? null : Object.values(properties)[0];
+        const name = this.getPreferedNameForFeature(properties);
         switch (geometry.type) {
           case "Point":
           case "MultiPoint":
@@ -387,7 +390,7 @@ class GisManager {
     const leftText = leftFeatures
       .map((feature) => {
         const { properties } = feature;
-        const name = properties === null ? null : Object.values(properties)[0];
+        const name = this.getPreferedNameForFeature(properties);
         return `Leaving ${name}`;
       })
       .join();
@@ -486,7 +489,8 @@ class GisManager {
 
       this.renderRaster();
     } catch (e) {
-      speak(`Something went wrong when getting raster data: ${e}`);
+      speak(`Something went wrong when fetching raster data: ${e}`);
+      console.log(e);
     }
   }
 
@@ -496,6 +500,25 @@ class GisManager {
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     this.renderVectors();
     this.renderRaster();
+  }
+
+  getPreferedNameForFeature(properties: { [name: string]: unknown } | null) {
+    if (properties === null) {
+      return null;
+    }
+    return Object.entries(properties).reduce((previous, current) => {
+      if (this.settings.vector.preferedKeys.includes(previous[0])) {
+        return previous;
+      } else if (this.settings.vector.preferedKeys.includes(current[0])) {
+        return current;
+      } else if (typeof previous[1] === "string") {
+        return previous;
+      } else if (typeof current[1] === "string" || previous[1] === null) {
+        return current;
+      } else {
+        return previous;
+      }
+    })[1];
   }
 }
 

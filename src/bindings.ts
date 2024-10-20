@@ -221,6 +221,9 @@ export const commands = {
   async focusRaster(): Promise<void> {
     await TAURI_INVOKE("focus_raster");
   },
+  async setPreferedDisplayFields(fields: string[]): Promise<void> {
+    await TAURI_INVOKE("set_prefered_display_fields", { fields });
+  },
 };
 
 /** user-defined events **/
@@ -378,6 +381,7 @@ export type LayerScreen = {
   layers: LayerDescriptor[];
   layer_info: LayerScreenInfo | null;
   ip: string;
+  prefered_display_fields: string[];
 };
 export type LayerScreenInfo =
   | ({ type: "Vector" } & VectorScreenData)

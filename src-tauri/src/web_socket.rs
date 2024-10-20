@@ -42,14 +42,7 @@ pub async fn ws_handle(
 
     // Ensure the device has the right settings for the current data on start
     app.state::<AppDataSync>().with_lock(|state| {
-        let settings = &state.shared.get_raster_to_display()?.info.audio_settings;
-        device_sender.send(AppMessage::Gis(GisMessage {
-            raster: RasterMessage {
-                min_freq: settings.min_freq,
-                max_freq: settings.max_freq,
-            },
-            vector: VectorMessage {},
-        }));
+        device_sender.send(AppMessage::Gis(state.get_touch_device_settings()?));
         Some(())
     });
 
@@ -152,7 +145,10 @@ pub struct RasterMessage {
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct VectorMessage {}
+#[serde(rename_all = "camelCase")]
+pub struct VectorMessage {
+    pub prefered_keys: Vec<String>,
+}
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "type", content = "data")]

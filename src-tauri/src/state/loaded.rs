@@ -10,6 +10,7 @@ use crate::{
     dataset_collection::DatasetCollection,
     gdal_if::{LocalFeatureInfo, WrappedDataset},
     geometry::AsPoint,
+    web_socket::{GisMessage, RasterMessage, VectorMessage},
 };
 
 use super::{
@@ -26,9 +27,24 @@ pub struct AppData {
     pub shared: UserState,
     pub errors: Vec<String>,
     settings: GlobalSettings,
+    pub prefered_display_fields: Vec<String>,
 }
 
 impl AppData {
+    /// Gets all of the data needed to update the touch devices configuration
+    /// Note that names of enums and structs are still not finalised as the end result is not yet clear
+    pub fn get_touch_device_settings(&mut self) -> Option<GisMessage> {
+        let settings = &self.shared.get_raster_to_display()?.info.audio_settings;
+        Some(GisMessage {
+            raster: RasterMessage {
+                min_freq: settings.min_freq,
+                max_freq: settings.max_freq,
+            },
+            vector: VectorMessage {
+                prefered_keys: self.prefered_display_fields.clone(),
+            },
+        })
+    }
     pub fn open_dataset(&mut self, name: String) -> Result<&mut StatefulDataset, String> {
         self.shared.datasets.open(name, &self.settings)
     }
@@ -40,6 +56,7 @@ impl AppData {
             shared: UserState::default(),
             errors: Vec::new(),
             settings: GlobalSettings::read(resolver),
+            prefered_display_fields: Vec::new(),
         }
     }
 

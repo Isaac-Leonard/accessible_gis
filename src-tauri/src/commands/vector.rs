@@ -4,10 +4,12 @@ use gdal::vector::{LayerAccess, ToGdal};
 use geo_types::Geometry as GeoGeometry;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use tauri::State;
 
 use crate::{
     gdal_if::{FieldType, LayerIndex},
     state::AppState,
+    web_socket::{AppMessage, TouchDevice},
     FeatureInfo,
 };
 
@@ -139,4 +141,17 @@ pub fn set_display_vector(state: AppState) {
     state
         .with_current_vector_layer(|layer| layer.info.display = true)
         .expect("No vector found when trying to set display");
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_prefered_display_fields(
+    fields: Vec<String>,
+    state: AppState,
+    device: State<TouchDevice>,
+) {
+    state.with_lock(|state| {
+        state.prefered_display_fields = fields;
+        device.send(AppMessage::Gis(state.get_touch_device_settings().unwrap()));
+    });
 }
