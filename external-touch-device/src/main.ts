@@ -259,10 +259,18 @@ class GisManager {
   }
 
   async getVectors() {
-    const res = await fetch("get_vector");
-    const geojson = await res.json().then((x) => featureCollection.parse(x));
-    this.features = geojson.features;
-    this.renderVectors();
+    try {
+      const res = await fetch("get_vector");
+      const geojson = await res.json().then((x) => featureCollection.parse(x));
+      this.features = geojson.features.filter(
+        (nullableFeature): nullableFeature is Feature =>
+          nullableFeature.geometry !== null
+      );
+      this.renderVectors();
+    } catch (e) {
+      speak(`Something went wrong with fetching vector data: ${e}`);
+      console.log(e);
+    }
   }
 
   renderVectors() {

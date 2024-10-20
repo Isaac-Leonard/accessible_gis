@@ -91,14 +91,15 @@ const geometry: Z.ZodType<Geometry> = Z.union([
   geometryCollection,
 ]);
 
-export const feature: Z.ZodType<Feature> = Z.object({
+export const feature: Z.ZodType<Feature<Geometry | null>> = Z.object({
   type: Z.literal("Feature"),
-  geometry: geometry,
+  geometry: geometry.nullable(),
   id: Z.union([Z.string(), Z.number(), Z.undefined()]).optional(),
   properties: Z.record(Z.unknown()),
 });
 
-export const featureCollection: Z.ZodType<FeatureCollection> = Z.object({
-  type: Z.literal("FeatureCollection"),
-  features: feature.array(),
-});
+export const featureCollection: Z.ZodType<FeatureCollection<Geometry | null>> =
+  Z.object({
+    type: Z.literal("FeatureCollection"),
+    features: feature.array(),
+  });
