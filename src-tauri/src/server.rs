@@ -29,6 +29,7 @@ fn get_raster_path(app: &AppHandle) -> PathBuf {
 async fn get_raster(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Responder {
     eprintln!("get_raster called");
     let raster_name = get_raster_path(&app);
+    std::fs::remove_file(&raster_name);
     let Some((metadata, data)) = state.with_lock(|state| -> Option<(_, _)> {
         let output = state
             .shared
@@ -64,10 +65,11 @@ async fn get_raster(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Resp
         .write_all(metadata.origin.1.to_le_bytes().as_slice())
         .unwrap();
     data.into_f64_vec().into_iter().for_each(|x| {
-        if let Err(e) = bytes.write_all((x as f32).to_le_bytes().as_slice()) {
-            panic!("Got error when writing response: {:?}", e)
-        }
+        bytes
+            .write_all((x as f32).to_le_bytes().as_slice())
+            .unwrap()
     });
+    eprintln!("Sending {}Mb to touch device", bytes.len() / 1024 / 1024);
     HttpResponse::Ok().body(bytes)
 }
 
