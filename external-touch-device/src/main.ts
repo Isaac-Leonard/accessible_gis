@@ -6,6 +6,8 @@ import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
 import { AppMessage, GisMessage, WsConnection } from "./websocket";
 import { Raster } from "./raster";
+import { CoordinateManager } from "./coordinate-manager";
+import { getCanvas } from "./canvas-manager";
 
 const root = document.getElementById("image");
 
@@ -24,11 +26,6 @@ const createButton = () => {
   return btn;
 };
 
-const minLon = -180,
-  minLat = -90,
-  maxLon = 180,
-  maxLat = 90;
-
 const defaultSettings: GisMessage = {
   raster: { minFreq: 220, maxFreq: 880 },
   vector: { preferedKeys: [] },
@@ -37,16 +34,12 @@ const defaultSettings: GisMessage = {
 class GisManager {
   // Required variables
   raster: Raster | null = null;
-  previousFeatures: Feature[] = [];
 
   radius = 5;
-
-  topLat = maxLat;
-  leftLon = minLon;
-  bottomLat: number = minLat;
-  rightLon: number = maxLon;
-  settings: GisMessage = defaultSettings;
+  previousFeatures: Feature[] = [];
   features: Feature[] = [];
+  coordinateManager = new CoordinateManager();
+  settings: GisMessage = defaultSettings;
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   gestureManager: GestureManager;
@@ -54,26 +47,16 @@ class GisManager {
 
   // Initial configuration
   constructor() {
-    this.canvas = document.createElement("canvas");
-    this.ctx = this.canvas.getContext("2d")!;
+    const { canvas, ctx } = getCanvas();
+    this.canvas = canvas;
+    this.ctx = ctx;
     console.log(this.ctx);
     this.gestureManager = new GestureManager(this.canvas);
     this.connection = new WsConnection();
     this.connection.addMessageHandler(this.wsMessageHandler.bind(this));
-    document.body.appendChild(this.canvas);
-    this.canvas.width = Math.max(
-      document.documentElement.clientWidth,
-      window.innerWidth
-    );
-    this.canvas.height = Math.max(
-      document.documentElement.clientHeight,
-      window.innerHeight
-    );
-    this.ctx.fillStyle = "#000000";
-    this.ctx.strokeStyle = "#ffffff";
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
     setAudioFrequency(440);
-    this.focusScreen([minLon, maxLat], [maxLon, minLat]);
+    this.coordinateManager.focusFullScreen();
     this.canvas.addEventListener("touchstart", (e) => {
       e.preventDefault();
       if (e.touches.length > 1) {
@@ -81,7 +64,7 @@ class GisManager {
       }
       const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
       console.log(`screen x: ${screenX}, screen y: ${screenY}`);
-      const coords = this.screenToCoords(screenX, screenY);
+      const coords = this.coordinateManager.screenToCoords(screenX, screenY);
       console.log(`Lon: ${coords[0]}, lat: ${coords[1]}`);
       this.speakFeatures(coords);
       this.playAudioInRaster(coords);
@@ -95,7 +78,7 @@ class GisManager {
       }
       const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
       console.log(`screen x: ${screenX}, screen y: ${screenY}`);
-      const coords = this.screenToCoords(screenX, screenY);
+      const coords = this.coordinateManager.screenToCoords(screenX, screenY);
       this.speakFeatures(coords);
       this.playAudioInRaster(coords);
     });
@@ -117,71 +100,59 @@ class GisManager {
     });
 
     this.gestureManager.addPinchHandler(() => {
-      speak("Zooming out");
-      const lonRange = this.rightLon - this.leftLon;
-      const latRange = this.topLat - this.bottomLat;
-      const maxXScale = (maxLon - this.leftLon) / lonRange;
-      const maxYScale = (this.topLat - minLat) / latRange;
-      let scale = Math.min(maxXScale, maxYScale, 2);
-      if (scale <= 1) {
+      const zoomed = this.coordinateManager.zoomOut();
+      if (zoomed) {
+        speak("Zoomed out");
+        this.render();
+      } else {
         speak("Cannot zoom out, you may need to swipe down or right");
-        return;
       }
-      this.rightLon = this.leftLon + lonRange * scale;
-      this.bottomLat = this.topLat - latRange * scale;
-      this.render();
     });
 
     this.gestureManager.addSpreadHandler(() => {
+      this.coordinateManager.zoomIn();
       speak("Zooming in");
-      const lonRange = this.rightLon - this.leftLon;
-      this.rightLon = this.leftLon + lonRange / 2;
-      const latRange = this.topLat - this.bottomLat;
-      this.bottomLat = this.topLat - latRange / 2;
       this.render();
     });
 
     this.gestureManager.addSwipeHandler("down", () => {
-      speak("Swiped down");
-      const range = this.topLat - this.bottomLat;
-      const top = Math.min(this.topLat + range, maxLat);
-      const panDistance = top - this.topLat;
-      this.topLat = top;
-      this.bottomLat += panDistance;
-      this.render();
+      const scrollDistance = this.coordinateManager.scrollDown();
+      if (scrollDistance != 0) {
+        speak("Swiped down");
+        this.render();
+      } else {
+        speak("Could not scroll down, at top of map");
+      }
     });
 
     this.gestureManager.addSwipeHandler("up", () => {
-      speak("Swiped up");
-      const range = this.topLat - this.bottomLat;
-      console.log("Range: " + range);
-      console.log("Bottom lat: " + this.bottomLat);
-      const bottom = Math.max(this.bottomLat - range, minLat);
-      console.log(`Bottom: ${bottom}`);
-      const panDistance = this.bottomLat - bottom;
-      this.bottomLat = bottom;
-      this.topLat -= panDistance;
-      this.render();
+      const scrollDistance = this.coordinateManager.scrollUp();
+      if (scrollDistance != 0) {
+        speak("Swiped up");
+        this.render();
+      } else {
+        speak("Could not scroll up, at bottom of map");
+      }
     });
 
     this.gestureManager.addSwipeHandler("right", () => {
-      speak("Swiped right");
-      const range = this.rightLon - this.leftLon;
-      const left = Math.max(this.leftLon - range, minLon);
-      const panDistance = this.leftLon - left;
-      this.leftLon = left;
-      this.rightLon -= panDistance;
-      this.render();
+      const scrollDistance = this.coordinateManager.scrollRight();
+      if (scrollDistance != 0) {
+        speak("Swiped right");
+        this.render();
+      } else {
+        speak("Could not scroll right, at left of map");
+      }
     });
 
     this.gestureManager.addSwipeHandler("left", () => {
-      speak("Swiped left");
-      const range = this.rightLon - this.leftLon;
-      const right = Math.min(this.rightLon + range, maxLon);
-      const panDistance = right - this.rightLon;
-      this.rightLon = right;
-      this.leftLon += panDistance;
-      this.render();
+      const scrollDistance = this.coordinateManager.scrollLeft();
+      if (scrollDistance != 0) {
+        speak("Swiped left");
+        this.render();
+      } else {
+        speak("Could not scroll left, at right of map");
+      }
     });
 
     this.getVectors();
@@ -197,7 +168,10 @@ class GisManager {
     } else if (msg.type === "FocusRaster") {
       if (this.raster) {
         speak("Focusing raster");
-        this.focusScreen(this.raster?.topLeft, this.raster?.bottomRight());
+        this.coordinateManager.focusScreen(
+          this.raster?.topLeft,
+          this.raster?.bottomRight()
+        );
         this.render();
       } else {
         speak("Tried to focus raster but no raster is loaded");
@@ -205,45 +179,8 @@ class GisManager {
     }
   }
 
-  focusScreen(
-    [minLon, maxLat]: [number, number],
-    [maxLon, minLat]: [number, number]
-  ) {
-    const screenWidth = this.canvas.width;
-    const screenHeight = this.canvas.height;
-    const lonRange = maxLon - minLon;
-    const latRange = maxLat - minLat;
-    this.topLat = maxLat;
-    this.leftLon = minLon;
-    const lonOverLat = lonRange / latRange;
-    const widthOverHeight = screenWidth / screenHeight;
-    if (widthOverHeight > lonOverLat) {
-      this.rightLon = maxLon;
-      this.bottomLat = maxLat - (lonRange / screenWidth) * screenHeight;
-    } else {
-      this.bottomLat = minLat;
-      this.rightLon = minLon + (latRange / screenHeight) * screenWidth;
-    }
-  }
-
-  screenToCoords(x: number, y: number): [number, number] {
-    return [
-      (x / this.canvas.width) * (this.rightLon - this.leftLon) + this.leftLon,
-      -(y / this.canvas.height) * (this.topLat - this.bottomLat) + this.topLat,
-    ];
-  }
-
-  coordsToScreen([lon, lat]: [number, number]): [number, number] {
-    return [
-      ((lon - this.leftLon) * this.canvas.width) /
-        (this.rightLon - this.leftLon),
-      -((lat - this.topLat) * this.canvas.height) /
-        (this.topLat - this.bottomLat),
-    ];
-  }
-
   drawPoint(p: Position) {
-    const [x, y] = this.coordsToScreen(p as [number, number]);
+    const [x, y] = this.coordinateManager.coordsToScreen(p as [number, number]);
     this.ctx.save();
     this.ctx.beginPath();
     this.ctx.fillStyle = "#ffffff";
@@ -256,7 +193,9 @@ class GisManager {
   drawLine(line: Position[]) {
     this.ctx.beginPath();
     line.forEach((p) => {
-      const [x, y] = this.coordsToScreen(p as [number, number]);
+      const [x, y] = this.coordinateManager.coordsToScreen(
+        p as [number, number]
+      );
       this.ctx.lineTo(x, y);
     });
     this.ctx.closePath();
@@ -410,20 +349,22 @@ class GisManager {
       return;
     }
     if (
-      this.raster.topLeft[0] > this.rightLon ||
-      this.raster.topLeft[1] < this.bottomLat ||
+      this.raster.topLeft[0] > this.coordinateManager.rightLon ||
+      this.raster.topLeft[1] < this.coordinateManager.bottomLat ||
       this.raster.topLeft[0] + this.raster.width * this.raster.xResolution <
-        this.leftLon ||
+        this.coordinateManager.leftLon ||
       this.raster.topLeft[1] + this.raster.height * this.raster.yResolution >
-        this.topLat
+        this.coordinateManager.topLat
     ) {
       // No raster data is visable
       console.log("Raster off screen");
       return;
     }
     console.log("Rendering raster on screen");
-    const topLeftScreen = this.coordsToScreen(this.raster.topLeft);
-    const bottomRightScreen = this.coordsToScreen(
+    const topLeftScreen = this.coordinateManager.coordsToScreen(
+      this.raster.topLeft
+    );
+    const bottomRightScreen = this.coordinateManager.coordsToScreen(
       this.raster.rasterToCoords(this.raster.width, this.raster.height)
     );
     const width = bottomRightScreen[0] - topLeftScreen[0];
@@ -523,69 +464,3 @@ class GisManager {
 }
 
 createButton();
-
-class Display {
-  canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
-
-  constructor() {
-    this.canvas = document.createElement("canvas");
-    this.ctx = this.canvas.getContext("2d")!;
-    document.body.appendChild(this.canvas);
-    this.canvas.width = Math.max(
-      document.documentElement.clientWidth,
-      window.innerWidth
-    );
-    this.canvas.height = Math.max(
-      document.documentElement.clientHeight,
-      window.innerHeight
-    );
-    this.ctx.fillStyle = "#000000";
-    this.ctx.strokeStyle = "#ffffff";
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-  }
-}
-
-class CoordinateManager {
-  topLat = maxLat;
-  leftLon = minLon;
-  bottomLat: number = minLat;
-  rightLon: number = maxLon;
-  constructor(public canvas: HTMLCanvasElement) {}
-  screenToCoords(x: number, y: number): [number, number] {
-    return [
-      (x / this.canvas.width) * (this.rightLon - this.leftLon) + this.leftLon,
-      -(y / this.canvas.height) * (this.topLat - this.bottomLat) + this.topLat,
-    ];
-  }
-
-  coordsToScreen([lon, lat]: [number, number]): [number, number] {
-    return [
-      ((lon - this.leftLon) * this.canvas.width) /
-        (this.rightLon - this.leftLon),
-      -((lat - this.topLat) * this.canvas.height) /
-        (this.topLat - this.bottomLat),
-    ];
-  }
-
-  focusScreen(
-    [minLon, maxLat]: [number, number],
-    [maxLon, minLat]: [number, number]
-  ) {
-    const screenWidth = this.canvas.width;
-    const screenHeight = this.canvas.height;
-    const lonRange = maxLon - minLon;
-    const latRange = maxLat - minLat;
-    this.topLat = maxLat;
-    this.leftLon = minLon;
-    const lonOverLat = lonRange / latRange;
-    const widthOverHeight = screenWidth / screenHeight;
-    if (widthOverHeight > lonOverLat) {
-      this.rightLon = maxLon;
-      this.bottomLat = maxLat - (lonRange / screenWidth) * screenHeight;
-    } else {
-      this.bottomLat = minLat;
-      this.rightLon = minLon + (latRange / screenHeight) * screenWidth;
-    }
-  }
-}
