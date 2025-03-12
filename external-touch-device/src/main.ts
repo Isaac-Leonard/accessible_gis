@@ -464,3 +464,7 @@ class GisManager {
 }
 
 createButton();
+class Vector {
+  previousFeatures: Feature[] = [];
+  features: Feature[] = [];
+}
