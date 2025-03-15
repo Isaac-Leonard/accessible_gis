@@ -1,0 +1,19 @@
+{
+  "name": "accessible_gis",
+  "version": "1.0.0",
+  "description": "A collection of applications and embedible components for working with GIS data for the blind",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Isaac Leonard",
+  "workspaces": [
+    "desktop",
+    "touch-device"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "typescript": "^5.8.2",
+    "vite": "^6.2.2"
+  }
+}
