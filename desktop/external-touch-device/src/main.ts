@@ -1,8 +1,8 @@
 import * as turf from "@turf/turf";
 import { Feature, Position } from "geojson";
-import { pauseAudio, playAudio, setAudioFrequency } from "./audio";
-import { featureCollection } from "./geojson-parser";
-import { speak } from "./speach";
+import { pauseAudio, playAudio, setAudioFrequency } from "touch-device";
+import { featureCollectionParser } from "touch-device";
+import { speak } from "touch-device";
 import { GestureManager } from "./touch-gpt";
 import { AppMessage, GisMessage, WsConnection } from "./websocket";
 import { Raster } from "touch-device";
@@ -205,7 +205,9 @@ class GisManager {
   async getVectors() {
     try {
       const res = await fetch("get_vector");
-      const geojson = await res.json().then((x) => featureCollection.parse(x));
+      const geojson = await res
+        .json()
+        .then((x) => featureCollectionParser.parse(x));
       this.features = geojson.features.filter(
         (nullableFeature): nullableFeature is Feature =>
           nullableFeature.geometry !== null

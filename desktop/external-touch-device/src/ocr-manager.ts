@@ -1,5 +1,5 @@
 import ImageJS from "image-js";
-import { speak } from "./speach";
+import { speak } from "touch-device";
 import { rectContains } from "./utils";
 import { getTextFromImage } from "./render-image";
 
