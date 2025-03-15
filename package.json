@@ -9,7 +9,8 @@
   "author": "Isaac Leonard",
   "workspaces": [
     "desktop",
-    "touch-device"
+    "touch-device",
+    "website"
   ],
   "license": "ISC",
   "dependencies": {
