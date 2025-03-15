@@ -21,6 +21,7 @@ export type FeatureInfo = {
   geometry: Geometry | null;
   fid: number | null;
 };
+
 export type Field = (
   | { type: "Integer"; value: number }
   | { type: "IntegerList"; value: number[] }
@@ -34,7 +35,9 @@ export type Field = (
   | { type: "DateTime"; value: string }
   | { type: "None" }
 ) & { name: string };
-
+/**
+ * A tagged union of all allowed geometry types
+ **/
 export type Geometry =
   | ({ type: "Point" } & Point)
   | ({ type: "Line" } & Line)
@@ -44,6 +47,7 @@ export type Geometry =
   | ({ type: "MultiLineString" } & MultiLineString)
   | ({ type: "MultiPolygon" } & MultiPolygon)
   | ({ type: "GeometryCollection" } & GeometryCollection);
+
 export type GeometryCollection = { geometries: Geometry[] };
 export type Line = { start: Point; end: Point };
 export type LineString = { points: Point[] };

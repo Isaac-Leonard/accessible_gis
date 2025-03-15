@@ -5,7 +5,7 @@ import { featureCollection } from "./geojson-parser";
 import { speak } from "./speach";
 import { GestureManager } from "./touch-gpt";
 import { AppMessage, GisMessage, WsConnection } from "./websocket";
-import { Raster } from "./raster";
+import { Raster } from "touch-device";
 import { CoordinateManager } from "./coordinate-manager";
 import { getCanvas } from "./canvas-manager";
 

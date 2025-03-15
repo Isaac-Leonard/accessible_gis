@@ -12,7 +12,8 @@
     "typescript": "^5.2.2",
     "vite": "^5.2.0"
   },
-  "dependencies": {
+    "dependencies": {
+    "touch-device": "workspace:*",
     "@turf/turf": "^7.1.0",
     "@types/geojson": "^7946.0.14",
     "@types/proj4": "^2.5.5",
