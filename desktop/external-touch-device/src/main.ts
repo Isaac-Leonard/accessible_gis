@@ -1,13 +1,17 @@
 import * as turf from "@turf/turf";
 import { Feature, Position } from "geojson";
-import { pauseAudio, playAudio, setAudioFrequency } from "touch-device";
-import { featureCollectionParser } from "touch-device";
-import { speak } from "touch-device";
-import { GestureManager } from "./touch-gpt";
+import {
+  featureCollectionParser,
+  pauseAudio,
+  playAudio,
+  setAudioFrequency,
+  speak,
+  Raster,
+  CoordinateManager,
+  getCanvas,
+  GestureManager,
+} from "touch-device";
 import { AppMessage, GisMessage, WsConnection } from "./websocket";
-import { Raster } from "touch-device";
-import { CoordinateManager } from "touch-device";
-import { getCanvas } from "touch-device";
 
 const root = document.getElementById("image");
 
