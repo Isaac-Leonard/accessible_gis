@@ -1,4 +1,4 @@
-import { mean } from "./utils";
+import { mean } from "./utils.js";
 
 /**
  * Type definition for a gesture handler function.

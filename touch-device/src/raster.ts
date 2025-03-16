@@ -1,6 +1,6 @@
 import type { ImageConstructorOptions } from "image-js";
 import * as ImageJs from "image-js";
-import Image from "image-js";
+import { Image } from "image-js";
 
 type RasterData =
   | { type: "Uint8"; data: Uint8Array }

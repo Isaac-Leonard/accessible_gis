@@ -1,4 +1,4 @@
-import { getCanvas } from "./canvas-manager";
+import { getCanvas } from "./canvas-manager.js";
 
 export const minLon = -180,
   minLat = -90,

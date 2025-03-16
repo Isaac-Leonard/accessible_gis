@@ -1,7 +1,7 @@
-export { Raster } from "./raster";
-export { getCanvas } from "./canvas-manager";
-export { CoordinateManager } from "./coordinate-manager";
-export { featureCollection as featureCollectionParser } from "./geojson-parser";
-export { pauseAudio, playAudio, setAudioFrequency } from "./audio";
-export { speak } from "./speach";
-export { GestureManager } from "./touch";
+export { Raster } from "./raster.js";
+export { getCanvas } from "./canvas-manager.js";
+export { CoordinateManager } from "./coordinate-manager.js";
+export { featureCollection as featureCollectionParser } from "./geojson-parser.js";
+export { pauseAudio, playAudio, setAudioFrequency } from "./audio.js";
+export { speak } from "./speach.js";
+export { GestureManager } from "./touch.js";
