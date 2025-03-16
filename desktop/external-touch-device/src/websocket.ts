@@ -1,3 +1,4 @@
+import { VectorSettings } from "touch-device";
 import { ZodType, z } from "zod";
 
 const host = window.location.host;
@@ -86,8 +87,6 @@ export type AppMessage =
 export type ImageMessage = { ocr: boolean };
 
 export type GisMessage = { vector: VectorSettings; raster: RasterSettings };
-
-export type VectorSettings = { preferedKeys: string[] };
 
 export type AudioSettings = {};
 

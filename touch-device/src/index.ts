@@ -5,3 +5,5 @@ export { featureCollection as featureCollectionParser } from "./geojson-parser.j
 export { pauseAudio, playAudio, setAudioFrequency } from "./audio.js";
 export { speak } from "./speach.js";
 export { GestureManager } from "./touch.js";
+export { VectorManager } from "./vector-manager.js";
+export type { VectorSettings } from "./vector-manager.js";
