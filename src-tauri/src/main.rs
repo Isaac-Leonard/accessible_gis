@@ -108,6 +108,7 @@ fn load_countries<R: tauri::Runtime>(
             tauri::path::BaseDirectory::Resource,
         )
         .unwrap();
+    eprintln!("Countries path: {:?}", countries_path);
     let countries = RTree::bulk_load(
         Dataset::open(countries_path)
             .unwrap()

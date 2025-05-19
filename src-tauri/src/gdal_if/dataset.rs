@@ -18,18 +18,11 @@ pub struct WrappedDataset {
 impl WrappedDataset {
     pub fn get_all_layers(&self) -> Vec<IndexedLayer> {
         let mut layers = Vec::new();
-        for index in 0..self.dataset.layer_count() {
-            let c_layer =
-                unsafe { gdal_sys::OGR_DS_GetLayer(self.dataset.c_dataset(), index as c_int) };
-            if !c_layer.is_null() {
-                let layer = unsafe { Layer::from_c_layer(&self.dataset, c_layer) };
-                layers.push(IndexedLayer {
-                    layer: LayerEnum::Layer(WrappedLayer { layer, index }),
-                    layer_index: index,
-                });
-            } else {
-                eprint!("Retrieving layer gave null pointer")
-            }
+        for (index, layer) in self.dataset.layers().enumerate() {
+            layers.push(IndexedLayer {
+                layer: LayerEnum::Layer(WrappedLayer { layer, index }),
+                layer_index: index,
+            });
         }
         let srs = self.dataset.spatial_ref().and_then(|srs| srs.to_wkt()).ok();
         let geo_transform = self.dataset.geo_transform().ok();

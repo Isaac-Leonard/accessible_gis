@@ -1,6 +1,6 @@
 use std::{ffi::CString, process::Command};
 
-use gdal::vector::{LayerAccess, ToGdal};
+use gdal::vector::{Feature, LayerAccess, ToGdal};
 use geo_types::Geometry as GeoGeometry;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -76,17 +76,19 @@ pub fn add_feature_to_layer(feature: FeatureInfo, state: AppState) -> Result<(),
                     ))
                 })
                 .unzip::<_, _, Vec<_>, Vec<_>>();
-
-            layer
-                .layer
-                .layer()
-                .create_feature_fields(geom, &fields.0, &fields.1)
+            let layer = layer.layer.layer();
+            let defn = layer.defn();
+            let mut ft = Feature::new(defn).unwrap();
+            ft.set_geometry(geom).unwrap();
+            for field in feature.fields {
+                let index = defn.field_index(&field.name).unwrap();
+                let val = gdal::vector::FieldValue::from(field.value);
+                ft.set_field(index, &val).unwrap();
+            }
+            ft.create(layer)
                 .inspect_err(|e| eprintln!("{:?}", e))
                 .map_err(|_| "Failed to add fields to schema".to_string())?;
-            eprintln!(
-                "{:?}",
-                FeatureInfo::from(layer.layer.layer().features().last().unwrap())
-            );
+            // eprintln!("{:?}", FeatureInfo::from(layer.features().last().unwrap()));
             Ok(())
         })
         .ok_or_else(|| "Tried to add feature to layer when state is uninitialised".to_string())?

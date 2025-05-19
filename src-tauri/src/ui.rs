@@ -97,7 +97,9 @@ impl AppData {
                         .features()
                         .map(move |feature| FeatureIdentifier {
                             name: primary_field_name
-                                .and_then(|name| feature.field(name).unwrap())
+                                .and_then(|name| {
+                                    feature.field(feature.field_index(name).unwrap()).unwrap()
+                                })
                                 .map(|x| FieldValue::from(x).to_string()),
                             fid: feature.fid().unwrap(),
                         })
