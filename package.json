@@ -1,29 +1,20 @@
 {
   "name": "accessible_gis",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "1.0.0",
+  "description": "A collection of applications and embedible components for working with GIS data for the blind",
+  "main": "index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "tauri": "tauri"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "author": "Isaac Leonard",
+  "workspaces": [
+    "desktop",
+    "touch-device",
+    "website"
+  ],
+  "license": "ISC",
   "dependencies": {
-    "@preact/signals": "^1.2.3",
-    "@tauri-apps/api": "^2.0.0-beta.11",
-    "@tauri-apps/plugin-dialog": "^2.0.0-beta.3",
-    "@tauri-apps/plugin-fs": "^2.0.0-beta.3",
-    "@tauri-apps/plugin-shell": "^2.0.0-beta.4",
-    "preact": "^10.5.9",
-    "react-headings": "^3.2.15",
-    "vite-plugin-externals": "^0.6.2",
-    "vite-plugin-html": "^3.2.2"
-  },
-  "devDependencies": {
-    "@prefresh/vite": "^2.0.0",
-    "@tauri-apps/cli": "^2.0.0-beta.17",
-    "typescript": "^5.0.2",
-    "vite": "^5.0.0"
+    "typescript": "^5.8.2",
+    "vite": "^6.2.2"
   }
 }
