@@ -2,6 +2,7 @@ export function getCanvas() {
   const canvas = document.getElementById("canvas");
   if (!(canvas instanceof HTMLCanvasElement)) {
     const canvas = document.createElement("canvas")!;
+    canvas.id = "canvas";
     const container = document.getElementById("image");
     container!.appendChild(canvas);
     canvas.width = Math.max(
