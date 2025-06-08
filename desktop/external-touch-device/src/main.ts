@@ -262,6 +262,11 @@ class GisManager {
       console.log("Called get raster");
       const dataRes = await fetch("/get_raster");
       console.log("Fetched data");
+      if (dataRes.status !== 200) {
+        console.log("No raster data");
+        this.raster = null;
+        return;
+      }
       const rasterData = await dataRes.arrayBuffer();
       console.log("Got rasterData array buffer");
       const dataView = new DataView(rasterData);
