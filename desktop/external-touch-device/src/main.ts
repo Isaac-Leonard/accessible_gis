@@ -22,8 +22,8 @@ const createButton = () => {
     speak(
       "If you are using a screen reader please turn it off to use this application"
     );
-    new GisManager();
     btn.remove();
+    new GisManager();
   };
   btn.textContent = "Start";
   root?.appendChild(btn);
