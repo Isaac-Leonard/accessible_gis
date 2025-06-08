@@ -159,6 +159,7 @@ export class VectorManager {
             return `Near ${geometry.type} ${name}`;
           case "Polygon":
           case "MultiPolygon":
+          case "GeometryCollection":
             return `In ${geometry.type} ${name}`;
         }
       })
