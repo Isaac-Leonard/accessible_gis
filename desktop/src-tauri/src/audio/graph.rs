@@ -6,7 +6,7 @@ use std::{collections::HashMap, thread::sleep, time::Duration};
 
 use crate::audio::low_level::AudioWave;
 
-use super::{low_level::Playable, Waveform};
+use super::{Waveform, low_level::Playable};
 
 pub fn play_rasta(vals: RasterGraphCreationData) {
     let rasta_graph = RasterGraph::new(vals);
@@ -249,7 +249,7 @@ impl Playable for RasterGraph {
             .collect::<Vec<_>>();
         let row_count = everything[0].1.nrows();
         let col_count = everything[0].1.ncols();
-        let duration_per_sample_ms = everything[0].2 .5;
+        let duration_per_sample_ms = everything[0].2.5;
         for row in 0..row_count {
             for i in 0..col_count {
                 for (wave, data, (min, min_freq, y_range, freq_range, row_len, _)) in

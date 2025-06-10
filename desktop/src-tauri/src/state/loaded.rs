@@ -1,10 +1,10 @@
 use std::{collections::HashMap, vec::IntoIter};
 
-use gdal::{vector::LayerAccess, Dataset};
+use gdal::{Dataset, vector::LayerAccess};
 use geo::{Closest, ClosestPoint, Contains, GeodesicDistance};
 use geo_types::{LineString, Point, Polygon};
 use itertools::Itertools;
-use tauri::{path::PathResolver, Runtime, Wry};
+use tauri::{Runtime, Wry, path::PathResolver};
 
 use crate::{
     dataset_collection::DatasetCollection,
@@ -14,11 +14,11 @@ use crate::{
 };
 
 use super::{
+    CountryImpl, Screen,
     gis::{dataset::StatefulDataset, raster::StatefulRasterBand, vector::StatefulVectorLayer},
     preloaded::Country,
     settings::GlobalSettings,
     user_state::UserState,
-    CountryImpl, Screen,
 };
 
 pub struct AppData {

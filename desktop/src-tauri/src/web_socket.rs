@@ -6,13 +6,13 @@ use std::{
 
 use actix_ws::AggregatedMessage;
 use futures_util::{
-    future::{select, Either},
     StreamExt,
+    future::{Either, select},
 };
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tokio::{
-    sync::mpsc::{unbounded_channel, UnboundedSender},
+    sync::mpsc::{UnboundedSender, unbounded_channel},
     time::interval,
 };
 
@@ -104,8 +104,8 @@ pub async fn ws_handle(
 
                     // all connection's message senders were dropped
                     (None, _) => unreachable!(
-                    "all connection message senders were dropped; chat server may have panicked"
-                ),
+                        "all connection message senders were dropped; chat server may have panicked"
+                    ),
                 },
             },
             // heartbeat internal tick

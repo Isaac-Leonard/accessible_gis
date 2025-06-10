@@ -1,4 +1,4 @@
-use crate::state::{gis::raster::RenderMethod, AppState};
+use crate::state::{AppState, gis::raster::RenderMethod};
 
 #[tauri::command]
 #[specta::specta]

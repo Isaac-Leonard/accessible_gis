@@ -1,13 +1,13 @@
 use std::{ffi::c_int, path::Path};
 
-use gdal::{errors::GdalError, spatial_ref::SpatialRef, vector::Layer, Dataset, DriverManager};
+use gdal::{Dataset, DriverManager, errors::GdalError, spatial_ref::SpatialRef, vector::Layer};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::{EnumDiscriminants, EnumIter};
 
 use crate::dataset_collection::IndexedLayer;
 
-use super::{raster::WrappedRasterBand, LayerEnum, WrappedLayer};
+use super::{LayerEnum, WrappedLayer, raster::WrappedRasterBand};
 
 pub struct WrappedDataset {
     pub file_name: String,

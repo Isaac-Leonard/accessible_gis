@@ -2,19 +2,18 @@ use std::{io::Write, path::PathBuf};
 
 use actix_files::{self as fs};
 use actix_web::{
-    get,
+    App, Error, HttpRequest, HttpResponse, HttpServer, Responder, get,
     http::header::ContentType,
     web::{self, Data, Json, PayloadConfig},
-    App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tauri::{path::BaseDirectory, AppHandle, Manager};
+use tauri::{AppHandle, Manager, path::BaseDirectory};
 use tokio::task::spawn_local;
 
 use crate::{
-    gdal_if::{merge_layers, read_raster_data_enum, Srs},
+    gdal_if::{Srs, merge_layers, read_raster_data_enum},
     state::AppDataSync,
     web_socket::ws_handle,
 };

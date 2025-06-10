@@ -7,10 +7,10 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::{
+    FeatureInfo,
     gdal_if::{FieldType, LayerIndex},
     state::AppState,
     web_socket::{AppMessage, TouchDevice},
-    FeatureInfo,
 };
 
 #[tauri::command]

@@ -2,8 +2,8 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 use tauri::{
-    path::{BaseDirectory, PathResolver},
     Runtime,
+    path::{BaseDirectory, PathResolver},
 };
 
 use crate::audio::{graph::RasterGraphSettings, histogram::HistogramSettings};

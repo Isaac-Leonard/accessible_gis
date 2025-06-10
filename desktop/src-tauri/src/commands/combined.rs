@@ -2,7 +2,7 @@ use gdal::spatial_ref::SpatialRef;
 
 use crate::{
     gdal_if::Srs,
-    state::{gis::combined::StatefulLayerEnum, AppState},
+    state::{AppState, gis::combined::StatefulLayerEnum},
 };
 
 #[tauri::command]

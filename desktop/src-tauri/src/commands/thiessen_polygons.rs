@@ -12,11 +12,11 @@ use proj::Transform;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    gdal_if::{get_driver_for_file, WrappedDataset},
+    gdal_if::{WrappedDataset, get_driver_for_file},
     geometry::{MultiPoint, Point, Polygon},
     state::{
-        gis::{dataset::StatefulDataset, vector::StatefulVectorInfo},
         AppState,
+        gis::{dataset::StatefulDataset, vector::StatefulVectorInfo},
     },
 };
 

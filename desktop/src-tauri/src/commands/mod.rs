@@ -13,9 +13,9 @@ mod vector;
 
 use std::path::Path;
 
-use specta_typescript::{formatter::prettier, BigIntExportBehavior, Typescript};
-use tauri::{ipc::Invoke, Wry};
-use tauri_specta::{collect_commands, collect_events, Builder};
+use specta_typescript::{BigIntExportBehavior, Typescript, formatter::prettier};
+use tauri::{Wry, ipc::Invoke};
+use tauri_specta::{Builder, collect_commands, collect_events};
 
 pub use crate::*;
 pub use audio::*;

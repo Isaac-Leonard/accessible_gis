@@ -14,7 +14,7 @@ pub use layer::*;
 pub use local_feature::*;
 pub use raster::*;
 
-use gdal::{vector::Envelope as GdalEnvelope, Driver, DriverManager, Metadata};
+use gdal::{Driver, DriverManager, Metadata, vector::Envelope as GdalEnvelope};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 pub use vector::*;

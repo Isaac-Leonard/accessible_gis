@@ -244,7 +244,9 @@ pub fn describe_polygon(polygon: Polygon, state: AppState, app: AppHandle) -> St
         .take(20)
         .flat_map(|town| town.get_name())
         .join(", ");
-    format!("A polygon with area {area}km and perimeter of {perimeter}km that has {number_of_exteria_points} exteria points, it intersects {country_names} and surrounds {towns}")
+    format!(
+        "A polygon with area {area}km and perimeter of {perimeter}km that has {number_of_exteria_points} exteria points, it intersects {country_names} and surrounds {towns}"
+    )
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, specta::Type)]

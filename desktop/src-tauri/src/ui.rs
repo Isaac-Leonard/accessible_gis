@@ -4,13 +4,13 @@ use local_ip_address::local_ip;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    FeatureInfo,
     gdal_if::{FieldSchema, FieldValue, LayerExt, LayerIndex},
     state::{
+        AppData,
         gis::{combined::RasterIndex, raster::RenderMethod},
         settings::{AudioSettings, GlobalSettings},
-        AppData,
     },
-    FeatureInfo,
 };
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]

@@ -2,7 +2,7 @@ use gdal::{Dataset, DatasetOptions, GdalOpenFlags};
 
 use crate::{
     gdal_if::WrappedDataset,
-    state::{gis::dataset::StatefulDataset, AppState, Screen},
+    state::{AppState, Screen, gis::dataset::StatefulDataset},
 };
 
 #[tauri::command]

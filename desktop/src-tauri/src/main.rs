@@ -20,10 +20,10 @@ pub use state::dataset_collection;
 
 use clap::Parser;
 use files::get_csv;
-use gdal::{vector::LayerAccess, Dataset};
+use gdal::{Dataset, vector::LayerAccess};
 use gdal_if::Field;
 use geometry::Geometry;
-use rstar::{primitives::GeomWithData, RTree};
+use rstar::{RTree, primitives::GeomWithData};
 use serde::{Deserialize, Serialize};
 use state::AppData;
 use tauri::Manager;

@@ -1,6 +1,6 @@
 use geo::{Contains, Intersects};
 use geo_types::{Geometry as GeoGeometry, Point, Polygon};
-use rstar::{primitives::GeomWithData, RTree, RTreeObject};
+use rstar::{RTree, RTreeObject, primitives::GeomWithData};
 
 use crate::{
     gdal_if::{Field, LocalFeatureInfo},

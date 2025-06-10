@@ -8,7 +8,7 @@ use crate::{
     dataset_collection::NonEmptyDelegatorImpl,
     gdal_if::{read_raster_data, read_raster_data_enum_as},
     geometry::Point,
-    state::{settings::AudioSettings, AppState},
+    state::{AppState, settings::AudioSettings},
     web_socket::{AppMessage, TouchDevice},
 };
 

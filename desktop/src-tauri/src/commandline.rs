@@ -3,14 +3,14 @@ use std::str::FromStr;
 use std::{path::PathBuf, process::exit, time::Duration};
 
 use clap::{Args, Parser, Subcommand};
-use gdal::{raster::StatisticsMinMax, Dataset};
+use gdal::{Dataset, raster::StatisticsMinMax};
 use itertools::Itertools;
 use ndarray::Array2;
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::audio::graph::{play_rasta, RasterGraphSettings};
-use crate::audio::{histogram::play_histogram, Waveform};
+use crate::audio::graph::{RasterGraphSettings, play_rasta};
+use crate::audio::{Waveform, histogram::play_histogram};
 use crate::gdal_if::read_raster_data;
 
 #[derive(Parser, Debug)]
@@ -274,7 +274,9 @@ fn gen_graph_options(
     let wave: Waveform = args.wave.into();
     let data = read_raster_data(&band);
     let Ok(StatisticsMinMax { min, max }) = band.compute_raster_min_max(false) else {
-        eprint!("Could not calculate the minimum and maximum pixel values of the specified band of the dataset");
+        eprint!(
+            "Could not calculate the minimum and maximum pixel values of the specified band of the dataset"
+        );
         exit(-1)
     };
     let no_data_value = band.no_data_value();

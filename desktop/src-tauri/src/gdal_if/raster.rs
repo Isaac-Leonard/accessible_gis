@@ -1,6 +1,6 @@
 use gdal::{
-    raster::{GdalDataType, RasterBand, ResampleAlg},
     GeoTransform, GeoTransformEx,
+    raster::{GdalDataType, RasterBand, ResampleAlg},
 };
 use geo_types::Point;
 use itertools::Itertools;

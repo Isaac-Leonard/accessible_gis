@@ -1,15 +1,15 @@
 use gdal::{
+    Dataset,
     raster::RasterBand,
     vector::{LayerAccess, LayerIterator},
-    Dataset,
 };
 use itertools::Itertools;
 
 use crate::{
-    dataset_collection::{get_default_field_name, IndexedLayer},
+    FeatureInfo,
+    dataset_collection::{IndexedLayer, get_default_field_name},
     gdal_if::{LayerIndex, WrappedDataset},
     state::settings::GlobalSettings,
-    FeatureInfo,
 };
 
 use super::{

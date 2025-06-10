@@ -1,7 +1,7 @@
 use tauri::AppHandle;
 use tauri::Manager;
 
-use crate::state::{settings::GlobalSettings, AppState, Screen};
+use crate::state::{AppState, Screen, settings::GlobalSettings};
 
 #[tauri::command]
 #[specta::specta]
