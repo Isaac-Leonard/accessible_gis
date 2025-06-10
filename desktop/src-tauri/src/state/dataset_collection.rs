@@ -158,14 +158,14 @@ pub enum DatasetCollection {
 impl NonEmptyDelegator for DatasetCollection {
     fn get_non_empty(&self) -> Option<&NonEmptyDatasetCollection> {
         match self {
-            Self::NonEmpty(ref datasets) => Some(datasets),
+            Self::NonEmpty(datasets) => Some(datasets),
             Self::Empty => None,
         }
     }
 
     fn get_non_empty_mut(&mut self) -> Option<&mut NonEmptyDatasetCollection> {
         match self {
-            Self::NonEmpty(ref mut datasets) => Some(datasets),
+            Self::NonEmpty(datasets) => Some(datasets),
             Self::Empty => None,
         }
     }

@@ -403,7 +403,7 @@ pub trait AsPoint {
 impl AsPoint for GeoGeometry {
     fn as_point(&self) -> Option<&GeoPoint> {
         match self {
-            Self::Point(ref p) => Some(p),
+            Self::Point(p) => Some(p),
             _ => None,
         }
     }
