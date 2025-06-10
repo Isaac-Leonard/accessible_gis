@@ -9,12 +9,14 @@
   "author": "Isaac Leonard",
   "workspaces": [
     "desktop",
+    "desktop/external-touch-device",
     "touch-device",
     "website"
   ],
   "license": "ISC",
   "dependencies": {
     "typescript": "^5.8.2",
-    "vite": "^6.2.2"
+    "vite": "^6.3.5",
+    "zod": "^3.24.2"
   }
 }
