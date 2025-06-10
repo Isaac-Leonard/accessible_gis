@@ -181,6 +181,13 @@ class GisManager {
       } else {
         speak("Tried to focus raster but no raster is loaded");
       }
+    } else if (msg.type === "FocusBox") {
+      speak("Focusing bounding box");
+      this.coordinateManager.focusScreen(
+        [msg.data[0], msg.data[3]],
+        [msg.data[2], msg.data[1]]
+      );
+      this.render();
     }
   }
 
