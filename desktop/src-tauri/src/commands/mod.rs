@@ -8,6 +8,7 @@ mod individual_settings;
 mod raster;
 mod settings;
 mod thiessen_polygons;
+mod touch_device;
 mod ui;
 mod vector;
 
@@ -28,6 +29,7 @@ pub use individual_settings::*;
 pub use raster::*;
 pub use settings::*;
 pub use thiessen_polygons::*;
+pub use touch_device::*;
 pub use ui::*;
 pub use vector::*;
 
@@ -87,6 +89,7 @@ pub fn generate_handlers(
             set_current_audio_settings,
             focus_raster,
             set_prefered_display_fields,
+            focus_box
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds

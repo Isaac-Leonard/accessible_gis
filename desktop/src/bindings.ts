@@ -224,6 +224,9 @@ export const commands = {
   async setPreferedDisplayFields(fields: string[]): Promise<void> {
     await TAURI_INVOKE("set_prefered_display_fields", { fields });
   },
+  async focusBox(bounds: [number, number, number, number]): Promise<void> {
+    await TAURI_INVOKE("focus_box", { bounds });
+  },
 };
 
 /** user-defined events **/
