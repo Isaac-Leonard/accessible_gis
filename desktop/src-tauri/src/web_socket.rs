@@ -129,6 +129,7 @@ pub async fn ws_handle(
 pub enum AppMessage {
     Gis(GisMessage),
     FocusRaster,
+    FocusBox([f64; 4]),
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
