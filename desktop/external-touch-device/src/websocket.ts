@@ -1,3 +1,5 @@
+import type { BBox } from "geojson";
+import { geoJsonParsers } from "touch-device";
 import { VectorSettings } from "touch-device";
 import { ZodType, z } from "zod";
 
@@ -82,7 +84,8 @@ export class WsConnection {
 export type AppMessage =
   | { type: "Image"; data: ImageMessage }
   | { type: "Gis"; data: GisMessage }
-  | { type: "FocusRaster" };
+  | { type: "FocusRaster" }
+  | { type: "FocusBox"; data: BBox };
 
 export type ImageMessage = { ocr: boolean };
 
@@ -111,4 +114,8 @@ const messageParser: ZodType<AppMessage> = z.union([
   z.object({ type: z.literal("Image"), data: z.object({ ocr: z.boolean() }) }),
   z.object({ type: z.literal("Gis"), data: GisParser }),
   z.object({ type: z.literal("FocusRaster") }),
+  z.object({
+    type: z.literal("FocusBox"),
+    data: geoJsonParsers.bBox,
+  }),
 ]);

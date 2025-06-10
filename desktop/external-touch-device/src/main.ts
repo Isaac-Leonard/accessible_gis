@@ -1,7 +1,7 @@
 import { Feature } from "geojson";
 import {
   VectorManager,
-  featureCollectionParser,
+  geoJsonParsers,
   pauseAudio,
   playAudio,
   setAudioFrequency,
@@ -189,7 +189,7 @@ class GisManager {
       const res = await fetch("get_vector");
       const geojson = await res
         .json()
-        .then((x) => featureCollectionParser.parse(x));
+        .then((x) => geoJsonParsers.featureCollection.parse(x));
       const features = geojson.features.filter(
         (nullableFeature): nullableFeature is Feature =>
           nullableFeature.geometry !== null
