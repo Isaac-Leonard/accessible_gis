@@ -1,5 +1,6 @@
 import { ReadonlySignal, Signal, computed, useComputed } from "@preact/signals";
 import { SetterName, setterName } from "./utils";
+import { Ref } from "preact";
 
 export type Binding<T> = Signal<T> | GetSet<T> | ComputedSetter<T>;
 
@@ -10,16 +11,16 @@ type ComputedSetter<T> = {
   setValue: (value: T) => void;
 };
 
-type InputProps = { label: string };
+type InputProps = { label: string; innerRef?: Ref<HTMLInputElement> };
 
 type BindedInputProps = { binding: Binding<string> } & InputProps;
 
-export const Input = ({ binding, label }: BindedInputProps) => {
+export const Input = ({ binding, label, innerRef }: BindedInputProps) => {
   return (
     <label>
       {label ?? ""}
       {binding instanceof Signal ? (
-        <SignalInput signal={binding} />
+        <SignalInput signal={binding} innerRef={innerRef} />
       ) : (
         <SetterInput {...binding} />
       )}
@@ -27,71 +28,98 @@ export const Input = ({ binding, label }: BindedInputProps) => {
   );
 };
 
-type SignalInputProps = { signal: Signal<string> };
+type SignalInputProps = {
+  signal: Signal<string>;
+  innerRef?: Ref<HTMLInputElement>;
+};
 
-export const SignalInput = ({ signal }: SignalInputProps) => {
+export const SignalInput = ({ signal, innerRef }: SignalInputProps) => {
   return (
     <input
       value={signal}
       onChange={(e) => {
         signal.value = e.currentTarget.value;
       }}
+      ref={innerRef}
     />
   );
+};
+
+type SetterInputProps = (ComputedSetter<string> | GetSet<string>) & {
+  innerRef?: Ref<HTMLInputElement>;
 };
 
 export const SetterInput = ({
   value,
   setValue,
-}: ComputedSetter<string> | GetSet<string>) => {
+  innerRef,
+}: SetterInputProps) => {
   return (
     <input
       value={value}
       onChange={(e) => {
         setValue(e.currentTarget.value);
       }}
+      ref={innerRef}
     />
   );
 };
 
 type BindedNumberInputProps = { binding: Binding<number> } & InputProps;
 
-export const NumberInput = ({ binding, label }: BindedNumberInputProps) => {
+export const NumberInput = ({
+  binding,
+  label,
+  innerRef,
+}: BindedNumberInputProps) => {
   return (
     <label>
       {label ?? ""}
       {binding instanceof Signal ? (
-        <SignalNumberInput signal={binding} />
+        <SignalNumberInput signal={binding} innerRef={innerRef} />
       ) : (
-        <SetterNumberInput {...binding} />
+        <SetterNumberInput {...binding} innerRef={innerRef} />
       )}
     </label>
   );
 };
 
-type SignalNumberInputProps = { signal: Signal<number> };
+type SignalNumberInputProps = {
+  signal: Signal<number>;
+  innerRef?: Ref<HTMLInputElement>;
+};
 
-export const SignalNumberInput = ({ signal }: SignalNumberInputProps) => {
+export const SignalNumberInput = ({
+  signal,
+  innerRef,
+}: SignalNumberInputProps) => {
   return (
     <input
       value={signal}
       onChange={(e) => {
         signal.value = Number(e.currentTarget.value);
       }}
+      ref={innerRef}
     />
   );
+};
+
+type SetterNumberInputProps = (ComputedSetter<number> | GetSet<number>) & {
+  innerRef?: Ref<HTMLInputElement>;
 };
 
 export const SetterNumberInput = ({
   value,
   setValue,
-}: ComputedSetter<number> | GetSet<number>) => {
+  innerRef,
+}: SetterNumberInputProps) => {
   return (
     <input
       value={value}
       onChange={(e) => {
         setValue(Number(e.currentTarget.value));
       }}
+      ref={innerRef}
     />
   );
 };
