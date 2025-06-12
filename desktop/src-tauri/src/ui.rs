@@ -20,6 +20,7 @@ pub enum UiScreen {
     ThiessenPolygons,
     NewDataset(NewDatasetScreenData),
     Settings(GlobalSettings),
+    TouchDevice,
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]

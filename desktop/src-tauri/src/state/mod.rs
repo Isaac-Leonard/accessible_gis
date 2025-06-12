@@ -101,4 +101,5 @@ pub enum Screen {
     Main,
     NewDataset,
     Settings,
+    TouchDevice,
 }

@@ -20,5 +20,6 @@ pub fn get_app_info(state: AppState) -> UiScreen {
             drivers: list_drivers(),
         }),
         Screen::Settings => UiScreen::Settings(state.settings().clone()),
+        Screen::TouchDevice => UiScreen::TouchDevice,
     })
 }

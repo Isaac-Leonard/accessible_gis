@@ -449,7 +449,7 @@ export type RenderMethod =
    * Render pure raster values mapped to 256 grey scale
    */
   | "GDAL";
-export type Screen = "Main" | "NewDataset" | "Settings";
+export type Screen = "Main" | "NewDataset" | "Settings" | "TouchDevice";
 export type Srs =
   | { type: "Proj"; value: string }
   | { type: "Wkt"; value: string }
@@ -465,7 +465,8 @@ export type UiScreen =
   | ({ name: "Layers" } & LayerScreen)
   | { name: "ThiessenPolygons" }
   | ({ name: "NewDataset" } & NewDatasetScreenData)
-  | ({ name: "Settings" } & GlobalSettings);
+  | ({ name: "Settings" } & GlobalSettings)
+  | { name: "TouchDevice" };
 export type VectorScreenData = {
   field_schema: FieldSchema[];
   features: FeatureIdentifier[];
