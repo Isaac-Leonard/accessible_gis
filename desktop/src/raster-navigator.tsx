@@ -143,7 +143,7 @@ const RasterNavigatorInner = ({
       >
         Display
       </button>
-      <button onClick={() => client.focusRaster()}>Zoom to raster</button>
+      <button onClick={() => client.focusDataset()}>Zoom to raster</button>
       <div onKeyDown={coordinateArrowHandler(x, y, radius, setCoords)}>
         <CoordinateButtons x={x} y={y} radius={radius} setCoords={setCoords} />
 

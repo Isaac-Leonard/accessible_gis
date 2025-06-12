@@ -1,14 +1,15 @@
 use std::{cmp::Ordering, process::Command};
 
+use gdal::vector::LayerAccess;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::{
     dataset_collection::NonEmptyDelegatorImpl,
-    gdal_if::{read_raster_data, read_raster_data_enum_as},
+    gdal_if::{LayerIndex, read_raster_data, read_raster_data_enum_as},
     geometry::Point,
-    state::{AppState, settings::AudioSettings},
+    state::{AppState, gis::combined::StatefulLayerEnum, settings::AudioSettings},
     web_socket::{AppMessage, TouchDevice},
 };
 
@@ -252,6 +253,22 @@ pub struct RasterSize {
 
 #[tauri::command]
 #[specta::specta]
-pub fn focus_raster(device: State<TouchDevice>) {
-    device.send(AppMessage::FocusRaster);
+pub fn focus_dataset(state: AppState, device: State<TouchDevice>) {
+    state.with_current_layer_mut(|layer| match layer {
+        StatefulLayerEnum::Raster(band) => {
+            let [ulx, xres, xskew, uly, yskew, yres] = band.band.geo_transform.clone().unwrap();
+            let lrx = ulx + (band.band.band().x_size() as f64 * xres);
+            let lry = uly + (band.band.band().y_size() as f64 * yres);
+            device.send(AppMessage::FocusBox([ulx, lry, lrx, uly]));
+        }
+        StatefulLayerEnum::Vector(mut layer) => {
+            let extent = layer.layer.layer().get_extent().unwrap();
+            device.send(AppMessage::FocusBox([
+                extent.MinX,
+                extent.MinY,
+                extent.MaxX,
+                extent.MaxY,
+            ]));
+        }
+    });
 }

@@ -24,7 +24,10 @@ export const VectorNavigator = ({ layer }: VectorLayerProp) => {
       <LayerSimplifierDialog />
       {layer.editable ? <DatasetEditor layer={layer} /> : <EditDatasetButton />}
       {layer.display ? (
-        <div>Displayed</div>
+        <>
+          <div>Displayed</div>
+          <button onClick={client.focusDataset}>Focus Layer</button>
+        </>
       ) : (
         <button onClick={client.setDisplayVector}>Show on screen</button>
       )}
