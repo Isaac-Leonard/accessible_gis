@@ -4,6 +4,7 @@ import { NewDatasetScreen } from "./new-dataset-screen";
 import { state } from "./api";
 import { SettingsScreen } from "./settings-screen";
 import { LayerScreenContext } from "./context";
+import { TouchDeviceScreen } from "./touch-device-screen";
 
 export const Router = () => {
   switch (state.value.name) {
@@ -20,5 +21,7 @@ export const Router = () => {
       return <NewDatasetScreen drivers={state.value.drivers} />;
     case "Settings":
       return <SettingsScreen settings={state.value} />;
+    case "TouchDevice":
+      return <TouchDeviceScreen />;
   }
 };
