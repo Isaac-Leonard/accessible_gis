@@ -21,8 +21,10 @@ function App() {
       <button onClick={() => client.setScreen("NewDataset")}>
         New dataset
       </button>
-      <button onClick={() => {}}>Tools</button>
       <button onClick={() => client.openSettings()}>Settings</button>
+      <button onClick={() => client.setScreen("TouchDevice")}>
+        Touch Device
+      </button>
       <Router />
     </div>
   );
