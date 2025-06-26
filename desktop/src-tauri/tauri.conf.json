@@ -8,7 +8,8 @@
     "bundle": {
 	"resources":{
 	    "../data": "data",
-	    "../external-touch-device/dist": "external-touch-device"
+	    "../external-touch-device/dist": "external-touch-device",
+	    "../../scripts": "scripts"
 	},
     "active": true,
     "targets": "all",
