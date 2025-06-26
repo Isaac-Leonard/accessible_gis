@@ -3,8 +3,11 @@ use std::{
     process::{Command, Output},
 };
 
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, path::BaseDirectory};
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(tag = "type", content = "error")]
 pub enum DemClassificationError {
     Geomorphons(String),
     Polygonise(String),
@@ -16,7 +19,7 @@ pub fn dem_to_landform_polygons(
     input: PathBuf,
     search: usize,
     threshold: f64,
-    distance: f64,
+    distance: usize,
     filter: usize,
     app: AppHandle,
 ) -> Result<PathBuf, DemClassificationError> {
@@ -53,7 +56,7 @@ fn geomorphons(
     output: &PathBuf,
     search: usize,
     threshold: f64,
-    distance: f64,
+    distance: usize,
 ) -> Output {
     let mut command = wbt();
     command.args(["-r", "Geomorphons", "-v"]);
