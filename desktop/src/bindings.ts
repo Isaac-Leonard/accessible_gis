@@ -227,6 +227,27 @@ export const commands = {
   async focusBox(bounds: [number, number, number, number]): Promise<void> {
     await TAURI_INVOKE("focus_box", { bounds });
   },
+  async classifyLandforms(
+    search: number,
+    threshold: number,
+    distance: number,
+    filter: number
+  ): Promise<Result<null, DemClassificationError>> {
+    try {
+      return {
+        status: "ok",
+        data: await TAURI_INVOKE("classify_landforms", {
+          search,
+          threshold,
+          distance,
+          filter,
+        }),
+      };
+    } catch (e) {
+      if (e instanceof Error) throw e;
+      else return { status: "error", error: e as any };
+    }
+  },
 };
 
 /** user-defined events **/
@@ -268,6 +289,11 @@ export type ClosedLineDescription = {
   distances: number;
   number_of_points: number;
 };
+export type DemClassificationError =
+  | { type: "Geomorphons"; error: string }
+  | { type: "Polygonise"; error: string }
+  | { type: "MajorityFilter"; error: string }
+  | { type: "LabelLandForms"; error: string };
 export type DistanceFromBoarder = { name: string; distance: number };
 export type Duration = { secs: number; nanos: number };
 export type FeatureIdentifier = { name: string | null; fid: number };

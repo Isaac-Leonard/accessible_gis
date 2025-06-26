@@ -1,6 +1,11 @@
+use std::path::PathBuf;
+
+use tauri::AppHandle;
+
 use crate::{
     gdal_if::processing::{aspect, roughness, slope},
     state::AppState,
+    tools::{DemClassificationError, dem_to_landform_polygons},
 };
 
 macro_rules! gen_processing_command {
@@ -26,3 +31,27 @@ macro_rules! gen_processing_command {
 gen_processing_command!(calc_slope, slope);
 gen_processing_command!(calc_aspect, aspect);
 gen_processing_command!(calc_roughness, roughness);
+
+#[tauri::command]
+#[specta::specta]
+pub fn classify_landforms(
+    search: usize,
+    threshold: f64,
+    distance: usize,
+    filter: usize,
+    app: AppState,
+    handle: AppHandle,
+) -> Result<(), DemClassificationError> {
+    let res = app
+        .with_current_raster_band(|band| {
+            let input = band.info.shared.name.parse::<PathBuf>().unwrap();
+            dem_to_landform_polygons(input, search, threshold, distance, filter, handle)
+        })
+        .unwrap()?;
+    app.with_lock(|state| {
+        state
+            .open_dataset(res.to_string_lossy().to_string())
+            .unwrap();
+    });
+    Ok(())
+}

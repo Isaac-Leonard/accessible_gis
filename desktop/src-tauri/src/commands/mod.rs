@@ -89,7 +89,8 @@ pub fn generate_handlers(
             set_current_audio_settings,
             focus_dataset,
             set_prefered_display_fields,
-            focus_box
+            focus_box,
+            classify_landforms,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds
