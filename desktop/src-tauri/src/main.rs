@@ -11,6 +11,7 @@ mod math;
 mod server;
 mod state;
 mod stats;
+mod tools;
 mod ui;
 mod web_socket;
 
