@@ -1,4 +1,5 @@
 mod dataset;
+mod errors;
 mod field_schema;
 mod fields;
 mod layer;
