@@ -264,9 +264,10 @@ export const events = __makeEvents__<{
 
 /** user-defined types **/
 
-export type ApplicationError =
-  | { type: "ExternalProgramError" }
-  | { type: "Other"; error: string };
+export type ApplicationError = (
+  | { type: "ExternalProgramError"; error: DemClassificationError }
+  | { type: "Other"; error: string }
+) & { read: boolean };
 export type AudioIndicator =
   | "Silence"
   | "MinFreq"
