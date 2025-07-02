@@ -1,5 +1,5 @@
 use std::{
-    path::PathBuf,
+    path::Path,
     process::{Command, Output},
 };
 
@@ -16,8 +16,8 @@ pub enum DemClassificationError {
 }
 
 pub fn dem_to_landform_polygons(
-    input: &PathBuf,
-    output: &PathBuf,
+    input: impl AsRef<Path>,
+    output: impl AsRef<Path>,
     search: usize,
     threshold: f64,
     distance: usize,
@@ -45,23 +45,23 @@ pub fn dem_to_landform_polygons(
         filter,
     ))
     .map_err(DemClassificationError::MajorityFilter)?;
-    proc_to_result(polygonise(&majority_filter_output, output))
+    proc_to_result(polygonise(&majority_filter_output, output.as_ref()))
         .map_err(DemClassificationError::Polygonise)?;
     proc_to_result(label_landforms(output, app)).map_err(DemClassificationError::LabelLandForms)?;
     Ok(())
 }
 
 fn geomorphons(
-    input: &PathBuf,
-    output: &PathBuf,
+    input: impl AsRef<Path>,
+    output: impl AsRef<Path>,
     search: usize,
     threshold: f64,
     distance: usize,
 ) -> Output {
     let mut command = wbt();
     command.args(["-r", "Geomorphons", "-v"]);
-    command.arg("--dem").arg(input);
-    command.arg("-o").arg(output);
+    command.arg("--dem").arg(input.as_ref());
+    command.arg("-o").arg(output.as_ref());
     command.arg("--search").arg(search.to_string().as_str());
     command
         .arg("--threshold")
@@ -72,22 +72,22 @@ fn geomorphons(
     command.output().unwrap()
 }
 
-fn majority_filter(input: &PathBuf, output: &PathBuf, filter: usize) -> Output {
+fn majority_filter(input: impl AsRef<Path>, output: impl AsRef<Path>, filter: usize) -> Output {
     let mut command = wbt();
     command.args(["-r", "MajorityFilter"]);
-    command.arg("-i").arg(input);
-    command.arg("-o").arg(output);
+    command.arg("-i").arg(input.as_ref());
+    command.arg("-o").arg(output.as_ref());
     command.arg("--filter").arg(filter.to_string().as_str());
     command.output().unwrap()
 }
 
-fn polygonise(input: &PathBuf, output: &PathBuf) -> Output {
+fn polygonise(input: impl AsRef<Path>, output: impl AsRef<Path>) -> Output {
     let mut command = Command::new("gdal_polygonize");
-    command.arg(input).arg(output);
+    command.arg(input.as_ref()).arg(output.as_ref());
     command.output().unwrap()
 }
 
-fn label_landforms(input: &PathBuf, app: AppHandle) -> Output {
+fn label_landforms(input: impl AsRef<Path>, app: AppHandle) -> Output {
     let path = app.path();
     let mut command = Command::new("python3.13");
     command
@@ -95,7 +95,7 @@ fn label_landforms(input: &PathBuf, app: AppHandle) -> Output {
             path.resolve("scripts/label_geomorphons.py", BaseDirectory::Resource)
                 .unwrap(),
         )
-        .arg(input)
+        .arg(input.as_ref())
         .arg("dn");
     command.output().unwrap()
 }
