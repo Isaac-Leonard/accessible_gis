@@ -28,7 +28,7 @@ num-traits = "0.2.18"
 statrs = "0.16.0"
 rstar = {"version" = "0.12.0", "features" = [ "serde", "mint"] }
 mint = "0.5.9"
-specta = { "version" = "=2.0.0-rc.20", "features" = ["function"] }
+specta = { "version" = "=2.0.0-rc.20", "features" = ["function", "uuid"] }
 tauri-specta = { version = "=2.0.0-rc.20", features = ["javascript", "typescript", "derive"] }
 enum-as-inner = "0.6.0"
 chrono = "0.4.38"
@@ -50,6 +50,7 @@ clap = { version = "4.5.11", features = ["derive"] }
 fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 specta-typescript = "0.0.7"
 proj = {"version"="0.28.0"}
+uuid = {version="1.17.0", features = ["v4"] }
 
 [patch.crates-io]
 #proj-sys= {"git" = "https://github.com/Isaac-Leonard/proj-rs", "ref" = "bfb4c1799e74e60f6abe58abe1c1f8db70bc83b3"}

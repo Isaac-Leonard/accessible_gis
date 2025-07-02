@@ -51,6 +51,7 @@ dependencies = [
  "tauri-plugin-shell",
  "tauri-specta",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -4779,6 +4780,7 @@ dependencies = [
  "paste",
  "specta-macros",
  "thiserror 1.0.69",
+ "uuid",
 ]
 
 [[package]]
