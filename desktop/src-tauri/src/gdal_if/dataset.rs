@@ -1,4 +1,4 @@
-use std::{ffi::c_int, path::Path};
+use std::path::{Path, PathBuf};
 
 use gdal::{Dataset, DriverManager, errors::GdalError, spatial_ref::SpatialRef, vector::Layer};
 use itertools::Itertools;
@@ -7,10 +7,10 @@ use strum::{EnumDiscriminants, EnumIter};
 
 use crate::dataset_collection::IndexedLayer;
 
-use super::{LayerEnum, WrappedLayer, raster::WrappedRasterBand};
+use super::{LayerEnum, WrappedLayer, errors::MyGdalError, raster::WrappedRasterBand};
 
 pub struct WrappedDataset {
-    pub file_name: String,
+    pub file_name: PathBuf,
     pub dataset: Dataset,
     pub editable: bool,
 }
@@ -68,36 +68,51 @@ impl WrappedDataset {
         self.dataset.flush_cache()
     }
 
-    pub fn open(name: impl AsRef<Path>) -> Result<Self, String> {
-        let dataset = Dataset::open(&name).map_err(|_| "Something went wrong".to_owned())?;
+    pub fn open(name: impl AsRef<Path>) -> Result<Self, OpenDatasetError> {
         Ok(WrappedDataset {
-            file_name: name.as_ref().to_str().unwrap().to_owned(),
-            dataset,
+            file_name: name.as_ref().to_path_buf(),
+            dataset: Dataset::open(&name).map_err(|err| OpenDatasetError {
+                name: name.as_ref().to_path_buf(),
+                gdal_error: err.into(),
+            })?,
             editable: false,
         })
     }
 
     /// Sometimes we need to manually open or create a dataset and need a way to wrap it
     /// We assume for now that it is not editable
-    pub fn wrap_existing(dataset: Dataset, file_name: String) -> Self {
+    pub fn wrap_existing(dataset: Dataset, file_name: impl AsRef<Path>) -> Self {
         Self {
-            file_name,
+            file_name: file_name.as_ref().to_path_buf(),
             dataset,
             editable: false,
         }
     }
 
-    pub fn new_vector(name: String, driver: String) -> Result<Self, String> {
-        let driver = DriverManager::get_driver_by_name(&driver)
-            .map_err(|_| format!("Failed to get driver for {driver}"))?;
-        let mut dataset = driver
-            .create_vector_only(&name)
-            .map_err(|_| format!("Failed to create dataset for file {name} with driver {name}"))?;
-        dataset
-            .flush_cache()
-            .map_err(|_| "Failed to save new dataset to disc".to_string())?;
+    pub fn new_vector(
+        name: impl AsRef<Path>,
+        driver: String,
+    ) -> Result<Self, DatasetCreationError> {
+        let driver = DriverManager::get_driver_by_name(&driver).map_err(|err| {
+            DatasetCreationError::DriverError(MissingDriverError {
+                driver,
+                gdal_error: err.into(),
+            })
+        })?;
+        let mut dataset = driver.create_vector_only(&name).map_err(|err| {
+            DatasetCreationError::CreationError(CreationError {
+                file: name.as_ref().to_path_buf(),
+                driver: driver.long_name(),
+                gdal_error: err.into(),
+            })
+        })?;
+        dataset.flush_cache().map_err(|err| {
+            DatasetCreationError::FlushCacheError(FlushCacheError {
+                gdal_error: err.into(),
+            })
+        })?;
         Ok(WrappedDataset {
-            file_name: name,
+            file_name: name.as_ref().to_path_buf(),
             dataset,
             editable: true,
         })
@@ -159,4 +174,35 @@ impl Srs {
             Srs::Epsg(epsg_code) => SpatialRef::from_epsg(epsg_code),
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
+pub enum DatasetCreationError {
+    CreationError(CreationError),
+    DriverError(MissingDriverError),
+    FlushCacheError(FlushCacheError),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
+pub struct CreationError {
+    pub file: PathBuf,
+    pub driver: String,
+    pub gdal_error: MyGdalError,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
+pub struct MissingDriverError {
+    pub driver: String,
+    pub gdal_error: MyGdalError,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
+pub struct FlushCacheError {
+    gdal_error: MyGdalError,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
+pub struct OpenDatasetError {
+    pub name: PathBuf,
+    pub gdal_error: MyGdalError,
 }

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, vec::IntoIter};
+use std::{collections::HashMap, path::Path, vec::IntoIter};
 
 use gdal::{Dataset, vector::LayerAccess};
 use geo::{Closest, ClosestPoint, Contains, GeodesicDistance};
@@ -8,8 +8,8 @@ use tauri::{Runtime, Wry, path::PathResolver};
 
 use crate::{
     dataset_collection::DatasetCollection,
-    errors::ApplicationError,
-    gdal_if::{LocalFeatureInfo, WrappedDataset},
+    errors::{ApplicationError, ErrorDetails},
+    gdal_if::{LocalFeatureInfo, OpenDatasetError, WrappedDataset},
     geometry::AsPoint,
     web_socket::{GisMessage, RasterMessage, VectorMessage},
 };
@@ -46,8 +46,18 @@ impl AppData {
             },
         })
     }
-    pub fn open_dataset(&mut self, name: String) -> Result<&mut StatefulDataset, String> {
-        self.shared.datasets.open(name, &self.settings)
+    pub fn open_dataset(
+        &mut self,
+        name: impl AsRef<Path>,
+    ) -> Result<&mut StatefulDataset, OpenDatasetError> {
+        match self.shared.datasets.open(name, &self.settings) {
+            Ok(dataset) => Ok(dataset),
+            Err(err) => {
+                self.errors
+                    .push(ErrorDetails::OpenDatasetError(err.clone()).into());
+                Err(err)
+            }
+        }
     }
 
     pub fn new<R: Runtime>(resolver: &PathResolver<R>) -> Self {

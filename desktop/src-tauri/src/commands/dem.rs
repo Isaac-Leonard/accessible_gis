@@ -21,7 +21,7 @@ macro_rules! gen_processing_command {
         						"Attempted to operate on current dataset but there is no current dataset selected",
         					);
                 match res {
-                    Err(e) => state.errors.push(ErrorDetails::Other(e.to_string()).into()),
+                    Err(e) => state.errors.push(e),
                     _ => {}
                 }
             })
@@ -45,8 +45,8 @@ pub fn classify_landforms(
     handle: AppHandle,
 ) -> Result<(), DemClassificationError> {
     app.with_current_raster_band(|band| {
-        let input = band.info.shared.name.parse::<PathBuf>().unwrap();
-        dem_to_landform_polygons(&input, &output, search, threshold, distance, filter, handle)
+        let input = &band.info.shared.name;
+        dem_to_landform_polygons(input, &output, search, threshold, distance, filter, handle)
             .unwrap()
     })
     .unwrap();

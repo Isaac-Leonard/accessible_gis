@@ -108,7 +108,7 @@ pub fn theissen_polygons_to_file(points: MultiPoint, srs: String, file: PathBuf,
     dataset.flush_cache().unwrap();
     let mut guard = state.data.lock().unwrap();
     let wrapped_dataset = WrappedDataset {
-        file_name: file.to_string_lossy().to_string(),
+        file_name: file,
         dataset,
         editable: true,
     };

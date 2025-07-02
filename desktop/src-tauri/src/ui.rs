@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use gdal::vector::LayerAccess;
 use itertools::Itertools;
 use local_ip_address::local_ip;
@@ -14,7 +16,7 @@ use crate::{
     },
 };
 
-#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+#[derive(Clone, Serialize, PartialEq, Debug, specta::Type)]
 pub struct UiState {
     pub screen: UiScreen,
     pub errors: Vec<ApplicationError>,
@@ -168,5 +170,5 @@ pub struct LayerDescriptor {
     pub dataset: usize,
     #[serde(flatten)]
     pub band: LayerIndex,
-    pub dataset_file: String,
+    pub dataset_file: PathBuf,
 }

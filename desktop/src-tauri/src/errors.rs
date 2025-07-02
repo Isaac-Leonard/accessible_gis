@@ -1,18 +1,25 @@
 use serde::{Deserialize, Serialize};
 
-use crate::tools::DemClassificationError;
+use crate::{
+    commands::EditDatasetError,
+    gdal_if::{DatasetCreationError, OpenDatasetError},
+    tools::DemClassificationError,
+};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+#[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
 pub struct ApplicationError {
     #[serde(flatten)]
     pub details: ErrorDetails,
     pub read: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+#[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
 #[serde(tag = "type", content = "error")]
 pub enum ErrorDetails {
     ExternalProgramError(DemClassificationError),
+    DatasetCreationError(DatasetCreationError),
+    EditDatasetError(EditDatasetError),
+    OpenDatasetError(OpenDatasetError),
     Other(String),
 }
 

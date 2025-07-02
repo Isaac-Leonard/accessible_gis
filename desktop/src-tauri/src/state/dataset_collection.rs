@@ -1,9 +1,12 @@
-use std::slice::{Iter, IterMut};
+use std::{
+    path::{Path, PathBuf},
+    slice::{Iter, IterMut},
+};
 
 use gdal::vector::Layer;
 
 use crate::{
-    gdal_if::{LayerEnum, LayerExt, LayerIndex, WrappedDataset},
+    gdal_if::{LayerEnum, LayerExt, LayerIndex, OpenDatasetError, WrappedDataset},
     ui::LayerDescriptor,
 };
 
@@ -201,9 +204,9 @@ impl DatasetCollection {
 
     pub fn open(
         &mut self,
-        name: String,
+        name: impl AsRef<Path>,
         settings: &GlobalSettings,
-    ) -> Result<&mut StatefulDataset, String> {
+    ) -> Result<&mut StatefulDataset, OpenDatasetError> {
         let dataset = WrappedDataset::open(name)?;
         Ok(self.add(StatefulDataset::new(dataset, settings)))
     }
@@ -249,7 +252,7 @@ impl DatasetCollection {
 }
 
 pub struct IndexedDatasetLayer<'a> {
-    ds_file: String,
+    ds_file: PathBuf,
     dataset_index: usize,
     layer: IndexedLayer<'a>,
 }

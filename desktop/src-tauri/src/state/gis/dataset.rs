@@ -8,7 +8,7 @@ use itertools::Itertools;
 use crate::{
     FeatureInfo,
     dataset_collection::{IndexedLayer, get_default_field_name},
-    gdal_if::{LayerIndex, WrappedDataset},
+    gdal_if::{LayerIndex, OpenDatasetError, WrappedDataset},
     state::settings::GlobalSettings,
 };
 
@@ -27,7 +27,7 @@ pub struct StatefulDataset {
 }
 
 impl StatefulDataset {
-    fn open(name: String, settings: &GlobalSettings) -> Result<Self, String> {
+    fn open(name: String, settings: &GlobalSettings) -> Result<Self, OpenDatasetError> {
         Ok(Self::new(WrappedDataset::open(name)?, settings))
     }
 

@@ -3,13 +3,8 @@
 /** user-defined commands **/
 
 export const commands = {
-  async loadFile(name: string): Promise<Result<null, string>> {
-    try {
-      return { status: "ok", data: await TAURI_INVOKE("load_file", { name }) };
-    } catch (e) {
-      if (e instanceof Error) throw e;
-      else return { status: "error", error: e as any };
-    }
+  async loadFile(name: string): Promise<void> {
+    await TAURI_INVOKE("load_file", { name });
   },
   async getAppInfo(): Promise<UiState> {
     return await TAURI_INVOKE("get_app_info");
@@ -91,19 +86,8 @@ export const commands = {
       else return { status: "error", error: e as any };
     }
   },
-  async createNewDataset(
-    driverName: string,
-    file: string
-  ): Promise<Result<null, string>> {
-    try {
-      return {
-        status: "ok",
-        data: await TAURI_INVOKE("create_new_dataset", { driverName, file }),
-      };
-    } catch (e) {
-      if (e instanceof Error) throw e;
-      else return { status: "error", error: e as any };
-    }
+  async createNewDataset(driverName: string, file: string): Promise<void> {
+    await TAURI_INVOKE("create_new_dataset", { driverName, file });
   },
   async addFieldToSchema(
     name: string,
@@ -119,13 +103,8 @@ export const commands = {
       else return { status: "error", error: e as any };
     }
   },
-  async editDataset(): Promise<Result<null, string>> {
-    try {
-      return { status: "ok", data: await TAURI_INVOKE("edit_dataset") };
-    } catch (e) {
-      if (e instanceof Error) throw e;
-      else return { status: "error", error: e as any };
-    }
+  async editDataset(): Promise<void> {
+    await TAURI_INVOKE("edit_dataset");
   },
   async addFeatureToLayer(feature: FeatureInfo): Promise<Result<null, string>> {
     try {
@@ -269,6 +248,9 @@ export const events = __makeEvents__<{
 
 export type ApplicationError = (
   | { type: "ExternalProgramError"; error: DemClassificationError }
+  | { type: "DatasetCreationError"; error: DatasetCreationError }
+  | { type: "EditDatasetError"; error: EditDatasetError }
+  | { type: "OpenDatasetError"; error: OpenDatasetError }
   | { type: "Other"; error: string }
 ) & { read: boolean };
 export type AudioIndicator =
@@ -298,6 +280,15 @@ export type ClosedLineDescription = {
   distances: number;
   number_of_points: number;
 };
+export type CreationError = {
+  file: string;
+  driver: string;
+  gdal_error: MyGdalError;
+};
+export type DatasetCreationError =
+  | { CreationError: CreationError }
+  | { DriverError: MissingDriverError }
+  | { FlushCacheError: FlushCacheError };
 export type DemClassificationError =
   | { type: "Geomorphons"; error: string }
   | { type: "Polygonise"; error: string }
@@ -306,6 +297,7 @@ export type DemClassificationError =
   | { type: "FailToRun"; error: string };
 export type DistanceFromBoarder = { name: string; distance: number };
 export type Duration = { secs: number; nanos: number };
+export type EditDatasetError = { OpenError: OpenDatasetError };
 export type FeatureIdentifier = { name: string | null; fid: number };
 export type FeatureInfo = {
   fields: Field[];
@@ -383,6 +375,7 @@ export type FieldType =
    * List of 64 bit integers
    */
   | "OFTInteger64List";
+export type FlushCacheError = { gdal_error: MyGdalError };
 export type Geometry =
   | ({ type: "Point" } & Point)
   | ({ type: "Line" } & Line)
@@ -431,10 +424,58 @@ export type LineDescription =
   | ({ type: "Open" } & OpenLineDescription);
 export type LineString = { points: Point[] };
 export type MessageEvent = null;
+export type MissingDriverError = { driver: string; gdal_error: MyGdalError };
 export type MultiLineString = { lines: LineString[] };
 export type MultiPoint = { points: Point[] };
 export type MultiPolygon = { polygons: Polygon[] };
+export type MyExtendedDataTypeClass = "Compound" | "Numeric" | "String";
+export type MyGdalError =
+  | { kind: "FfiNulError"; data: MyNulError }
+  | { kind: "FfiIntoStringError"; data: MyIntoStringError }
+  | { kind: "StrUtf8Error"; data: MyUtf8Error }
+  | { kind: "NdarrayShapeError"; data: MyShapeError }
+  | { kind: "CplError"; data: { class: number; number: number; msg: string } }
+  | { kind: "NullPointer"; data: { method_name: string; msg: string } }
+  | { kind: "CastToF64Error" }
+  | { kind: "OgrError"; data: { err: number; method_name: string } }
+  | {
+      kind: "UnhandledFieldType";
+      data: { field_type: number; method_name: string };
+    }
+  | {
+      kind: "InvalidFieldName";
+      data: { field_name: string; method_name: string };
+    }
+  | { kind: "InvalidFieldIndex"; data: { index: number; method_name: string } }
+  | { kind: "UnlinkedGeometry"; data: { method_name: string } }
+  | {
+      kind: "InvalidCoordinateRange";
+      data: { from: string; to: string; msg: string | null };
+    }
+  | { kind: "AxisNotFoundError"; data: { key: string; method_name: string } }
+  | { kind: "UnsupportedGdalGeometryType"; data: number }
+  | { kind: "UnlinkMemFile"; data: { file_name: string } }
+  | { kind: "BadArgument"; data: string }
+  | { kind: "DateError"; data: string }
+  | {
+      kind: "UnsupportedMdDataType";
+      data: { data_type: MyExtendedDataTypeClass; method_name: string };
+    }
+  | { kind: "IntConversionError"; data: null }
+  | { kind: "BufferSizeMismatch"; data: [number, [number, number]] };
+export type MyIntoStringError = { inner: string; error: MyUtf8Error };
+export type MyNulError = [number, number[]];
+export type MyShapeError =
+  | "IncompatibleShape"
+  | "IncompatibleLayout"
+  | "RangeLimited"
+  | "OutOfBounds"
+  | "Unsupported"
+  | "Overflow"
+  | "Other";
+export type MyUtf8Error = { valid_up_to: number; error_len: number | null };
 export type NewDatasetScreenData = { drivers: string[] };
+export type OpenDatasetError = { name: string; gdal_error: MyGdalError };
 export type OpenLineDescription = {
   x: number;
   y: number;
