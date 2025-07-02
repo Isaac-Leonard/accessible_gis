@@ -250,6 +250,9 @@ export const commands = {
       else return { status: "error", error: e as any };
     }
   },
+  async markErrorRead(index: number): Promise<void> {
+    await TAURI_INVOKE("mark_error_read", { index });
+  },
 };
 
 /** user-defined events **/

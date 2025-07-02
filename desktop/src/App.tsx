@@ -1,7 +1,8 @@
 import "./App.css";
 import { Router } from "./router";
-import { client } from "./api";
+import { client, state } from "./api";
 import { load } from "./files";
+import { ErrorsPopup } from "./errors-screen";
 
 const globalKeyHandler = (e: KeyboardEvent) => {
   if (e.metaKey) {
@@ -26,6 +27,7 @@ function App() {
         Touch Device
       </button>
       <Router />
+      <ErrorsPopup />
     </div>
   );
 }

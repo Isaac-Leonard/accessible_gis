@@ -26,3 +26,9 @@ pub fn get_app_info(state: AppState) -> UiState {
         errors: state.errors.clone(),
     })
 }
+
+#[tauri::command]
+#[specta::specta]
+pub fn mark_error_read(index: usize, state: AppState) {
+    state.with_lock(|state| state.errors[index].read = false)
+}

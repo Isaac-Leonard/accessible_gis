@@ -91,6 +91,7 @@ pub fn generate_handlers(
             set_prefered_display_fields,
             focus_box,
             classify_landforms,
+            mark_error_read,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds
