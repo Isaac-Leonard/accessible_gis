@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 use crate::{
     gdal_if::list_drivers,
     state::{AppState, Screen},
@@ -22,13 +24,14 @@ pub fn get_app_info(state: AppState) -> UiState {
             }),
             Screen::Settings => UiScreen::Settings(state.settings().clone()),
             Screen::TouchDevice => UiScreen::TouchDevice,
+            Screen::Errors => UiScreen::Errors,
         },
-        errors: state.errors.clone(),
+        errors: state.errors.to_vec(),
     })
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn mark_error_read(index: usize, state: AppState) {
-    state.with_lock(|state| state.errors[index].read = false)
+pub fn mark_error_read(id: Uuid, state: AppState) {
+    state.with_lock(|state| state.errors.get(id).unwrap().read = true)
 }

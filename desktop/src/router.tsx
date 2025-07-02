@@ -24,6 +24,6 @@ export const Router = () => {
     case "TouchDevice":
       return <TouchDeviceScreen />;
     case "Errors":
-      <ErrorsScreen errors={state.value.errors} />;
+      return <ErrorsScreen errors={state.value.errors} />;
   }
 };

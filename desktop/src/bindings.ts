@@ -229,8 +229,8 @@ export const commands = {
       else return { status: "error", error: e as any };
     }
   },
-  async markErrorRead(index: number): Promise<void> {
-    await TAURI_INVOKE("mark_error_read", { index });
+  async markErrorRead(id: string): Promise<void> {
+    await TAURI_INVOKE("mark_error_read", { id });
   },
 };
 
@@ -252,7 +252,7 @@ export type ApplicationError = (
   | { type: "EditDatasetError"; error: EditDatasetError }
   | { type: "OpenDatasetError"; error: OpenDatasetError }
   | { type: "Other"; error: string }
-) & { read: boolean };
+) & { read: boolean; id: string };
 export type AudioIndicator =
   | "Silence"
   | "MinFreq"
@@ -526,7 +526,12 @@ export type RenderMethod =
    * Render pure raster values mapped to 256 grey scale
    */
   | "GDAL";
-export type Screen = "Main" | "NewDataset" | "Settings" | "TouchDevice";
+export type Screen =
+  | "Main"
+  | "NewDataset"
+  | "Settings"
+  | "TouchDevice"
+  | "Errors";
 export type Srs =
   | { type: "Proj"; value: string }
   | { type: "Wkt"; value: string }

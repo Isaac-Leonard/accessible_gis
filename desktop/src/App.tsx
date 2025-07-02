@@ -18,6 +18,7 @@ const globalKeyHandler = (e: KeyboardEvent) => {
 function App() {
   return (
     <div onKeyDown={globalKeyHandler}>
+      <ErrorsPopup />
       <button onClick={() => client.setScreen("Main")}>Main</button>
       <button onClick={() => client.setScreen("NewDataset")}>
         New dataset
@@ -26,8 +27,8 @@ function App() {
       <button onClick={() => client.setScreen("TouchDevice")}>
         Touch Device
       </button>
+      <button onClick={() => client.setScreen("Errors")}>Errors</button>
       <Router />
-      <ErrorsPopup />
     </div>
   );
 }

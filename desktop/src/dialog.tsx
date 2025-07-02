@@ -29,7 +29,6 @@ export const Dialog = ({
         ref.current?.show();
       }
     } else {
-      onClose?.();
       ref.current?.close();
     }
   }, [open, modal]);
@@ -44,7 +43,13 @@ export const Dialog = ({
       <button ref={closeRef} onClick={() => setOpen(true)}>
         {openText}
       </button>
-      <dialog onClose={() => setOpen(false)} ref={ref}>
+      <dialog
+        onClose={() => {
+          setOpen(false);
+          onClose?.();
+        }}
+        ref={ref}
+      >
         {children}
       </dialog>
     </div>

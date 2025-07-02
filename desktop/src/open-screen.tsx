@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
 import { Drawer, useDrawer } from "./drawer";
-import { load, loadFile } from "./files";
+import { load } from "./files";
+import { client } from "./api";
 
 export const OpenDatasetDialog = () => {
   const { open, setOpen, innerRef } = useDrawer<HTMLButtonElement>();
@@ -32,7 +33,7 @@ const OpenLink = () => {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          loadFile(url);
+          client.loadFile(url);
           setOpen(false);
         }}
       >

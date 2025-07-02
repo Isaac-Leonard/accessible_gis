@@ -4,7 +4,9 @@ use gdal::{Dataset, vector::LayerAccess};
 use geo::{Closest, ClosestPoint, Contains, GeodesicDistance};
 use geo_types::{LineString, Point, Polygon};
 use itertools::Itertools;
+use serde::Serialize;
 use tauri::{Runtime, Wry, path::PathResolver};
+use uuid::Uuid;
 
 use crate::{
     dataset_collection::DatasetCollection,
@@ -26,7 +28,7 @@ pub struct AppData {
     pub towns: HashMap<String, Vec<LocalFeatureInfo>>,
     pub screen: Screen,
     pub shared: UserState,
-    pub errors: Vec<ApplicationError>,
+    pub errors: ErrorList,
     settings: GlobalSettings,
     pub prefered_display_fields: Vec<String>,
 }
@@ -65,7 +67,7 @@ impl AppData {
             towns: HashMap::new(),
             screen: Screen::Main,
             shared: UserState::default(),
-            errors: Vec::new(),
+            errors: ErrorList::new(),
             settings: GlobalSettings::read(resolver),
             prefered_display_fields: Vec::new(),
         }
@@ -213,5 +215,26 @@ impl AppData {
         self.settings = settings;
         self.settings.write_to_file(resolver);
         &self.settings
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
+pub struct ErrorList(Vec<ApplicationError>);
+
+impl ErrorList {
+    pub fn to_vec(&self) -> Vec<ApplicationError> {
+        self.0.clone()
+    }
+
+    pub fn push(&mut self, err: ApplicationError) {
+        self.0.push(err)
+    }
+
+    fn new() -> Self {
+        Self(Vec::new())
+    }
+
+    pub fn get(&mut self, id: Uuid) -> Option<&mut ApplicationError> {
+        return self.0.iter_mut().find(|err| err.id == id);
     }
 }

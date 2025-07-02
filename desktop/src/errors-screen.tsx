@@ -5,26 +5,23 @@ import { Dialog, useDialog } from "./dialog";
 
 const ErrorDialog = ({
   error,
-  popup = false,
   onClose,
 }: {
   error: ApplicationError;
-  popup?: boolean;
   onClose?: () => void;
 }) => {
-  const { open, setOpen, innerRef } = useDialog<HTMLDivElement>();
+  const { open, setOpen, innerRef } = useDialog<HTMLHeadingElement>();
   return (
     <Dialog
       modal={true}
       openText={error.type}
-      open={popup ? error.read : open}
+      open={!error.read || open}
       setOpen={setOpen}
       onClose={onClose}
     >
-      <h1>{error.type}</h1>
-      <div tabIndex={-1} ref={innerRef}>
-        {error.type}
-      </div>
+      <h1 ref={innerRef}>{error.type}</h1>
+      <div>{JSON.stringify(error.error)}</div>
+      {onClose && <button onClick={onClose}>Close</button>}
     </Dialog>
   );
 };
@@ -36,7 +33,7 @@ export const ErrorsScreen = ({ errors }: { errors: ApplicationError[] }) => {
       <div>
         <ul>
           {errors.map((error) => (
-            <ErrorDialog error={error} />
+            <ErrorDialog key={error.id} error={error} />
           ))}
         </ul>
       </div>{" "}
@@ -45,27 +42,26 @@ export const ErrorsScreen = ({ errors }: { errors: ApplicationError[] }) => {
 };
 
 export const ErrorsPopup = () => {
-  const ref = useRef<HTMLDialogElement>(null);
   const unreadErrors = state.value.errors.filter((error) => !error.read);
-  useEffect(
-    () =>
-      unreadErrors.length > 0
-        ? ref?.current?.showModal()
-        : ref.current?.close(),
-    [unreadErrors.length > 0]
-  );
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (unreadErrors.length > 0) {
+      ref?.current?.showModal();
+      ref.current?.focus();
+    } else {
+      ref.current?.close();
+    }
+  }, [unreadErrors.length]);
   return (
-    <dialog>
+    <dialog ref={ref}>
       {[
-        unreadErrors
-          .reverse()
-          .map((error, index) => (
-            <ErrorDialog
-              error={error}
-              popup={true}
-              onClose={() => client.markErrorRead(index)}
-            />
-          )),
+        unreadErrors.map((error) => (
+          <ErrorDialog
+            key={error.id}
+            error={error}
+            onClose={() => client.markErrorRead(error.id)}
+          />
+        )),
       ]}
     </dialog>
   );

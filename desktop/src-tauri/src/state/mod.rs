@@ -102,4 +102,5 @@ pub enum Screen {
     NewDataset,
     Settings,
     TouchDevice,
+    Errors,
 }
