@@ -2,6 +2,7 @@ import { client } from "./api";
 import { Dialog, useDialog } from "./dialog";
 import { NumberInput, useBindedObjectState } from "./binded-input";
 import { Ref } from "preact";
+import { SaveButton } from "./save-button";
 
 const GeomorphonsPolygonsScreen = ({
   innerRef,
@@ -15,8 +16,9 @@ const GeomorphonsPolygonsScreen = ({
     filter: 15,
   });
 
-  const clickHandler = () =>
+  const clickHandler = (name: string) =>
     client.classifyLandforms(
+      name,
       options.search.value,
       options.threshold.value,
       options.distance.value,
@@ -42,7 +44,11 @@ const GeomorphonsPolygonsScreen = ({
         label="Window size for majority filter (in pixels)"
         binding={options.filter}
       />{" "}
-      <button onClick={clickHandler}>Run</button>
+      <SaveButton
+        text="Run"
+        prompt="Name of new polygons file"
+        onSave={clickHandler}
+      />
     </div>
   );
 };
@@ -50,7 +56,11 @@ const GeomorphonsPolygonsScreen = ({
 export const GeomorphonsPolygonsDialog = () => {
   const { open, setOpen, innerRef } = useDialog<HTMLInputElement>();
   return (
-    <Dialog openText="Customise Audio Settings" open={open} setOpen={setOpen}>
+    <Dialog
+      openText="Geomorphons landform classification"
+      open={open}
+      setOpen={setOpen}
+    >
       <GeomorphonsPolygonsScreen innerRef={innerRef} />
     </Dialog>
   );

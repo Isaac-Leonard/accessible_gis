@@ -16,13 +16,14 @@ pub enum DemClassificationError {
 }
 
 pub fn dem_to_landform_polygons(
-    input: PathBuf,
+    input: &PathBuf,
+    output: &PathBuf,
     search: usize,
     threshold: f64,
     distance: usize,
     filter: usize,
     app: AppHandle,
-) -> Result<PathBuf, DemClassificationError> {
+) -> Result<(), DemClassificationError> {
     let path = app.path();
     let geomorphons_output = path
         .resolve("output_geomorphons.tif", BaseDirectory::Temp)

@@ -228,6 +228,7 @@ export const commands = {
     await TAURI_INVOKE("focus_box", { bounds });
   },
   async classifyLandforms(
+    output: string,
     search: number,
     threshold: number,
     distance: number,
@@ -237,6 +238,7 @@ export const commands = {
       return {
         status: "ok",
         data: await TAURI_INVOKE("classify_landforms", {
+          output,
           search,
           threshold,
           distance,

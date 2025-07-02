@@ -35,6 +35,7 @@ gen_processing_command!(calc_roughness, roughness);
 #[tauri::command]
 #[specta::specta]
 pub fn classify_landforms(
+    output: PathBuf,
     search: usize,
     threshold: f64,
     distance: usize,
@@ -42,15 +43,15 @@ pub fn classify_landforms(
     app: AppState,
     handle: AppHandle,
 ) -> Result<(), DemClassificationError> {
-    let res = app
-        .with_current_raster_band(|band| {
-            let input = band.info.shared.name.parse::<PathBuf>().unwrap();
-            dem_to_landform_polygons(input, search, threshold, distance, filter, handle)
-        })
-        .unwrap()?;
+    app.with_current_raster_band(|band| {
+        let input = band.info.shared.name.parse::<PathBuf>().unwrap();
+        dem_to_landform_polygons(&input, &output, search, threshold, distance, filter, handle)
+            .unwrap()
+    })
+    .unwrap();
     app.with_lock(|state| {
         state
-            .open_dataset(res.to_string_lossy().to_string())
+            .open_dataset(output.to_string_lossy().to_string())
             .unwrap();
     });
     Ok(())
