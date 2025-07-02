@@ -1,5 +1,6 @@
 import { AspectCalculator } from "./aspect-calculator";
 import { Dialog, useDialog } from "./dialog";
+import { GeomorphonsPolygonsDialog } from "./geomorphons-polygons";
 import { RoughnessCalculator } from "./roughness_calculator";
 import { SlopeCalculator } from "./slope-calculator";
 
@@ -15,6 +16,7 @@ export const DemMethodsDialog = () => {
       <SlopeCalculator />
       <AspectCalculator />
       <RoughnessCalculator />
+      <GeomorphonsPolygonsDialog />
       <button onClick={() => setOpen(false)}>Close</button>
     </Dialog>
   );
