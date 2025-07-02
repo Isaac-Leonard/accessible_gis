@@ -295,7 +295,8 @@ export type DemClassificationError =
   | { type: "Geomorphons"; error: string }
   | { type: "Polygonise"; error: string }
   | { type: "MajorityFilter"; error: string }
-  | { type: "LabelLandForms"; error: string };
+  | { type: "LabelLandForms"; error: string }
+  | { type: "FailToRun"; error: string };
 export type DistanceFromBoarder = { name: string; distance: number };
 export type Duration = { secs: number; nanos: number };
 export type FeatureIdentifier = { name: string | null; fid: number };
