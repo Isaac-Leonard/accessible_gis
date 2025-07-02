@@ -7,6 +7,7 @@ type DialogProps = {
   open: boolean;
   setOpen: (open: boolean) => void;
   children: ComponentChildren;
+  onClose?: () => void;
 };
 
 export const Dialog = ({
@@ -15,6 +16,7 @@ export const Dialog = ({
   open,
   children,
   setOpen,
+  onClose,
 }: DialogProps) => {
   const ref = useRef<HTMLDialogElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
@@ -27,6 +29,7 @@ export const Dialog = ({
         ref.current?.show();
       }
     } else {
+      onClose?.();
       ref.current?.close();
     }
   }, [open, modal]);
