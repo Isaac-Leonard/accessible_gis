@@ -4,6 +4,7 @@
 mod audio;
 mod commandline;
 mod commands;
+mod errors;
 mod files;
 mod gdal_if;
 mod geometry;

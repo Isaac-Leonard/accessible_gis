@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use tauri::AppHandle;
 
 use crate::{
+    errors::ApplicationError,
     gdal_if::processing::{aspect, roughness, slope},
     state::AppState,
     tools::{DemClassificationError, dem_to_landform_polygons},
@@ -20,7 +21,7 @@ macro_rules! gen_processing_command {
         						"Attempted to operate on current dataset but there is no current dataset selected",
         					);
                 match res {
-                    Err(e) => state.errors.push(e.to_string()),
+                    Err(e) => state.errors.push(ApplicationError::Other(e.to_string())),
                     _ => {}
                 }
             })

@@ -8,6 +8,7 @@ use tauri::{Runtime, Wry, path::PathResolver};
 
 use crate::{
     dataset_collection::DatasetCollection,
+    errors::ApplicationError,
     gdal_if::{LocalFeatureInfo, WrappedDataset},
     geometry::AsPoint,
     web_socket::{GisMessage, RasterMessage, VectorMessage},
@@ -25,7 +26,7 @@ pub struct AppData {
     pub towns: HashMap<String, Vec<LocalFeatureInfo>>,
     pub screen: Screen,
     pub shared: UserState,
-    pub errors: Vec<String>,
+    pub errors: Vec<ApplicationError>,
     settings: GlobalSettings,
     pub prefered_display_fields: Vec<String>,
 }
