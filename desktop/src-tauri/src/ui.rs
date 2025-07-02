@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     FeatureInfo,
+    errors::ApplicationError,
     gdal_if::{FieldSchema, FieldValue, LayerExt, LayerIndex},
     state::{
         AppData,
@@ -14,6 +15,12 @@ use crate::{
 };
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+pub struct UiState {
+    pub screen: UiScreen,
+    pub errors: Vec<ApplicationError>,
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
 #[serde(tag = "name")]
 pub enum UiScreen {
     Layers(LayerScreen),
@@ -21,6 +28,7 @@ pub enum UiScreen {
     NewDataset(NewDatasetScreenData),
     Settings(GlobalSettings),
     TouchDevice,
+    Errors,
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]

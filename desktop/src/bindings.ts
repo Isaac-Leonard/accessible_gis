@@ -11,7 +11,7 @@ export const commands = {
       else return { status: "error", error: e as any };
     }
   },
-  async getAppInfo(): Promise<UiScreen> {
+  async getAppInfo(): Promise<UiState> {
     return await TAURI_INVOKE("get_app_info");
   },
   async getBandSizes(): Promise<RasterSize[]> {
@@ -264,6 +264,9 @@ export const events = __makeEvents__<{
 
 /** user-defined types **/
 
+export type ApplicationError =
+  | { type: "ExternalProgramError" }
+  | { type: "Other"; error: string };
 export type AudioIndicator =
   | "Silence"
   | "MinFreq"
@@ -495,7 +498,9 @@ export type UiScreen =
   | { name: "ThiessenPolygons" }
   | ({ name: "NewDataset" } & NewDatasetScreenData)
   | ({ name: "Settings" } & GlobalSettings)
-  | { name: "TouchDevice" };
+  | { name: "TouchDevice" }
+  | { name: "Errors" };
+export type UiState = { screen: UiScreen; errors: ApplicationError[] };
 export type VectorScreenData = {
   field_schema: FieldSchema[];
   features: FeatureIdentifier[];
