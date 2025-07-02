@@ -101,7 +101,7 @@ fn wbt() -> Command {
 }
 
 fn proc_to_result(output: Output) -> Result<String, String> {
-    if !output.stderr.is_empty() {
+    if !output.status.success() {
         Err(String::from_utf8_lossy(&output.stderr).to_string())
     } else {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
