@@ -1,6 +1,7 @@
 import { ReadonlySignal, Signal, computed, useComputed } from "@preact/signals";
 import { SetterName, setterName } from "./utils";
 import { Ref } from "preact";
+import { useState } from "preact/hooks";
 
 export type Binding<T> = Signal<T> | GetSet<T> | ComputedSetter<T>;
 
@@ -251,4 +252,15 @@ export const useBindedObjectProperties = <T extends Record<string, unknown>>(
     }),
     {}
   ) as any;
+};
+
+export const useBindedObjectState = <T extends Record<string, unknown>>(
+  obj: T
+): {
+  [K in keyof T]: {
+    value: T[K];
+    setValue: (value: T[K]) => void;
+  };
+} => {
+  return useBindedObjectProperties(...useState(obj));
 };
