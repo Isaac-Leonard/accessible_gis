@@ -11,6 +11,7 @@ pub struct ApplicationError {
     #[serde(flatten)]
     pub details: ErrorDetails,
     pub read: bool,
+    pub id: uuid::Uuid,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
@@ -28,6 +29,7 @@ impl From<ErrorDetails> for ApplicationError {
         Self {
             details: value,
             read: false,
+            id: uuid::Uuid::new_v4(),
         }
     }
 }
