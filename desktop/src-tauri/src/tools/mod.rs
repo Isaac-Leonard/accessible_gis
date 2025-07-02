@@ -44,15 +44,14 @@ pub fn dem_to_landform_polygons(
         filter,
     ))
     .map_err(DemClassificationError::MajorityFilter)?;
-    let output = path.resolve("output.shp", BaseDirectory::Temp).unwrap();
-    proc_to_result(polygonise(&majority_filter_output, &output))
+    proc_to_result(polygonise(&majority_filter_output, output))
         .map_err(DemClassificationError::Polygonise)?;
-    proc_to_result(label_landforms(&output)).map_err(DemClassificationError::LabelLandForms)?;
-    Ok(output)
+    proc_to_result(label_landforms(output, app)).map_err(DemClassificationError::LabelLandForms)?;
+    Ok(())
 }
 
 fn geomorphons(
-    input: PathBuf,
+    input: &PathBuf,
     output: &PathBuf,
     search: usize,
     threshold: f64,
@@ -87,10 +86,14 @@ fn polygonise(input: &PathBuf, output: &PathBuf) -> Output {
     command.output().unwrap()
 }
 
-fn label_landforms(input: &PathBuf) -> Output {
+fn label_landforms(input: &PathBuf, app: AppHandle) -> Output {
+    let path = app.path();
     let mut command = Command::new("python3.13");
     command
-        .arg("scrypts/label_geomorphons.py")
+        .arg(
+            path.resolve("scripts/label_geomorphons.py", BaseDirectory::Resource)
+                .unwrap(),
+        )
         .arg(input)
         .arg("dn");
     command.output().unwrap()
