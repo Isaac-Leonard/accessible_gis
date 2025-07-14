@@ -205,6 +205,9 @@ class GisManager {
     } catch (e) {
       speak(`Something went wrong with fetching vector data: ${e}`);
       console.log(e);
+      this.connection.sendError(
+        `Something went wrong with fetching vector data: ${e}`
+      );
     }
   }
 
@@ -301,6 +304,9 @@ class GisManager {
     } catch (e) {
       speak(`Something went wrong when fetching raster data: ${e}`);
       console.log(e);
+      this.connection.sendError(
+        `Something went wrong when fetching raster data: ${e}`
+      );
     }
   }
 

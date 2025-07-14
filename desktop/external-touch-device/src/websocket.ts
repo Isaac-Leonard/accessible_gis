@@ -6,7 +6,9 @@ import { ZodType, z } from "zod";
 const host = window.location.host;
 const wsUrl = `ws://${host}/ws`;
 
-export type DeviceMessage = never;
+export type DeviceMessage =
+  | { type: "Voices"; data: string[] }
+  | { type: "Error"; data: String };
 
 export type MessageHandler = (message: AppMessage) => void;
 
@@ -23,6 +25,10 @@ export class WsConnection {
 
   send(message: DeviceMessage) {
     this.socket.send(JSON.stringify(message));
+  }
+
+  sendError(message: string) {
+    this.send({ type: "Error", data: message });
   }
 
   connect() {
@@ -56,6 +62,12 @@ export class WsConnection {
     } catch (e) {
       console.log("An error occured while parsing message from websocket");
       console.log(e);
+      this.send({
+        type: "Error",
+        data: `An error occured while parsing message from websocket: ${JSON.stringify(
+          e
+        )}`,
+      });
     }
   }
 

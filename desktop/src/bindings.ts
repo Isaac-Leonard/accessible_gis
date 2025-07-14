@@ -251,6 +251,8 @@ export type ApplicationError = (
   | { type: "DatasetCreationError"; error: DatasetCreationError }
   | { type: "EditDatasetError"; error: EditDatasetError }
   | { type: "OpenDatasetError"; error: OpenDatasetError }
+  | { type: "CsvError"; error: MyCsvError }
+  | { type: "TouchDeviceError"; error: string }
   | { type: "Other"; error: string }
 ) & { read: boolean; id: string };
 export type AudioIndicator =
@@ -428,6 +430,100 @@ export type MissingDriverError = { driver: string; gdal_error: MyGdalError };
 export type MultiLineString = { lines: LineString[] };
 export type MultiPoint = { points: Point[] };
 export type MultiPolygon = { polygons: Polygon[] };
+export type MyCsvDeserializeError = {
+  field: number | null;
+  kind: MyCsvDeserializeErrorKind;
+};
+export type MyCsvDeserializeErrorKind =
+  | { Message: string }
+  | { Unsupported: string }
+  | "UnexpectedEndOfRow"
+  | { InvalidUtf8: MyUtf8Error }
+  | { ParseBool: string }
+  | { ParseInt: string }
+  | { ParseFloat: string };
+export type MyCsvError = MyCsvErrorKind;
+export type MyCsvErrorKind =
+  /**
+   * An I/O error that occurred while reading CSV data.
+   */
+  | { Io: string }
+  /**
+   * A UTF-8 decoding error that occured while reading CSV data into Rust
+   * `String`s.
+   */
+  | {
+      Utf8: {
+        /**
+         * The position of the record in which this error occurred, if
+         * available.
+         */
+        pos: MyCsvPosition | null;
+        /**
+         * The corresponding UTF-8 error.
+         */
+        err: MyUtf8Error;
+      };
+    }
+  /**
+   * This error occurs when two records with an unequal number of fields
+   * are found. This error only occurs when the `flexible` option in a
+   * CSV reader/writer is disabled.
+   */
+  | {
+      UnequalLengths: {
+        /**
+         * The position of the first record with an unequal number of fields
+         * to the previous record, if available.
+         */
+        pos: MyCsvPosition | null;
+        /**
+         * The expected number of fields in a record. This is the number of
+         * fields in the record read prior to the record indicated by
+         * `pos`.
+         */
+        expected_len: number;
+        /**
+         * The number of fields in the bad record.
+         */
+        len: number;
+      };
+    }
+  /**
+   * This error occurs when either the `byte_headers` or `headers` methods
+   * are called on a CSV reader that was asked to `seek` before it parsed
+   * the first record.
+   */
+  | "Seek"
+  /**
+   * An error of this kind occurs only when using the Serde serializer.
+   */
+  | { Serialize: string }
+  /**
+   * An error of this kind occurs only when performing automatic
+   * deserialization with serde.
+   */
+  | {
+      Deserialize: {
+        /**
+         * The position of this error, if available.
+         */
+        pos: MyCsvPosition | null;
+        /**
+         * The deserialization error.
+         */
+        err: MyCsvDeserializeError;
+      };
+    }
+  /**
+   * Hints that destructuring should not be exhaustive.
+   *
+   * This enum may grow additional variants, so this makes sure clients
+   * don't count on exhaustive matching. (Otherwise, adding a new variant
+   * could break existing code.)
+   */
+  | "__Nonexhaustive";
+export type MyCsvPosition = { byte: number; line: number; record: number };
 export type MyExtendedDataTypeClass = "Compound" | "Numeric" | "String";
 export type MyGdalError =
   | { kind: "FfiNulError"; data: MyNulError }
