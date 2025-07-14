@@ -24,6 +24,7 @@ pub enum ErrorDetails {
     EditDatasetError(EditDatasetError),
     OpenDatasetError(OpenDatasetError),
     CsvError(MyCsvError),
+    TouchDeviceError(String),
     Other(String),
 }
 

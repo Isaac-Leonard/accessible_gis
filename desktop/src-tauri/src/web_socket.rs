@@ -16,7 +16,7 @@ use tokio::{
     time::interval,
 };
 
-use crate::commands::AppDataSync;
+use crate::{commands::AppDataSync, errors::ErrorDetails};
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -155,6 +155,7 @@ pub struct VectorMessage {
 #[serde(tag = "type", content = "data")]
 enum DeviceMessage {
     Data(DeviceData),
+    Error(String),
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -162,8 +163,16 @@ pub struct DeviceData {
     voices: Vec<String>,
 }
 
-fn process_device_message(_app: AppHandle, message: DeviceMessage) {
+fn process_device_message(app: AppHandle, message: DeviceMessage) {
     eprintln!("Message: {:?}", message);
+    match message {
+        DeviceMessage::Error(err) => app.state::<AppDataSync>().with_lock(|state| {
+            state
+                .errors
+                .push(ErrorDetails::TouchDeviceError(err).into())
+        }),
+        _ => {}
+    }
 }
 
 #[derive(Default)]
