@@ -25,40 +25,58 @@ export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
       <button onClick={() => client.playHistogram()}>
         Play audio Histogram
       </button>
-      <RenderMethodsSelector
-        binding={{
-          value: layer.render_method,
-          setValue: client.setCurrentRenderMethod,
-        }}
-      />
-      <label>
-        Enable OCR when displayed?
-        <input
-          role="switch"
-          type="checkbox"
-          checked={layer.ocr}
-          aria-pressed={layer.ocr}
-          onChange={(e) => client.setCurrentOcr(e.currentTarget.checked)}
-        />
-      </label>
       <AudioSettingsDialog settings={layer.audio_settings} />
-      <RasterNavigatorInner layer={layer} savePoints={() => {}} />
+      <RasterNavigatorInner layer={layer} />
     </div>
   );
 };
 
-const RasterNavigatorInner = ({
-  layer,
-  savePoints,
-}: {
-  layer: RasterScreenData;
-  savePoints: (points: Point[]) => void;
-}) => {
-  let { cols, rows } = layer;
+const RasterNavigatorInner = ({ layer }: { layer: RasterScreenData }) => {
+  return (
+    <div>
+      <button
+        aria-checked={layer.display}
+        role="switch"
+        onClick={() => client.setDisplayRaster()}
+      >
+        Display
+      </button>
+      {layer.display ? (
+        <>
+          <button onClick={() => client.focusDataset()}>Zoom to raster</button>{" "}
+          <RenderMethodsSelector
+            prompt="Load data on touch device as"
+            binding={{
+              value: layer.render_method,
+              setValue: client.setCurrentRenderMethod,
+            }}
+          />
+          <label>
+            Enable OCR when displayed?
+            <input
+              role="switch"
+              type="checkbox"
+              checked={layer.ocr}
+              aria-pressed={layer.ocr}
+              onChange={(e) => client.setCurrentOcr(e.currentTarget.checked)}
+            />
+          </label>
+        </>
+      ) : (
+        ""
+      )}
+      <PixelExplorer layer={layer} />
+    </div>
+  );
+};
+
+const PixelExplorer = ({ layer }: { layer: RasterScreenData }) => {
   const [showCoords, setShowCoords] = useState(true);
+  const [points, setPoints] = useState<Point[]>([]);
   const [{ x, y }, setCoords] = useState({ x: 0, y: 0 });
   const [radius, setRadius] = useState(1);
-  const [points, setPoints] = useState<Point[]>([]);
+  const { open, setOpen } = useDialog();
+  let { cols, rows } = layer;
   const [getCountry, setCountry] = useState(false);
   const [getTown, setTown] = useState(false);
   const [info, setInfo] = useState("");
@@ -85,71 +103,72 @@ const RasterNavigatorInner = ({
       }
     })();
   }, [cols, rows, radius, x, y, showCoords]);
+
+  const keyHandler = (e: KeyboardEvent) => {
+    coordinateArrowHandler(x, y, radius, setCoords)(e);
+    if (e.key === "M") {
+      e.preventDefault();
+      client.getPointOfMaxValue().then((p) => {
+        if (p !== null) {
+          setCoords(p);
+        }
+      });
+    }
+    if (e.key === "m") {
+      e.preventDefault();
+      client.getPointOfMinValue().then((p) => {
+        if (p !== null) {
+          setCoords(p);
+        }
+      });
+    }
+    if (e.key === "c") {
+      e.preventDefault();
+      setCountry(true);
+      setTown(false);
+    }
+    if (e.key === "t") {
+      e.preventDefault();
+      setTown(true);
+      setCountry(false);
+    }
+    if (e.key === "p") {
+      e.preventDefault();
+      setPoints([...points, { x, y }]);
+    }
+    // TODO: Implement a way to properly build up geometries manually by examining raster data.
+    if (e.key === "s" && e.ctrlKey) {
+      // savePoints(points);
+    }
+  };
+
   return (
-    <div
-      onKeyDown={(e) => {
-        if (e.key === "M") {
-          e.preventDefault();
-          client.getPointOfMaxValue().then((p) => {
-            if (p !== null) {
-              setCoords(p);
-            }
-          });
-        }
-        if (e.key === "m") {
-          e.preventDefault();
-          client.getPointOfMinValue().then((p) => {
-            if (p !== null) {
-              setCoords(p);
-            }
-          });
-        }
-        if (e.key === "c") {
-          e.preventDefault();
-          setCountry(true);
-          setTown(false);
-        }
-        if (e.key === "t") {
-          e.preventDefault();
-          setTown(true);
-          setCountry(false);
-        }
-        if (e.key === "p") {
-          e.preventDefault();
-          setPoints([...points, { x, y }]);
-        }
-        if (e.key === "s" && e.ctrlKey) {
-          savePoints(points);
-        }
-      }}
+    <Dialog
+      modal={true}
+      openText="Explore pixels"
+      open={open}
+      setOpen={setOpen}
     >
-      <input
-        type="number"
-        value={radius}
-        onChange={(e) => setRadius(Number(e.currentTarget.value))}
-      />
-      <label>
-        Show coords?{" "}
+      <div onKeyDown={keyHandler}>
         <input
-          type="checkbox"
-          defaultChecked={true}
-          onChange={(e) => setShowCoords(e.currentTarget.checked)}
+          type="number"
+          value={radius}
+          onChange={(e) => setRadius(Number(e.currentTarget.value))}
+          autofocus={true}
         />
-      </label>
-      <button
-        aria-checked={layer.display}
-        role="switch"
-        onClick={() => client.setDisplayRaster()}
-      >
-        Display
-      </button>
-      <button onClick={() => client.focusDataset()}>Zoom to raster</button>
-      <div onKeyDown={coordinateArrowHandler(x, y, radius, setCoords)}>
+        <label>
+          Show coords?{" "}
+          <input
+            type="checkbox"
+            defaultChecked={true}
+            onChange={(e) => setShowCoords(e.currentTarget.checked)}
+          />
+        </label>
         <CoordinateButtons x={x} y={y} radius={radius} setCoords={setCoords} />
 
         <p role="status">{info}</p>
       </div>
-    </div>
+    </Dialog>
   );
 };
 
