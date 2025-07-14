@@ -20,8 +20,8 @@ pub struct UserState {
 }
 
 impl UserState {
-    pub fn display_current_raster(&mut self) {
-        self.raster_to_display = self.datasets.get_current_raster_index();
+    pub fn display_current_raster(&mut self, raster: Option<RasterIndex>) {
+        self.raster_to_display = raster;
     }
 
     pub fn get_raster_to_display(&mut self) -> Option<StatefulRasterBand> {

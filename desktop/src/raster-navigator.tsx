@@ -37,7 +37,13 @@ const RasterNavigatorInner = ({ layer }: { layer: RasterScreenData }) => {
       <button
         aria-checked={layer.display}
         role="switch"
-        onClick={() => client.setDisplayRaster()}
+        onClick={() =>
+          client.setDisplayRaster(
+            layer.display
+              ? null
+              : { dataset: layer.dataset_index, band: layer.layer_index }
+          )
+        }
       >
         Display
       </button>

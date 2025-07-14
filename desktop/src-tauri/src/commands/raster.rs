@@ -9,7 +9,11 @@ use crate::{
     dataset_collection::NonEmptyDelegatorImpl,
     gdal_if::{read_raster_data, read_raster_data_enum_as},
     geometry::Point,
-    state::{AppState, gis::combined::StatefulLayerEnum, settings::AudioSettings},
+    state::{
+        AppState,
+        gis::combined::{RasterIndex, StatefulLayerEnum},
+        settings::AudioSettings,
+    },
     web_socket::{AppMessage, TouchDevice},
 };
 
@@ -99,8 +103,8 @@ impl Classification {
 
 #[tauri::command]
 #[specta::specta]
-pub fn set_display_raster(state: AppState) {
-    state.with_lock(|state| state.shared.display_current_raster())
+pub fn set_display_raster(raster: Option<RasterIndex>, state: AppState) {
+    state.with_lock(|state| state.shared.display_current_raster(raster))
 }
 
 #[tauri::command]

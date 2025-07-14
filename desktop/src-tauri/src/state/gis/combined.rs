@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::gdal_if::LayerIndex;
 
 use super::{raster::StatefulRasterBand, shared::SharedInfo, vector::StatefulVectorLayer};
@@ -67,7 +69,7 @@ pub struct DatasetLayerIndex {
     pub layer: LayerIndex,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct RasterIndex {
     pub dataset: usize,
     pub band: usize,

@@ -182,8 +182,8 @@ export const commands = {
   async getWaveForms(): Promise<Waveform[]> {
     return await TAURI_INVOKE("get_wave_forms");
   },
-  async setDisplayRaster(): Promise<void> {
-    await TAURI_INVOKE("set_display_raster");
+  async setDisplayRaster(raster: RasterIndex | null): Promise<void> {
+    await TAURI_INVOKE("set_display_raster", { raster });
   },
   async setDisplayVector(): Promise<void> {
     await TAURI_INVOKE("set_display_vector");
@@ -601,6 +601,7 @@ export type RasterGraphSettings = {
   min_value: number | null;
   max_value: number | null;
 };
+export type RasterIndex = { dataset: number; band: number };
 export type RasterScreenData = {
   layer_index: number;
   dataset_index: number;
