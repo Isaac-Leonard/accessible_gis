@@ -7,7 +7,8 @@ use gdal_sys::{CPLErr, GDALExtendedDataTypeClass, OGRErr, OGRFieldType, OGRwkbGe
 use ndarray::ShapeError;
 use serde::{Deserialize, Serialize};
 use std::ffi::{CString, IntoStringError, c_int};
-use std::str::Utf8Error;
+
+use crate::errors::MyUtf8Error;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "kind", content = "data")]
@@ -164,21 +165,6 @@ impl From<IntoStringError> for MyIntoStringError {
         Self {
             error: value.utf8_error().into(),
             inner: value.into_cstring(),
-        }
-    }
-}
-
-#[derive(Copy, Eq, PartialEq, Clone, Debug, Serialize, Deserialize, specta::Type)]
-pub struct MyUtf8Error {
-    pub valid_up_to: usize,
-    pub error_len: Option<usize>,
-}
-
-impl From<Utf8Error> for MyUtf8Error {
-    fn from(value: Utf8Error) -> Self {
-        Self {
-            valid_up_to: value.valid_up_to(),
-            error_len: value.error_len(),
         }
     }
 }

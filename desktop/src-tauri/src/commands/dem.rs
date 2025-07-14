@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use tauri::AppHandle;
 
 use crate::{
-    errors::ErrorDetails,
     gdal_if::processing::{aspect, roughness, slope},
     state::AppState,
     tools::{DemClassificationError, dem_to_landform_polygons},

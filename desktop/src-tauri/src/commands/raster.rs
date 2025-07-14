@@ -7,7 +7,7 @@ use tauri::State;
 
 use crate::{
     dataset_collection::NonEmptyDelegatorImpl,
-    gdal_if::{LayerIndex, read_raster_data, read_raster_data_enum_as},
+    gdal_if::{read_raster_data, read_raster_data_enum_as},
     geometry::Point,
     state::{AppState, gis::combined::StatefulLayerEnum, settings::AudioSettings},
     web_socket::{AppMessage, TouchDevice},
@@ -256,7 +256,7 @@ pub struct RasterSize {
 pub fn focus_dataset(state: AppState, device: State<TouchDevice>) {
     state.with_current_layer_mut(|layer| match layer {
         StatefulLayerEnum::Raster(band) => {
-            let [ulx, xres, xskew, uly, yskew, yres] = band.band.geo_transform.clone().unwrap();
+            let [ulx, xres, xskew, uly, yskew, yres] = band.band.geo_transform.unwrap();
             let lrx = ulx + (band.band.band().x_size() as f64 * xres);
             let lry = uly + (band.band.band().y_size() as f64 * yres);
             device.send(AppMessage::FocusBox([ulx, lry, lrx, uly]));

@@ -1,9 +1,6 @@
 use tauri::State;
 
-use crate::{
-    gdal_if::LayerIndex,
-    web_socket::{AppMessage, TouchDevice},
-};
+use crate::web_socket::{AppMessage, TouchDevice};
 
 #[tauri::command]
 #[specta::specta]

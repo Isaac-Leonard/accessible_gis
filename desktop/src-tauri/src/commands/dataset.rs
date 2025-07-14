@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use gdal::{Dataset, DatasetOptions, GdalOpenFlags};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::{
     errors::ErrorDetails,
