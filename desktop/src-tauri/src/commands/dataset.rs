@@ -31,6 +31,7 @@ pub fn edit_dataset(state: AppState) {
                 dataset.dataset.editable = true;
                 Ok(())
             })
+            .expect("No project loaded")
             .expect("No dataset selected");
         match res {
             Ok(()) => {}
@@ -45,18 +46,20 @@ pub fn edit_dataset(state: AppState) {
 #[specta::specta]
 pub fn create_new_dataset(driver_name: String, file: String, state: AppState) {
     state.with_lock(|state| {
-        let mut dataset = match WrappedDataset::new_vector(file, driver_name) {
-            Ok(dataset) => dataset,
-            Err(err) => {
-                state
-                    .errors
-                    .push(ErrorDetails::DatasetCreationError(err).into());
-                return;
-            }
-        };
-        dataset.add_layer().unwrap();
-        let dataset = StatefulDataset::new(dataset, state.settings());
-        state.shared.datasets.add(dataset);
+        state
+            .with_project(|project| {
+                let mut dataset = match WrappedDataset::new_vector(file, driver_name) {
+                    Ok(dataset) => dataset,
+                    Err(err) => {
+                        return Err(ErrorDetails::DatasetCreationError(err).into());
+                    }
+                };
+                dataset.add_layer().unwrap();
+                let dataset = StatefulDataset::new(dataset, &project.settings);
+                project.datasets.add(dataset);
+                Ok(())
+            })
+            .map(|res| res.map_err(|err| state.errors.push(err)));
         state.screen = Screen::Main;
     });
 }
@@ -64,8 +67,10 @@ pub fn create_new_dataset(driver_name: String, file: String, state: AppState) {
 #[tauri::command]
 #[specta::specta]
 pub fn set_dataset_index(index: usize, state: AppState) {
-    let mut guard = state.data.lock().unwrap();
-    guard.shared.datasets.set_index(index).unwrap();
+    state
+        .with_lock(|state| state.with_project(|project| project.datasets.set_index(index)))
+        .unwrap()
+        .unwrap()
 }
 
 #[tauri::command]

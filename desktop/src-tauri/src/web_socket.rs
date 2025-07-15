@@ -41,8 +41,8 @@ pub async fn ws_handle(
     let mut msg_stream = pin!(msg_stream);
 
     // Ensure the device has the right settings for the current data on start
-    app.state::<AppDataSync>().with_lock(|state| {
-        device_sender.send(AppMessage::Gis(state.get_touch_device_settings()?));
+    app.state::<AppDataSync>().with_project(|project| {
+        device_sender.send(AppMessage::Gis(project.get_touch_device_settings()?));
         Some(())
     });
 

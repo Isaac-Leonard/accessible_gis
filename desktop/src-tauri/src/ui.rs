@@ -25,7 +25,7 @@ pub struct UiState {
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
 #[serde(tag = "name")]
 pub enum UiScreen {
-    Layers(LayerScreen),
+    Layers(Option<LayerScreen>),
     ThiessenPolygons,
     NewDataset(NewDatasetScreenData),
     Settings(GlobalSettings),
@@ -86,82 +86,84 @@ pub struct RasterScreenData {
 }
 
 impl AppData {
-    pub fn get_layers_screen(&mut self) -> LayerScreen {
-        let layers = self
-            .shared
-            .datasets
-            .get_all_layers()
-            .into_iter()
-            .map_into()
-            .collect_vec();
-        let visible_raster_index = self.shared.get_raster_index_to_display();
-        let layer_info = self
-            .shared
-            .with_current_dataset_mut(|ds, ds_index| match ds.layer_index {
-                Some(LayerIndex::Vector(index)) => {
-                    let feature = ds.get_current_feature();
-                    let mut layer = ds.get_vector(index).expect("Failed to get vector layer");
-                    let primary_field_name = layer.info.primary_field_name.as_ref();
-                    let features = layer
-                        .layer
-                        .layer
-                        .features()
-                        .map(move |feature| FeatureIdentifier {
-                            name: primary_field_name
-                                .and_then(|name| {
-                                    feature.field(feature.field_index(name).unwrap()).unwrap()
-                                })
-                                .map(|x| FieldValue::from(x).to_string()),
-                            fid: feature.fid().unwrap(),
-                        })
-                        .collect_vec();
-                    Some(LayerScreenInfo::Vector(VectorScreenData {
-                        name_field: primary_field_name.cloned(),
-                        display: layer.info.display,
-                        dataset_index: ds_index,
-                        srs: layer
+    pub fn get_layers_screen(&mut self) -> Option<LayerScreen> {
+        self.with_project(|project| {
+            let layers = project
+                .datasets
+                .get_all_layers()
+                .into_iter()
+                .map_into()
+                .collect_vec();
+            let visible_raster_index = project.get_raster_index_to_display();
+            let layer_info = project
+                .with_current_dataset_mut(|ds, ds_index| match ds.layer_index {
+                    Some(LayerIndex::Vector(index)) => {
+                        let feature = ds.get_current_feature();
+                        let mut layer = ds.get_vector(index).expect("Failed to get vector layer");
+                        let primary_field_name = layer.info.primary_field_name.as_ref();
+                        let features = layer
                             .layer
                             .layer
-                            .spatial_ref()
-                            .and_then(|x| x.to_wkt().ok()),
-                        field_schema: layer.layer.get_field_schema(),
-                        features,
-                        feature,
-                        editable: ds.dataset.editable,
-                        layer_index: index,
-                    }))
-                }
-                Some(LayerIndex::Raster(index)) => {
-                    let band = ds.get_raster(index).unwrap();
-                    let (cols, rows) = band.band.band().size();
-                    Some(LayerScreenInfo::Raster(RasterScreenData {
-                        dataset_index: ds_index,
-                        layer_index: index,
-                        cols,
-                        rows,
-                        srs: band.band.srs.clone(),
-                        display: visible_raster_index
-                            == Some(RasterIndex {
-                                dataset: ds_index,
-                                band: index,
-                            }),
-                        render_method: band.info.render,
-                        ocr: band.info.ocr,
-                        audio_settings: band.info.audio_settings.clone(),
-                    }))
-                }
-                None => None,
-            })
-            .flatten();
-        let port = 80;
-        LayerScreen {
-            layers,
-            layer_info,
-            ip: local_ip()
-                .map(|ip| format!("Server running at http://{}:{}/", ip, port))
-                .unwrap_or_else(|e| format!("Unable to get local IP address, got error: {}", e)),
-            prefered_display_fields: self.prefered_display_fields.clone(),
-        }
+                            .features()
+                            .map(move |feature| FeatureIdentifier {
+                                name: primary_field_name
+                                    .and_then(|name| {
+                                        feature.field(feature.field_index(name).unwrap()).unwrap()
+                                    })
+                                    .map(|x| FieldValue::from(x).to_string()),
+                                fid: feature.fid().unwrap(),
+                            })
+                            .collect_vec();
+                        Some(LayerScreenInfo::Vector(VectorScreenData {
+                            name_field: primary_field_name.cloned(),
+                            display: layer.info.display,
+                            dataset_index: ds_index,
+                            srs: layer
+                                .layer
+                                .layer
+                                .spatial_ref()
+                                .and_then(|x| x.to_wkt().ok()),
+                            field_schema: layer.layer.get_field_schema(),
+                            features,
+                            feature,
+                            editable: ds.dataset.editable,
+                            layer_index: index,
+                        }))
+                    }
+                    Some(LayerIndex::Raster(index)) => {
+                        let band = ds.get_raster(index).unwrap();
+                        let (cols, rows) = band.band.band().size();
+                        Some(LayerScreenInfo::Raster(RasterScreenData {
+                            dataset_index: ds_index,
+                            layer_index: index,
+                            cols,
+                            rows,
+                            srs: band.band.srs.clone(),
+                            display: visible_raster_index
+                                == Some(RasterIndex {
+                                    dataset: ds_index,
+                                    band: index,
+                                }),
+                            render_method: band.info.render,
+                            ocr: band.info.ocr,
+                            audio_settings: band.info.audio_settings.clone(),
+                        }))
+                    }
+                    None => None,
+                })
+                .flatten();
+            let port = 80;
+            LayerScreen {
+                layers,
+                layer_info,
+                ip: local_ip()
+                    .map(|ip| format!("Server running at http://{}:{}/", ip, port))
+                    .unwrap_or_else(|e| {
+                        format!("Unable to get local IP address, got error: {}", e)
+                    }),
+                prefered_display_fields: project.prefered_display_fields.clone(),
+            }
+        })
     }
 }
 

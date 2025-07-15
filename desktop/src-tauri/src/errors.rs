@@ -25,6 +25,8 @@ pub enum ErrorDetails {
     OpenDatasetError(OpenDatasetError),
     CsvError(MyCsvError),
     TouchDeviceError(String),
+    IoError(String),
+    SerdeError(String),
     Other(String),
 }
 

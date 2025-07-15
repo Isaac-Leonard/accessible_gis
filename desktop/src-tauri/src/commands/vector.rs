@@ -152,8 +152,10 @@ pub fn set_prefered_display_fields(
     state: AppState,
     device: State<TouchDevice>,
 ) {
-    state.with_lock(|state| {
-        state.prefered_display_fields = fields;
-        device.send(AppMessage::Gis(state.get_touch_device_settings().unwrap()));
+    state.with_project(|project| {
+        project.prefered_display_fields = fields;
+        device.send(AppMessage::Gis(
+            project.get_touch_device_settings().unwrap(),
+        ));
     });
 }

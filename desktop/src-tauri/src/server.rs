@@ -30,10 +30,11 @@ async fn get_raster(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Resp
     let raster_name = get_raster_path(&app);
     std::fs::remove_file(&raster_name);
     let Some((metadata, data)) = state.with_lock(|state| -> Option<(_, _)> {
-        let output = state
-            .shared
-            .get_raster_to_display()?
-            .reproject(&raster_name, Srs::Epsg(4326));
+        let output = state.with_project(|project| {
+            project
+                .get_raster_to_display()
+                .map(|raster| raster.reproject(&raster_name, Srs::Epsg(4326)))
+        })??;
         eprintln!("{:?}", output);
         let wgs84_raster = state
             .open_dataset(raster_name.to_str().unwrap().to_string())
@@ -119,15 +120,20 @@ async fn get_vector(app: Data<AppHandle>) -> impl Responder {
         .unwrap();
     let state = app.state::<AppDataSync>();
     let succeeded = state.with_lock(|state| {
-        let layers = state.shared.get_vectors_for_display();
-        if layers.is_empty() {
+        let Some(layer_names) = state.with_project(|project| {
+            let layers = project.get_vectors_for_display();
+            layers
+                .into_iter()
+                .map(|layer| layer.info.shared.name.clone())
+                .dedup()
+                .collect_vec()
+        }) else {
+            return false;
+        };
+        if layer_names.is_empty() {
             return false;
         }
-        let layer_names = layers
-            .into_iter()
-            .map(|layer| layer.info.shared.name.clone())
-            .dedup()
-            .collect_vec();
+
         let output = merge_layers(layer_names, true, Srs::Epsg(4326), &json_name, true).unwrap();
         eprintln!("{:?}", output);
         true
@@ -160,10 +166,18 @@ async fn ws(
 
 #[get("/get_info")]
 async fn get_info(state: Data<AppDataSync>) -> impl Responder {
-    Json(state.with_lock(|state| Some(state.shared.get_raster_to_display()?.info.render)))
+    Json(state.with_lock(|state| {
+        state.with_project(|project| {
+            project
+                .get_raster_to_display()
+                .map(|raster| raster.info.render)
+        })?
+    }))
 }
 
 #[get("/get_ocr")]
 async fn get_ocr(state: Data<AppDataSync>) -> impl Responder {
-    Json(state.with_lock(|state| Some(state.shared.get_raster_to_display()?.info.ocr)))
+    Json(state.with_lock(|state| {
+        state.with_project(|project| Some(project.get_raster_to_display()?.info.render))
+    }))
 }

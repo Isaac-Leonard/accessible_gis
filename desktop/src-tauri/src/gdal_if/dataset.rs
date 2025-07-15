@@ -165,6 +165,12 @@ pub enum Srs {
     Epsg(u32),
 }
 
+impl Default for Srs {
+    fn default() -> Self {
+        Self::Epsg(4326)
+    }
+}
+
 impl Srs {
     pub fn try_to_gdal(self) -> Result<SpatialRef, GdalError> {
         match self {

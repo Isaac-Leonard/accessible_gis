@@ -2,12 +2,13 @@ pub mod dataset_collection;
 pub mod gis;
 mod loaded;
 mod preloaded;
+pub mod projects;
 pub mod settings;
 mod ui_state;
-mod user_state;
 
 use std::sync::{Arc, Mutex};
 
+use projects::Project;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -39,11 +40,19 @@ impl AppDataSync {
         f(&mut guard)
     }
 
+    pub fn with_project<T, F>(&self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut Project) -> T,
+    {
+        self.with_lock(|state| state.with_project(f))
+    }
+
     pub fn with_current_layer_mut<T, F>(&self, f: F) -> Option<T>
     where
         F: FnOnce(StatefulLayerEnum) -> T,
     {
         self.with_current_dataset_mut(|dataset, _| Some(f(dataset.get_current_layer()?)))
+            .flatten()
             .flatten()
     }
 
@@ -57,6 +66,7 @@ impl AppDataSync {
             Some(f(&mut band))
         })
         .flatten()
+        .flatten()
     }
 
     pub fn with_current_vector_layer<T, F>(&self, f: F) -> Option<T>
@@ -69,15 +79,14 @@ impl AppDataSync {
             Some(f(&mut layer))
         })
         .flatten()
+        .flatten()
     }
 
-    pub fn with_current_dataset_mut<T, F>(&self, f: F) -> Option<T>
+    pub fn with_current_dataset_mut<T, F>(&self, f: F) -> Option<Option<T>>
     where
         F: FnOnce(&mut StatefulDataset, usize) -> T,
     {
-        // If this panics then something has gone wrong elsewhere.
-        let mut guard = self.data.lock().unwrap();
-        guard.with_current_dataset_mut(f)
+        self.with_lock(|state| state.with_current_dataset_mut(f))
     }
 }
 

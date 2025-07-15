@@ -9,67 +9,44 @@ use tauri::{Runtime, Wry, path::PathResolver};
 use uuid::Uuid;
 
 use crate::{
-    dataset_collection::DatasetCollection,
     errors::{ApplicationError, ErrorDetails},
-    gdal_if::{LocalFeatureInfo, OpenDatasetError, WrappedDataset},
+    gdal_if::{LocalFeatureInfo, WrappedDataset},
     geometry::AsPoint,
-    web_socket::{GisMessage, RasterMessage, VectorMessage},
 };
 
 use super::{
     CountryImpl, Screen,
     gis::{dataset::StatefulDataset, raster::StatefulRasterBand, vector::StatefulVectorLayer},
     preloaded::Country,
+    projects::Project,
     settings::GlobalSettings,
-    user_state::UserState,
 };
 
 pub struct AppData {
     pub towns: HashMap<String, Vec<LocalFeatureInfo>>,
+    pub project: Option<Project>,
     pub screen: Screen,
-    pub shared: UserState,
     pub errors: ErrorList,
     settings: GlobalSettings,
-    pub prefered_display_fields: Vec<String>,
 }
 
 impl AppData {
-    /// Gets all of the data needed to update the touch devices configuration
-    /// Note that names of enums and structs are still not finalised as the end result is not yet clear
-    pub fn get_touch_device_settings(&mut self) -> Option<GisMessage> {
-        let settings = &self.shared.get_raster_to_display()?.info.audio_settings;
-        Some(GisMessage {
-            raster: RasterMessage {
-                min_freq: settings.min_freq,
-                max_freq: settings.max_freq,
+    pub fn open_dataset(&mut self, name: impl AsRef<Path>) -> Option<&mut StatefulDataset> {
+        self.with_project_fallible(
+            |project| match project.datasets.open(name, &project.settings) {
+                Ok(dataset) => Ok(dataset),
+                Err(err) => Err(ErrorDetails::OpenDatasetError(err.clone()).into()),
             },
-            vector: VectorMessage {
-                prefered_keys: self.prefered_display_fields.clone(),
-            },
-        })
-    }
-    pub fn open_dataset(
-        &mut self,
-        name: impl AsRef<Path>,
-    ) -> Result<&mut StatefulDataset, OpenDatasetError> {
-        match self.shared.datasets.open(name, &self.settings) {
-            Ok(dataset) => Ok(dataset),
-            Err(err) => {
-                self.errors
-                    .push(ErrorDetails::OpenDatasetError(err.clone()).into());
-                Err(err)
-            }
-        }
+        )
     }
 
     pub fn new<R: Runtime>(resolver: &PathResolver<R>) -> Self {
         Self {
             towns: HashMap::new(),
             screen: Screen::Main,
-            shared: UserState::default(),
+            project: None,
             errors: ErrorList::new(),
             settings: GlobalSettings::read(resolver),
-            prefered_display_fields: Vec::new(),
         }
     }
 
@@ -80,7 +57,30 @@ impl AppData {
     where
         F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, E>,
     {
-        self.shared.create_from_current_dataset(f, &self.settings)
+        self.with_project(|project| {
+            project.create_from_current_dataset(f, &project.settings.clone())
+        })?
+    }
+
+    pub fn with_project<'a, T, F>(&'a mut self, f: F) -> Option<T>
+    where
+        F: FnOnce(&'a mut Project) -> T,
+    {
+        self.project.as_mut().map(f)
+    }
+
+    pub fn with_project_fallible<'a, T, F>(&'a mut self, f: F) -> Option<T>
+    where
+        F: FnOnce(&'a mut Project) -> Result<T, ApplicationError>,
+    {
+        match self.project.as_mut().map(f) {
+            Some(Ok(v)) => Some(v),
+            Some(Err(e)) => {
+                self.errors.push(e);
+                None
+            }
+            None => None,
+        }
     }
 
     pub fn with_current_vector_layer<T, F>(&mut self, f: F) -> Option<T>
@@ -89,42 +89,41 @@ impl AppData {
     {
         self.with_current_dataset_mut(|dataset, _| {
             dataset.get_current_layer()?.try_into_vector().ok().map(f)
-        })?
+        })??
     }
 
-    pub fn with_current_dataset_mut<T, F>(&mut self, f: F) -> Option<T>
+    pub fn with_current_dataset_mut<T, F>(&mut self, f: F) -> Option<Option<T>>
     where
         F: FnOnce(&mut StatefulDataset, usize) -> T,
     {
-        self.shared.with_current_dataset_mut(f)
+        self.with_project(|project| project.with_current_dataset_mut(f))
     }
 
     pub fn raster_point_to_wgs84(&mut self, point: Point) -> Point {
         self.with_current_raster_band(|band| band.band.point_to_wgs84(point))
             .flatten()
+            .flatten()
             .expect("Expected raster band and couldn't find it")
     }
 
-    pub fn with_current_raster_band<T, F>(&mut self, f: F) -> Option<T>
+    pub fn with_current_raster_band<T, F>(&mut self, f: F) -> Option<Option<T>>
     where
         F: Fn(StatefulRasterBand) -> T,
     {
-        self.shared
-            .datasets
-            .with_current_dataset_mut(|dataset, _| {
-                let band = dataset.get_current_layer()?.try_into_raster().ok()?;
-                let res = f(band);
-                dataset
-                    .dataset
-                    .save_changes()
-                    .expect("Could not flush cache");
-                Some(res)
-            })
-            .flatten()
-    }
-
-    pub fn datasets(&self) -> &DatasetCollection {
-        &self.shared.datasets
+        self.with_project(|project| {
+            project
+                .datasets
+                .with_current_dataset_mut(|dataset, _| {
+                    let band = dataset.get_current_layer()?.try_into_raster().ok()?;
+                    let res = f(band);
+                    dataset
+                        .dataset
+                        .save_changes()
+                        .expect("Could not flush cache");
+                    Some(res)
+                })
+                .flatten()
+        })
     }
 
     pub fn get_towns_by_code(

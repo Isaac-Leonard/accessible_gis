@@ -106,16 +106,17 @@ pub fn theissen_polygons_to_file(points: MultiPoint, srs: String, file: PathBuf,
     let mut layer = dataset.create_layer(Default::default()).unwrap();
     layer.create_feature(polygons.to_gdal().unwrap()).unwrap();
     dataset.flush_cache().unwrap();
-    let mut guard = state.data.lock().unwrap();
     let wrapped_dataset = WrappedDataset {
         file_name: file,
         dataset,
         editable: true,
     };
-    guard.shared.datasets.add(StatefulDataset {
-        dataset: wrapped_dataset,
-        layer_index: None,
-        layer_info: vec![StatefulVectorInfo::default()],
-        band_info: vec![],
+    state.with_project(|project| {
+        project.datasets.add(StatefulDataset {
+            dataset: wrapped_dataset,
+            layer_index: None,
+            layer_info: vec![StatefulVectorInfo::default()],
+            band_info: vec![],
+        });
     });
 }

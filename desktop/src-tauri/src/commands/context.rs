@@ -1,10 +1,9 @@
-use std::sync::MutexGuard;
 use tauri::Manager;
 
 use gdal::vector::LayerAccess;
 use geo::{
     Area, ChamberlainDuquetteArea, Closest, ClosestPoint, Contains, GeodesicArea, GeodesicBearing,
-    GeodesicDistance, GeodesicLength, Intersects, Within,
+    GeodesicDistance, GeodesicLength,
 };
 use geo_types::{LineString as GeoLineString, Point as GeoPoint, Polygon as GeoPolygon};
 use itertools::Itertools;
@@ -15,10 +14,9 @@ use statrs::statistics::Statistics;
 use tauri::AppHandle;
 
 use crate::{
-    dataset_collection::NonEmptyDelegatorImpl,
     gdal_if::Field,
-    geometry::{Geometry, LineString, Point, Polygon, SingleGeometry, ToGeometryType},
-    state::{AppData, AppState, CountryImpl},
+    geometry::{Geometry, LineString, Point, Polygon, SingleGeometry},
+    state::{AppState, CountryImpl},
 };
 
 fn describe_polygon_internal(
@@ -161,35 +159,6 @@ pub fn describe_line(
     }
 }
 
-#[specta::specta]
-fn _analyse_geom(line: LineString, mut guard: MutexGuard<'_, AppData>) {
-    let line = GeoLineString::from(line);
-    let mut contains = Vec::new();
-    let mut contained_by = Vec::new();
-    let mut crosses = Vec::new();
-    for (dataset_idx, dataset) in guard.shared.datasets.iter_mut().enumerate() {
-        for (layer_idx, mut layer) in &mut dataset.dataset.dataset.layers().enumerate() {
-            for feature in layer.features() {
-                let fid = feature.fid().unwrap();
-                let geom = feature.geometry().expect("Feature has no geometry");
-                let geom = geom
-                    .to_geo()
-                    .expect("Could not convert gdal geometry to geo geometry");
-                //let line = Geometry::LineString { points: line }.into();
-                let geom_type = geom.to_type();
-                let info = (geom_type, dataset_idx, layer_idx, fid);
-                if geom.is_within(&line) {
-                    contained_by.push(info);
-                } else if geom.contains(&line) {
-                    contains.push(info);
-                } else if geom.intersects(&line) {
-                    crosses.push(info);
-                }
-            }
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "type")]
 pub enum LineDescription {
@@ -314,6 +283,7 @@ pub fn get_polygons_around_point(point: Point, layer: usize, state: AppState) ->
                 })
                 .collect()
         })
+        .flatten()
         .unwrap_or_default()
 }
 

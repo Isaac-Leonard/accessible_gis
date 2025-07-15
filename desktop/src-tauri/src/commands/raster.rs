@@ -104,7 +104,7 @@ impl Classification {
 #[tauri::command]
 #[specta::specta]
 pub fn set_display_raster(raster: Option<RasterIndex>, state: AppState) {
-    state.with_lock(|state| state.shared.display_current_raster(raster))
+    state.with_project(|project| project.display_current_raster(raster));
 }
 
 #[tauri::command]
@@ -114,14 +114,16 @@ pub fn set_current_audio_settings(
     state: AppState,
     device: State<TouchDevice>,
 ) {
-    state.with_lock(|state| {
+    state.with_project(|project| {
         state
             .with_current_raster_band(|band| {
                 band.info.audio_settings = settings.clone();
             })
             .expect("Tried to work on non selected raster band");
         // We already used expect above for the same band so we are safe to unwrap here
-        device.send(AppMessage::Gis(state.get_touch_device_settings().unwrap()));
+        device.send(AppMessage::Gis(
+            project.get_touch_device_settings().unwrap(),
+        ));
     });
 }
 
@@ -161,22 +163,19 @@ pub fn get_point_of_max_value(state: AppState) -> Option<Point> {
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_point_of_min_value(state: AppState) -> Option<Point> {
-    let mut guard = state.data.lock().unwrap();
-    guard
-        .with_current_raster_band(|band| {
-            let data = read_raster_data(&band.band.band);
-            let data_iter = data.indexed_iter();
-            match band.band.no_data_value() {
-                Some(no_data_value) => itertools::Either::Left(data_iter.filter(move |x| {
-                    x.1.total_cmp(&no_data_value) != Ordering::Equal && !x.1.is_nan()
-                })),
-                _ => itertools::Either::Right(data_iter.filter(|x| !x.1.is_nan())),
-            }
-            .min_by(|a, b| a.1.total_cmp(b.1))
-            .map(|(index, _)| Point::from_2d_index(index))
-        })
-        .unwrap()
+pub fn get_point_of_min_value(state: AppState) -> Option<Option<Point>> {
+    state.with_current_raster_band(|band| {
+        let data = read_raster_data(&band.band.band);
+        let data_iter = data.indexed_iter();
+        match band.band.no_data_value() {
+            Some(no_data_value) => itertools::Either::Left(data_iter.filter(move |x| {
+                x.1.total_cmp(&no_data_value) != Ordering::Equal && !x.1.is_nan()
+            })),
+            _ => itertools::Either::Right(data_iter.filter(|x| !x.1.is_nan())),
+        }
+        .min_by(|a, b| a.1.total_cmp(b.1))
+        .map(|(index, _)| Point::from_2d_index(index))
+    })
 }
 
 pub trait IntoIndex {
@@ -228,24 +227,25 @@ pub fn get_value_at_point(point: Point, state: AppState) -> Option<f64> {
 #[tauri::command]
 #[specta::specta]
 pub fn get_band_sizes(state: AppState) -> Vec<RasterSize> {
-    state.with_lock(|state| {
-        state
-            .shared
-            .datasets
-            .iter_mut()
-            .map(|wrapped| {
-                let dataset = &wrapped.dataset;
-                let (width, length) = dataset.dataset.raster_size();
-                let bands = dataset.dataset.raster_count();
+    state
+        .with_project(|project| {
+            project
+                .datasets
+                .iter_mut()
+                .map(|wrapped| {
+                    let dataset = &wrapped.dataset;
+                    let (width, length) = dataset.dataset.raster_size();
+                    let bands = dataset.dataset.raster_count();
 
-                RasterSize {
-                    width,
-                    length,
-                    bands,
-                }
-            })
-            .collect()
-    })
+                    RasterSize {
+                        width,
+                        length,
+                        bands,
+                    }
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 #[derive(Serialize, Deserialize, specta::Type)]
