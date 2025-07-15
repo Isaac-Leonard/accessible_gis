@@ -10,23 +10,13 @@ import { IndexedOptionPicker } from "./option-picker";
 import { client } from "./api";
 import { OpenDatasetDialog } from "./open-screen";
 import { Dialog, useDialog } from "./dialog";
-import { openFile } from "./files";
-import { save } from "@tauri-apps/plugin-dialog";
+import { newProject, openFile } from "./files";
 import { LayerScreenContext } from "./context";
 
 export const MainScreen = ({ state }: { state: ProjectScreen }) => {
   return state.type === "NotLoaded" ? (
     <div>
-      <button
-        onClick={() =>
-          save({
-            title: "Project location",
-            defaultPath: "accessible_gis_project.json",
-          }).then(client.createProject)
-        }
-      >
-        New Project
-      </button>
+      <button onClick={newProject}>New Project</button>
       <button
         onClick={() =>
           openFile("Load project from where").then(client.loadProject)

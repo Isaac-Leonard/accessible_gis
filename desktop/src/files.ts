@@ -1,4 +1,4 @@
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { client } from "./api";
 
 export const openFile = async (prompt?: string): Promise<null | string> => {
@@ -23,3 +23,13 @@ export async function load() {
     await client.loadFile(file);
   }
 }
+
+export const newProject = () =>
+  save({
+    title: "Project location",
+    defaultPath: "accessible_gis_project.json",
+  }).then((name) => {
+    if (name !== null) {
+      return client.createProject(name);
+    }
+  });

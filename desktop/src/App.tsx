@@ -1,7 +1,7 @@
 import "./App.css";
 import { Router } from "./router";
 import { client, state } from "./api";
-import { load } from "./files";
+import { load, newProject } from "./files";
 import { ErrorsPopup } from "./errors-screen";
 
 const globalKeyHandler = (e: KeyboardEvent) => {
@@ -10,6 +10,10 @@ const globalKeyHandler = (e: KeyboardEvent) => {
       case "o":
         e.preventDefault();
         load();
+        break;
+      case "n":
+        e.preventDefault();
+        newProject();
         break;
     }
   }
