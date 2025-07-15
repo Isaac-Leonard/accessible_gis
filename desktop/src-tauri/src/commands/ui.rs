@@ -18,7 +18,7 @@ pub fn set_screen(screen: Screen, state: AppState) {
 pub fn get_app_info(state: AppState) -> UiState {
     state.with_lock(|state| UiState {
         screen: match state.screen {
-            Screen::Main => UiScreen::Layers(state.get_layers_screen()),
+            Screen::Main => UiScreen::Project(state.get_layers_screen()),
             Screen::NewDataset => UiScreen::NewDataset(NewDatasetScreenData {
                 drivers: list_drivers(),
             }),

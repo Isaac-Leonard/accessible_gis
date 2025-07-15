@@ -25,7 +25,7 @@ pub struct UiState {
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
 #[serde(tag = "name")]
 pub enum UiScreen {
-    Layers(Option<LayerScreen>),
+    Project(Option<ProjectScreen>),
     ThiessenPolygons,
     NewDataset(NewDatasetScreenData),
     Settings(GlobalSettings),
@@ -39,7 +39,7 @@ pub struct NewDatasetScreenData {
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
-pub struct LayerScreen {
+pub struct ProjectScreen {
     pub layers: Vec<LayerDescriptor>,
     pub layer_info: Option<LayerScreenInfo>,
     pub ip: String,
@@ -86,7 +86,7 @@ pub struct RasterScreenData {
 }
 
 impl AppData {
-    pub fn get_layers_screen(&mut self) -> Option<LayerScreen> {
+    pub fn get_layers_screen(&mut self) -> Option<ProjectScreen> {
         self.with_project(|project| {
             let layers = project
                 .datasets
@@ -153,7 +153,7 @@ impl AppData {
                 })
                 .flatten();
             let port = 80;
-            LayerScreen {
+            ProjectScreen {
                 layers,
                 layer_info,
                 ip: local_ip()
