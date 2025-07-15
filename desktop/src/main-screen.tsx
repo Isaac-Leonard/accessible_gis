@@ -1,12 +1,52 @@
 import { VectorNavigator } from "./vector-navigator";
 import { RasterNavigator } from "./raster-navigator";
-import { LayerDescriptor, LayerScreen, LayerScreenInfo } from "./bindings";
+import {
+  LayerDescriptor,
+  LayerScreenInfo,
+  ProjectScreen,
+  ProjectScreenInfo,
+} from "./bindings";
 import { IndexedOptionPicker } from "./option-picker";
 import { client } from "./api";
 import { OpenDatasetDialog } from "./open-screen";
 import { Dialog, useDialog } from "./dialog";
+import { openFile } from "./files";
+import { save } from "@tauri-apps/plugin-dialog";
+import { LayerScreenContext } from "./context";
 
-export const MainScreen = ({ state }: { state: LayerScreen }) => {
+export const MainScreen = ({ state }: { state: ProjectScreen }) => {
+  return state.type === "NotLoaded" ? (
+    <div>
+      <button
+        onClick={() =>
+          save({
+            title: "Project location",
+            defaultPath: "accessible_gis_project.json",
+          }).then(client.createProject)
+        }
+      >
+        New Project
+      </button>
+      <button
+        onClick={() =>
+          openFile("Load project from where").then(client.loadProject)
+        }
+      >
+        Open Project
+      </button>
+    </div>
+  ) : (
+    <LayerScreenContext.Provider value={state}>
+      <LoadedProjectScreen state={state} />
+    </LayerScreenContext.Provider>
+  );
+};
+
+export const LoadedProjectScreen = ({
+  state,
+}: {
+  state: ProjectScreenInfo;
+}) => {
   const layersInfo = state.layers;
   const foundIndex = layersInfo.findIndex(
     (layer) =>

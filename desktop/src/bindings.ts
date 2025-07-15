@@ -232,6 +232,12 @@ export const commands = {
   async markErrorRead(id: string): Promise<void> {
     await TAURI_INVOKE("mark_error_read", { id });
   },
+  async createProject(path: string): Promise<void> {
+    await TAURI_INVOKE("create_project", { path });
+  },
+  async loadProject(path: string): Promise<void> {
+    await TAURI_INVOKE("load_project", { path });
+  },
 };
 
 /** user-defined events **/
@@ -253,6 +259,8 @@ export type ApplicationError = (
   | { type: "OpenDatasetError"; error: OpenDatasetError }
   | { type: "CsvError"; error: MyCsvError }
   | { type: "TouchDeviceError"; error: string }
+  | { type: "IoError"; error: string }
+  | { type: "SerdeError"; error: string }
   | { type: "Other"; error: string }
 ) & { read: boolean; id: string };
 export type AudioIndicator =
@@ -411,12 +419,6 @@ export type LayerDescriptor = (
 export type LayerIndex =
   | { type: "Vector"; index: number }
   | { type: "Raster"; index: number };
-export type LayerScreen = {
-  layers: LayerDescriptor[];
-  layer_info: LayerScreenInfo | null;
-  ip: string;
-  prefered_display_fields: string[];
-};
 export type LayerScreenInfo =
   | ({ type: "Vector" } & VectorScreenData)
   | ({ type: "Raster" } & RasterScreenData);
@@ -587,6 +589,15 @@ export type OpenLineDescription = {
 export type Point = { x: number; y: number };
 export type Polygon = { exterior: LineString; interior: LineString[] };
 export type PolygonInfo = { area: number; fields: Field[] };
+export type ProjectScreen =
+  | ({ type: "Project" } & ProjectScreenInfo)
+  | { type: "NotLoaded" };
+export type ProjectScreenInfo = {
+  layers: LayerDescriptor[];
+  layer_info: LayerScreenInfo | null;
+  ip: string;
+  prefered_display_fields: string[];
+};
 export type RasterGraphSettings = {
   /**
    * The length the histogram should play for in milliseconds
@@ -641,7 +652,7 @@ export type ThiessenPolygonRecord = {
   column: number;
 };
 export type UiScreen =
-  | ({ name: "Layers" } & LayerScreen)
+  | ({ name: "Project" } & ProjectScreen)
   | { name: "ThiessenPolygons" }
   | ({ name: "NewDataset" } & NewDatasetScreenData)
   | ({ name: "Settings" } & GlobalSettings)

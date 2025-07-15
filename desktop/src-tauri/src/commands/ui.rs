@@ -3,7 +3,7 @@ use uuid::Uuid;
 use crate::{
     gdal_if::list_drivers,
     state::{AppState, Screen},
-    ui::{NewDatasetScreenData, UiScreen, UiState},
+    ui::{NewDatasetScreenData, ProjectScreen, UiScreen, UiState},
 };
 
 #[tauri::command]
@@ -18,7 +18,12 @@ pub fn set_screen(screen: Screen, state: AppState) {
 pub fn get_app_info(state: AppState) -> UiState {
     state.with_lock(|state| UiState {
         screen: match state.screen {
-            Screen::Main => UiScreen::Project(state.get_layers_screen()),
+            Screen::Main => UiScreen::Project(
+                state
+                    .get_project_screen_info()
+                    .map(ProjectScreen::Project)
+                    .unwrap_or_default(),
+            ),
             Screen::NewDataset => UiScreen::NewDataset(NewDatasetScreenData {
                 drivers: list_drivers(),
             }),

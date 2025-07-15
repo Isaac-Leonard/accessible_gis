@@ -41,7 +41,7 @@ impl Project {
         Ok(project)
     }
 
-    fn load(path: PathBuf) -> Result<Self, ApplicationError> {
+    pub fn load(path: PathBuf) -> Result<Self, ApplicationError> {
         let serialised_project =
             std::fs::read_to_string(&path).map_err(|err| ErrorDetails::IoError(err.to_string()))?;
 

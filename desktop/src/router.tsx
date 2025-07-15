@@ -3,18 +3,13 @@ import { MainScreen } from "./main-screen";
 import { NewDatasetScreen } from "./new-dataset-screen";
 import { state } from "./api";
 import { SettingsScreen } from "./settings-screen";
-import { LayerScreenContext } from "./context";
 import { TouchDeviceScreen } from "./touch-device-screen";
 import { ErrorsScreen } from "./errors-screen";
 
 export const Router = () => {
   switch (state.value.screen.name) {
-    case "Layers":
-      return (
-        <LayerScreenContext.Provider value={state.value.screen}>
-          <MainScreen state={state.value.screen} />
-        </LayerScreenContext.Provider>
-      );
+    case "Project":
+      return <MainScreen state={state.value.screen} />;
     case "ThiessenPolygons":
       return <ThiessenPolygons />;
     case "NewDataset":

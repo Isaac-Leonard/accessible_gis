@@ -163,7 +163,7 @@ pub fn get_point_of_max_value(state: AppState) -> Option<Point> {
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_point_of_min_value(state: AppState) -> Option<Option<Point>> {
+pub fn get_point_of_min_value(state: AppState) -> Option<Point> {
     state.with_current_raster_band(|band| {
         let data = read_raster_data(&band.band.band);
         let data_iter = data.indexed_iter();
@@ -175,7 +175,7 @@ pub fn get_point_of_min_value(state: AppState) -> Option<Option<Point>> {
         }
         .min_by(|a, b| a.1.total_cmp(b.1))
         .map(|(index, _)| Point::from_2d_index(index))
-    })
+    })?
 }
 
 pub trait IntoIndex {

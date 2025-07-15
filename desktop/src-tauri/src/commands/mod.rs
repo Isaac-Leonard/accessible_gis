@@ -5,6 +5,7 @@ mod context;
 mod dataset;
 mod dem;
 mod individual_settings;
+mod project;
 mod raster;
 mod settings;
 mod thiessen_polygons;
@@ -26,6 +27,7 @@ pub use context::*;
 pub use dataset::*;
 pub use dem::*;
 pub use individual_settings::*;
+pub use project::*;
 pub use raster::*;
 pub use settings::*;
 pub use thiessen_polygons::*;
@@ -92,6 +94,8 @@ pub fn generate_handlers(
             focus_box,
             classify_landforms,
             mark_error_read,
+            create_project,
+            load_project,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds
