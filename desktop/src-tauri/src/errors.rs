@@ -32,17 +32,17 @@ pub enum ErrorDetails {
 
 impl From<ErrorDetails> for ApplicationError {
     fn from(value: ErrorDetails) -> Self {
-        Self {
-            details: value,
-            read: false,
-            id: uuid::Uuid::new_v4(),
-        }
+        value.into_application_error()
     }
 }
 
 impl ErrorDetails {
     pub fn into_application_error(self) -> ApplicationError {
-        self.into()
+        ApplicationError {
+            details: self,
+            read: false,
+            id: uuid::Uuid::new_v4(),
+        }
     }
 }
 
@@ -51,6 +51,12 @@ pub struct FailedToRun(String);
 
 #[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
 pub struct MyCsvError(Box<MyCsvErrorKind>);
+
+impl From<csv::Error> for MyCsvError {
+    fn from(value: csv::Error) -> Self {
+        Self(Box::new(value.into_kind().into()))
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
 pub enum MyCsvErrorKind {
@@ -63,7 +69,7 @@ pub enum MyCsvErrorKind {
         /// available.
         pos: Option<MyCsvPosition>,
         /// The corresponding UTF-8 error.
-        err: MyUtf8Error,
+        err: MyCsvUtf8Error,
     },
     /// This error occurs when two records with an unequal number of fields
     /// are found. This error only occurs when the `flexible` option in a
@@ -99,6 +105,35 @@ pub enum MyCsvErrorKind {
     /// don't count on exhaustive matching. (Otherwise, adding a new variant
     /// could break existing code.)
     __Nonexhaustive,
+}
+
+impl From<csv::ErrorKind> for MyCsvErrorKind {
+    fn from(value: csv::ErrorKind) -> Self {
+        use csv::ErrorKind;
+        match value {
+            ErrorKind::Io(error) => Self::Io(error.to_string()),
+            ErrorKind::Utf8 { pos, err } => Self::Utf8 {
+                pos: pos.map(Into::into),
+                err: err.into(),
+            },
+            ErrorKind::UnequalLengths {
+                pos,
+                expected_len,
+                len,
+            } => Self::UnequalLengths {
+                pos: pos.map(Into::into),
+                expected_len,
+                len,
+            },
+            ErrorKind::Seek => Self::Seek,
+            ErrorKind::Serialize(err) => Self::Serialize(err),
+            ErrorKind::Deserialize { pos, err } => Self::Deserialize {
+                pos: pos.map(Into::into),
+                err: err.into(),
+            },
+            _ => todo!(),
+        }
+    }
 }
 
 #[derive(Copy, Eq, PartialEq, Clone, Debug, Serialize, Deserialize, specta::Type)]
@@ -142,7 +177,7 @@ pub struct MyCsvDeserializeError {
 impl From<csv::DeserializeError> for MyCsvDeserializeError {
     fn from(value: csv::DeserializeError) -> Self {
         Self {
-            field: value.field().clone(),
+            field: value.field(),
             kind: value.kind().clone().into(),
         }
     }
@@ -170,6 +205,23 @@ impl From<csv::DeserializeErrorKind> for MyCsvDeserializeErrorKind {
             DeserializeErrorKind::ParseBool(err) => Self::ParseBool(err.to_string()),
             DeserializeErrorKind::ParseInt(err) => Self::ParseInt(err.to_string()),
             DeserializeErrorKind::ParseFloat(err) => Self::ParseFloat(err.to_string()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, specta::Type)]
+pub struct MyCsvUtf8Error {
+    /// The field index of a byte record in which UTF-8 validation failed.
+    field: usize,
+    /// The index into the given field up to which valid UTF-8 was verified.
+    valid_up_to: usize,
+}
+
+impl From<csv::Utf8Error> for MyCsvUtf8Error {
+    fn from(value: csv::Utf8Error) -> Self {
+        Self {
+            field: value.field(),
+            valid_up_to: value.valid_up_to(),
         }
     }
 }

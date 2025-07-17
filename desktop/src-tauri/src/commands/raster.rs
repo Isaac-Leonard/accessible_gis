@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, process::Command};
+use std::{cmp::Ordering, path::PathBuf, process::Command};
 
 use gdal::vector::LayerAccess;
 use itertools::Itertools;
@@ -7,6 +7,7 @@ use tauri::State;
 
 use crate::{
     dataset_collection::NonEmptyDelegatorImpl,
+    errors::ErrorDetails,
     gdal_if::{read_raster_data, read_raster_data_enum_as},
     geometry::Point,
     state::{
@@ -19,7 +20,7 @@ use crate::{
 
 #[tauri::command]
 #[specta::specta]
-pub fn generate_counts_report(name: String, state: AppState) {
+pub fn generate_counts_report(name: PathBuf, state: AppState) {
     let pixels = state
         .with_current_raster_band(|band| read_raster_data(&band.band.band))
         .unwrap();
@@ -45,15 +46,22 @@ pub fn generate_counts_report(name: String, state: AppState) {
         .write_record(["value", "count", "percentage"])
         .unwrap();
 
-    report.iter().for_each(|(pixel, count, percentage)| {
-        output
-            .write_record([
-                pixel.to_string(),
-                count.to_string(),
-                format!("{:.2}", percentage),
-            ])
-            .unwrap();
-    })
+    for (pixel, count, percentage) in report {
+        let res = output.write_record([
+            pixel.to_string(),
+            count.to_string(),
+            format!("{:.2}", percentage),
+        ]);
+        match res {
+            Ok(()) => {}
+            Err(err) => {
+                state.with_lock(|state| {
+                    state.errors.push(ErrorDetails::CsvError(err.into()).into())
+                });
+                return;
+            }
+        };
+    }
 }
 
 #[tauri::command]
