@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals";
 import { Result } from "./bindings";
-import { commands } from "./bindings";
+import { commands, events } from "./bindings";
 
 export const state = signal(await commands.getAppInfo());
 type Api = typeof commands;
@@ -47,3 +47,5 @@ export const rerender = () => {
     state.value = data;
   });
 };
+
+events.messageEvent.listen(rerender);

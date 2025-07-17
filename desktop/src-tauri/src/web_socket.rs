@@ -11,12 +11,16 @@ use futures_util::{
 };
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
+use tauri_specta::Event;
 use tokio::{
     sync::mpsc::{UnboundedSender, unbounded_channel},
     time::interval,
 };
 
-use crate::{commands::AppDataSync, errors::ErrorDetails};
+use crate::{
+    commands::{AppDataSync, MessageEvent},
+    errors::ErrorDetails,
+};
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -172,7 +176,8 @@ fn process_device_message(app: AppHandle, message: DeviceMessage) {
                 .push(ErrorDetails::TouchDeviceError(err).into())
         }),
         _ => {}
-    }
+    };
+    MessageEvent.emit_to(&app, "MessageEvent").unwrap();
 }
 
 #[derive(Default)]
