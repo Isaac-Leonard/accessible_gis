@@ -164,7 +164,7 @@ enum DeviceMessage {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DeviceData {
-    voices: Vec<String>,
+    pub voices: Vec<String>,
 }
 
 fn process_device_message(app: AppHandle, message: DeviceMessage) {

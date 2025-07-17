@@ -32,12 +32,12 @@ pub struct AppData {
 
 impl AppData {
     pub fn open_dataset(&mut self, name: impl AsRef<Path>) -> Option<&mut StatefulDataset> {
-        self.with_project_fallible(
-            |project| match project.datasets.open(name, &project.settings) {
-                Ok(dataset) => Ok(dataset),
-                Err(err) => Err(ErrorDetails::OpenDatasetError(err.clone()).into()),
-            },
-        )
+        self.with_project_fallible(|project| {
+            project
+                .datasets
+                .open(name, &project.settings)
+                .map_err(|err| ErrorDetails::OpenDatasetError(err.clone()))
+        })
     }
 
     pub fn new<R: Runtime>(resolver: &PathResolver<R>) -> Self {
@@ -71,12 +71,12 @@ impl AppData {
 
     pub fn with_project_fallible<'a, T, F>(&'a mut self, f: F) -> Option<T>
     where
-        F: FnOnce(&'a mut Project) -> Result<T, ApplicationError>,
+        F: FnOnce(&'a mut Project) -> Result<T, ErrorDetails>,
     {
         match self.project.as_mut().map(f) {
             Some(Ok(v)) => Some(v),
             Some(Err(e)) => {
-                self.errors.push(e);
+                self.errors.push(e.into());
                 None
             }
             None => None,

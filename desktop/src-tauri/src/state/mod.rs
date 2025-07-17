@@ -12,7 +12,7 @@ use projects::Project;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::gdal_if::Envelope;
+use crate::{errors::ErrorDetails, gdal_if::Envelope};
 
 pub use loaded::*;
 pub use preloaded::*;
@@ -45,6 +45,13 @@ impl AppDataSync {
         F: FnOnce(&mut Project) -> T,
     {
         self.with_lock(|state| state.with_project(f))
+    }
+
+    pub fn with_project_fallible<T, F>(&self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut Project) -> Result<T, ErrorDetails>,
+    {
+        self.with_lock(|state| state.with_project_fallible(f))
     }
 
     pub fn with_current_layer_mut<T, F>(&self, f: F) -> Option<T>
