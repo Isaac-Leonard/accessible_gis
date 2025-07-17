@@ -67,7 +67,7 @@ pub fn generate_counts_report(name: PathBuf, state: AppState) {
 #[tauri::command]
 #[specta::specta]
 pub fn classify_current_raster(
-    dest: String,
+    dest: PathBuf,
     classifications: Vec<Classification>,
     state: AppState,
 ) {
@@ -79,7 +79,7 @@ pub fn classify_current_raster(
         let mut cmd = Command::new("gdal_calc.py");
         cmd.arg("-A")
             .arg(&dataset.dataset.file_name)
-            .arg(format!("--outfile={}", dest))
+            .arg(format!("--outfile={:?}", dest))
             .arg(format!("--calc=\"{}\"", classifications))
             .arg(format!(
                 "--NoDataValue={}",

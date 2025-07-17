@@ -95,6 +95,20 @@ impl AppDataSync {
     {
         self.with_lock(|state| state.with_current_dataset_mut(f))
     }
+
+    pub fn with_current_dataset_mut_fallible<T, F>(&self, f: F) -> Option<Option<T>>
+    where
+        F: FnOnce(&mut StatefulDataset, usize) -> Result<T, ErrorDetails>,
+    {
+        self.with_lock(|state| match state.with_current_dataset_mut(f) {
+            Some(Some(Ok(v))) => Some(Some(v)),
+            Some(Some(Err(err))) => {
+                state.errors.push(err.into());
+                None
+            }
+            None | Some(None) => None,
+        })
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
