@@ -154,8 +154,6 @@ pub fn set_prefered_display_fields(
 ) {
     state.with_project(|project| {
         project.prefered_display_fields = fields;
-        device.send(AppMessage::Gis(
-            project.get_touch_device_settings().unwrap(),
-        ));
+        device.send(AppMessage::Gis(project.get_touch_device_settings()));
     });
 }

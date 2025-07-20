@@ -67,13 +67,7 @@ impl AppDataSync {
     where
         F: FnOnce(&mut StatefulRasterBand) -> T,
     {
-        self.with_current_dataset_mut(|dataset, _| {
-            let index = *dataset.layer_index?.as_raster()?;
-            let mut band = dataset.get_raster(index)?;
-            Some(f(&mut band))
-        })
-        .flatten()
-        .flatten()
+        self.with_project(|project| project.with_current_raster_band(f))?
     }
 
     pub fn with_current_vector_layer<T, F>(&self, f: F) -> Option<T>

@@ -75,7 +75,7 @@ pub fn classify_current_raster(
         .into_iter()
         .map(Classification::into_calc_string)
         .join("+");
-    state.with_current_dataset_mut(|dataset, _| {
+    state.with_current_dataset_mut_fallible(|dataset, _| {
         let mut cmd = Command::new("gdal_calc.py");
         cmd.arg("-A")
             .arg(&dataset.dataset.file_name)
@@ -91,8 +91,11 @@ pub fn classify_current_raster(
                     .no_data_value()
                     .unwrap()
             ));
-        let output = cmd.output().expect("Failed to classify raster");
+        let output = cmd
+            .output()
+            .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
         eprint!("{:?}", output);
+        Ok(())
     });
 }
 
@@ -122,16 +125,16 @@ pub fn set_current_audio_settings(
     state: AppState,
     device: State<TouchDevice>,
 ) {
-    state.with_project(|project| {
-        state
-            .with_current_raster_band(|band| {
-                band.info.audio_settings = settings.clone();
-            })
-            .expect("Tried to work on non selected raster band");
-        // We already used expect above for the same band so we are safe to unwrap here
-        device.send(AppMessage::Gis(
-            project.get_touch_device_settings().unwrap(),
-        ));
+    state.with_project_fallible::<(), _>(|project| {
+        let Some(_) = project.with_current_raster_band(|band| {
+            band.info.audio_settings = settings.clone();
+        }) else {
+            return Err(ErrorDetails::Other(
+                "Tried to work on non selected raster band".to_string(),
+            ));
+        };
+        device.send(AppMessage::Gis(project.get_touch_device_settings()));
+        Ok(())
     });
 }
 

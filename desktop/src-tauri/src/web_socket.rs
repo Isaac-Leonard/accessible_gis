@@ -46,7 +46,7 @@ pub async fn ws_handle(
 
     // Ensure the device has the right settings for the current data on start
     app.state::<AppDataSync>().with_project(|project| {
-        device_sender.send(AppMessage::Gis(project.get_touch_device_settings()?));
+        device_sender.send(AppMessage::Gis(project.get_touch_device_settings()));
         Some(())
     });
 

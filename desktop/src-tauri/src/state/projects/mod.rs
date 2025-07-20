@@ -82,7 +82,7 @@ impl Project {
         for dataset in project.datasets {
             datasets
                 .open(dataset, &project.settings)
-                .map_err(|err| ErrorDetails::OpenDatasetError(err))?;
+                .map_err(ErrorDetails::OpenDatasetError)?;
         }
 
         Ok(Self {
@@ -91,7 +91,7 @@ impl Project {
             datasets,
             settings: project.settings.clone(),
             prefered_display_fields: project.prefered_display_fields.clone(),
-            raster_to_display: project.raster_to_display.clone(),
+            raster_to_display: project.raster_to_display,
         })
     }
 
@@ -134,9 +134,12 @@ impl Project {
 
     /// Gets all of the data needed to update the touch devices configuration
     /// Note that names of enums and structs are still not finalised as the end result is not yet clear
-    pub fn get_touch_device_settings(&mut self) -> Option<GisMessage> {
-        let settings = &self.get_raster_to_display()?.info.audio_settings;
-        Some(GisMessage {
+    pub fn get_touch_device_settings(&mut self) -> GisMessage {
+        let settings = match self.get_raster_to_display() {
+            Some(band) => &band.info.audio_settings,
+            None => self.settings.get_default_audio(),
+        };
+        GisMessage {
             raster: RasterMessage {
                 min_freq: settings.min_freq,
                 max_freq: settings.max_freq,
@@ -144,7 +147,19 @@ impl Project {
             vector: VectorMessage {
                 prefered_keys: self.prefered_display_fields.clone(),
             },
+        }
+    }
+
+    pub fn with_current_raster_band<T, F>(&mut self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut StatefulRasterBand) -> T,
+    {
+        self.with_current_dataset_mut(|dataset, _| {
+            let index = *dataset.layer_index?.as_raster()?;
+            let mut band = dataset.get_raster(index)?;
+            Some(f(&mut band))
         })
+        .flatten()
     }
 }
 
