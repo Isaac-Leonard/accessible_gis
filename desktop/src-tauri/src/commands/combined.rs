@@ -1,6 +1,7 @@
 use gdal::spatial_ref::SpatialRef;
 
 use crate::{
+    errors::ErrorDetails,
     gdal_if::Srs,
     state::{AppState, gis::combined::StatefulLayerEnum},
 };
@@ -8,19 +9,25 @@ use crate::{
 #[tauri::command]
 #[specta::specta]
 pub fn reproject_layer(srs: Srs, name: &str, state: AppState) {
-    state.with_current_dataset_mut(|ds, _| {
+    state.with_current_dataset_mut_fallible(|ds, _| {
         let layer = ds.get_current_layer();
-        match layer {
+        Ok(match layer {
             Some(StatefulLayerEnum::Vector(layer)) => {
-                let output = layer.reproject(name, srs).unwrap();
+                let output = layer
+                    .reproject(name, srs)
+                    .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
                 eprint!("{:?}", output)
             }
             Some(StatefulLayerEnum::Raster(band)) => {
-                let output = band.reproject(name, srs).unwrap();
+                let output = band
+                    .reproject(name, srs)
+                    .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
                 eprint!("{:?}", output)
             }
-            None => eprint!("No layer available"),
-        }
+            None => Err(ErrorDetails::Other(
+                "No layer available to reproject".to_string(),
+            ))?,
+        })
     });
 }
 
@@ -34,5 +41,10 @@ pub fn set_srs(srs: Srs, state: AppState) {
         Srs::Epsg(epsg_code) => SpatialRef::from_epsg(epsg_code),
     }
     .unwrap();
-    state.with_current_dataset_mut(|ds, _| ds.dataset.dataset.set_spatial_ref(&srs).unwrap());
+    state.with_current_dataset_mut_fallible(|ds, _| {
+        ds.dataset
+            .dataset
+            .set_spatial_ref(&srs)
+            .map_err(|err| ErrorDetails::Other(err.to_string()))
+    });
 }

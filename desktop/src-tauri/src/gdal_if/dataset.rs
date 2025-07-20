@@ -64,8 +64,8 @@ impl WrappedDataset {
             .collect_vec()
     }
 
-    pub fn save_changes(&mut self) -> gdal::errors::Result<()> {
-        self.dataset.flush_cache()
+    pub fn save_changes(&mut self) -> Result<(), FlushCacheError> {
+        self.dataset.flush_cache().map_err(FlushCacheError::new)
     }
 
     pub fn open(name: impl AsRef<Path>) -> Result<Self, OpenDatasetError> {
@@ -205,6 +205,14 @@ pub struct MissingDriverError {
 #[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
 pub struct FlushCacheError {
     gdal_error: MyGdalError,
+}
+
+impl FlushCacheError {
+    pub fn new(gdal_error: GdalError) -> Self {
+        Self {
+            gdal_error: gdal_error.into(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
