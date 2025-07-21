@@ -28,7 +28,7 @@ const GeomorphonsPolygonsScreen = ({
   return (
     <div>
       <NumberInput
-        label="Minimum Search distance (in pixels)"
+        label="Minimum Search distance (in cells)"
         binding={options.search}
         innerRef={innerRef}
       />
@@ -37,13 +37,13 @@ const GeomorphonsPolygonsScreen = ({
         binding={options.threshold}
       />
       <NumberInput
-        label="Maximum search distance (in pixels)"
+        label="Maximum search distance (in cells)"
         binding={options.distance}
-      />{" "}
+      />
       <NumberInput
-        label="Window size for majority filter (in pixels)"
+        label="Window size for majority filter (in cells)"
         binding={options.filter}
-      />{" "}
+      />
       <SaveButton
         text="Run"
         prompt="Name of new polygons file"
