@@ -8,6 +8,7 @@ use tauri::State;
 
 use crate::{
     FeatureInfo,
+    errors::ErrorDetails,
     gdal_if::{FieldType, LayerIndex},
     state::AppState,
     web_socket::{AppMessage, TouchDevice},
@@ -16,7 +17,7 @@ use crate::{
 #[tauri::command]
 #[specta::specta]
 pub fn copy_features(features: Vec<usize>, name: &str, state: AppState) {
-    state.with_current_dataset_mut(|ds, _| {
+    state.with_current_dataset_mut_fallible(|ds, _| {
         let input_name = ds.dataset.file_name.clone();
 
         let mut command = Command::new("ogr2ogr");
@@ -24,8 +25,11 @@ pub fn copy_features(features: Vec<usize>, name: &str, state: AppState) {
             .arg("-where")
             .arg(format!("fid in ({})", features.into_iter().join(", ")));
         command.arg(name).arg(&input_name);
-        let output = command.output().unwrap();
-        eprint!("{:?}", output)
+        let output = command
+            .output()
+            .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
+        eprint!("{:?}", output);
+        Ok(())
     });
 }
 
@@ -35,13 +39,16 @@ pub fn simplify_layer(tolerance: f64, name: String, state: AppState) {
     let tolerance_str = CString::new(tolerance.to_string()).unwrap();
     eprintln!("{}", unsafe { gdal_sys::CPLAtof(tolerance_str.as_ptr()) });
     eprintln!("{}", tolerance);
-    state.with_current_dataset_mut(|ds, _| {
+    state.with_current_dataset_mut_fallible(|ds, _| {
         let input_name = ds.dataset.file_name.clone();
         let mut command = Command::new("ogr2ogr");
         command.arg("-simplify").arg(tolerance.to_string());
         command.arg(name).arg(&input_name);
-        let output = command.output().unwrap();
-        eprint!("{:?}", output)
+        let output = command
+            .output()
+            .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
+        eprint!("{:?}", output);
+        Ok(())
     });
 }
 
