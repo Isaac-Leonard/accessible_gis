@@ -74,9 +74,7 @@ pub fn normalise_polygon(polygon: Polygon) -> Polygon {
         .map(|Coord { x, y }| x.hypot(y))
         .max_by(f64::total_cmp)
         // Unwrap here is safe, polygons must have at least 3 points so we're guaranteed a result.
-        .unwrap()
-        // Take the square root here as the max function will produce the same result on the squared distances which means we can take the square root once instead of for each point in the polygon.
-        .sqrt();
+        .unwrap();
 
     polygon.map_coords(|Coord { x, y }| Coord {
         x: x / max_distance,
@@ -153,6 +151,29 @@ mod test {
         assert!(
             approx_eq(score, 0.0, 1e-6),
             "Translated shape should match perfectly"
+        );
+    }
+
+    #[test]
+    fn scaled_shapes() {
+        let triangle1 = polygon![
+            (x: 0.0, y: 0.0),
+            (x: 1.0, y: 0.0),
+            (x: 0.5, y: 1.0),
+            (x: 0.0, y: 0.0),
+        ];
+
+        let triangle2 = polygon![
+            (x: 0.0, y: 0.0),
+            (x: 2.0, y: 0.0),
+            (x: 1.0, y: 2.0),
+            (x: 0.0, y: 0.0),
+        ];
+
+        let score = shape_correspondence(triangle1, triangle2);
+        assert!(
+            approx_eq(score, 0.0, 1e-6),
+            "Scaled shape should match perfectly, instead got score of {score}"
         );
     }
 }
