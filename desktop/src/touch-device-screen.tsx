@@ -16,6 +16,7 @@ export const TouchDeviceScreen = () => {
       >
         <FocusBoxScreen onClose={() => setOpen(false)} innerRef={innerRef} />
       </Dialog>
+      <button onClick={() => client.toggleLabels}>Toggle Auto Labels</button>
     </div>
   );
 };

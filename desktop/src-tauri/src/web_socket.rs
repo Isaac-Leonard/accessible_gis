@@ -153,6 +153,7 @@ pub struct RasterMessage {
 #[serde(rename_all = "camelCase")]
 pub struct VectorMessage {
     pub prefered_keys: Vec<String>,
+    pub use_labels: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

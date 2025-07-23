@@ -32,7 +32,7 @@ const createButton = () => {
 
 const defaultSettings: GisMessage = {
   raster: { minFreq: 220, maxFreq: 880 },
-  vector: { preferedKeys: [] },
+  vector: { preferedKeys: [], useLabels: false },
 };
 
 class GisManager {
@@ -169,6 +169,8 @@ class GisManager {
   wsMessageHandler(msg: AppMessage) {
     if (msg?.type === "Gis") {
       this.settings = msg.data;
+      this.vectorManager.setSettings(msg.data.vector);
+      this.render();
       // speak("Updated settings");
     } else if (msg.type === "FocusRaster") {
       if (this.raster) {

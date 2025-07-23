@@ -25,6 +25,7 @@ pub struct Project {
     pub settings: GlobalSettings,
     pub prefered_display_fields: Vec<String>,
     pub raster_to_display: Option<RasterIndex>,
+    pub use_labels: bool,
 }
 
 impl Project {
@@ -36,6 +37,7 @@ impl Project {
             datasets: DatasetCollection::Empty,
             raster_to_display: None,
             prefered_display_fields: vec![],
+            use_labels: false,
         };
         project.save()?;
         Ok(project)
@@ -71,6 +73,7 @@ impl Project {
             settings: self.settings.clone(),
             prefered_display_fields: self.prefered_display_fields.clone(),
             raster_to_display: self.raster_to_display.clone(),
+            use_labels: self.use_labels,
         }
     }
 
@@ -92,6 +95,7 @@ impl Project {
             settings: project.settings.clone(),
             prefered_display_fields: project.prefered_display_fields.clone(),
             raster_to_display: project.raster_to_display,
+            use_labels: project.use_labels,
         })
     }
 
@@ -146,6 +150,7 @@ impl Project {
             },
             vector: VectorMessage {
                 prefered_keys: self.prefered_display_fields.clone(),
+                use_labels: self.use_labels,
             },
         }
     }
@@ -170,4 +175,6 @@ pub struct StoredProject {
     pub settings: GlobalSettings,
     pub prefered_display_fields: Vec<String>,
     pub raster_to_display: Option<RasterIndex>,
+    #[serde(default)]
+    pub use_labels: bool,
 }

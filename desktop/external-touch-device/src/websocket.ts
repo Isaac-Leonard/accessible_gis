@@ -115,7 +115,10 @@ const rasterParser: ZodType<RasterSettings> = z.object({
   maxFreq: z.number(),
 });
 
-const vectorSettingsParser = z.object({ preferedKeys: z.string().array() });
+const vectorSettingsParser = z.object({
+  preferedKeys: z.string().array(),
+  useLabels: z.boolean(),
+});
 
 const GisParser = z.object({
   vector: vectorSettingsParser,

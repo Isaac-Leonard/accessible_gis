@@ -241,6 +241,9 @@ export const commands = {
   async saveProject(): Promise<void> {
     await TAURI_INVOKE("save_project");
   },
+  async toggleLabels(): Promise<void> {
+    await TAURI_INVOKE("toggle_labels");
+  },
 };
 
 /** user-defined events **/

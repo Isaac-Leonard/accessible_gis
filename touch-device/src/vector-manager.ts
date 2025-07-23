@@ -10,7 +10,7 @@ import { CoordinateManager } from "./coordinate-manager.js";
 import { getCanvas } from "./canvas-manager.js";
 import { speak } from "./speach.js";
 
-export type VectorSettings = { preferedKeys: string[] };
+export type VectorSettings = { preferedKeys: string[]; useLabels: boolean };
 
 export class VectorManager {
   radius = 5;
@@ -28,6 +28,10 @@ export class VectorManager {
     const { canvas, ctx } = getCanvas();
     this.canvas = canvas;
     this.ctx = ctx;
+  }
+
+  setSettings(settings: VectorSettings) {
+    this.settings = settings;
   }
 
   setFeatures(features: Feature[]) {
@@ -209,6 +213,9 @@ export class VectorManager {
   }
 
   labelPolygon(polygon: Feature<Polygon | MultiPolygon, GeoJsonProperties>) {
+    if (!this.settings.useLabels) {
+      return;
+    }
     const label = `${this.getPreferedNameForFeature(polygon.properties)}`;
 
     const labelPoint = this.coordinateManager.coordsToScreen(
