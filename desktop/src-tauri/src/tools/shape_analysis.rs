@@ -9,6 +9,11 @@ pub fn shape_correspondence(shape1: Polygon, shape2: Polygon) -> f64 {
     let shape1 = normalise_polygon(shape1);
     let shape2 = normalise_polygon(shape2);
 
+    // The first and last points are the same so we must get rid of one of them.
+    // We get the exteria ring, which is all we care about, then get the inner vecter and slice out all but the first element.
+    // Thandkfully the geo crate has implemented all of their methods on slices of Coords so we don't need to reconstruct polygon objects.
+    let shape1 = &shape1.exterior().into_inner()[1..];
+    let shape2 = &shape2.exterior().into_inner()[1..];
     // The first shape must be the one with fewer points
     // o will be rotated to match p
     // Using short names p and o to match the algorithm in the paper
@@ -17,6 +22,7 @@ pub fn shape_correspondence(shape1: Polygon, shape2: Polygon) -> f64 {
     } else {
         (shape2, shape1)
     };
+
     let mut correspondence_list = Vec::<(Coord, Coord)>::new();
     let mut outliers = Vec::new();
     for o_i in o.coords_iter() {
@@ -96,5 +102,34 @@ impl Eq for FloatWrapper {}
 impl Ord for FloatWrapper {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.0.total_cmp(&other.0)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use geo::{Polygon, coord, polygon};
+
+    use crate::tools::shape_analysis::shape_correspondence;
+
+    fn approx_eq(a: f64, b: f64, eps: f64) -> bool {
+        (a - b).abs() < eps
+    }
+
+    #[test]
+    fn identical_shapes() {
+        let triangle1 = polygon![
+            (x: 0.0, y: 0.0),
+            (x: 1.0, y: 0.0),
+            (x: 0.5, y: 1.0),
+            (x: 0.0, y: 0.0),
+        ];
+
+        let triangle2 = triangle1.clone();
+
+        let score = shape_correspondence(triangle1, triangle2);
+        assert!(
+            approx_eq(score, 0.0, 1e-6),
+            "Identical shapes should have zero distance, got a score of {score} instead"
+        );
     }
 }
