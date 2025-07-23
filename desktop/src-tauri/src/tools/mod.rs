@@ -1,3 +1,5 @@
+pub mod shape_analysis;
+
 use std::{
     path::Path,
     process::{Command, Output},
