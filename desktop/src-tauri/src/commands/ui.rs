@@ -3,7 +3,7 @@ use uuid::Uuid;
 use crate::{
     gdal_if::list_drivers,
     state::{AppState, Screen},
-    ui::{NewDatasetScreenData, ProjectScreen, UiScreen, UiState},
+    ui::{NewDatasetScreenData, ProjectScreen, TouchDeviceState, UiScreen, UiState},
 };
 
 #[tauri::command]
@@ -28,7 +28,9 @@ pub fn get_app_info(state: AppState) -> UiState {
                 drivers: list_drivers(),
             }),
             Screen::Settings => UiScreen::Settings(state.settings().clone()),
-            Screen::TouchDevice => UiScreen::TouchDevice,
+            Screen::TouchDevice => UiScreen::TouchDevice(TouchDeviceState {
+                use_labels: state.with_project(|p| p.use_labels).unwrap_or_default(),
+            }),
             Screen::Errors => UiScreen::Errors,
         },
         errors: state.errors.to_vec(),

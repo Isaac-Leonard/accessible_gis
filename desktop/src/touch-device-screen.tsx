@@ -3,8 +3,9 @@ import { client } from "./api";
 import { Dialog, useDialog } from "./dialog";
 import { NumberInput, useBindedObjectProperties } from "./binded-input";
 import { Ref } from "preact";
+import { TouchDeviceState } from "./bindings";
 
-export const TouchDeviceScreen = () => {
+export const TouchDeviceScreen = ({ use_labels }: TouchDeviceState) => {
   const { open, setOpen, innerRef } = useDialog<HTMLInputElement>();
   return (
     <div>
@@ -16,7 +17,13 @@ export const TouchDeviceScreen = () => {
       >
         <FocusBoxScreen onClose={() => setOpen(false)} innerRef={innerRef} />
       </Dialog>
-      <button onClick={() => client.toggleLabels}>Toggle Auto Labels</button>
+      <button
+        onClick={() => client.toggleLabels()}
+        role="switch"
+        aria-checked={use_labels}
+      >
+        Toggle Auto Labels
+      </button>
     </div>
   );
 };

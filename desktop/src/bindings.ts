@@ -667,12 +667,13 @@ export type ThiessenPolygonRecord = {
   start_line: number;
   column: number;
 };
+export type TouchDeviceState = { use_labels: boolean };
 export type UiScreen =
   | ({ name: "Project" } & ProjectScreen)
   | { name: "ThiessenPolygons" }
   | ({ name: "NewDataset" } & NewDatasetScreenData)
   | ({ name: "Settings" } & GlobalSettings)
-  | { name: "TouchDevice" }
+  | ({ name: "TouchDevice" } & TouchDeviceState)
   | { name: "Errors" };
 export type UiState = { screen: UiScreen; errors: ApplicationError[] };
 export type VectorScreenData = {

@@ -29,7 +29,7 @@ pub enum UiScreen {
     ThiessenPolygons,
     NewDataset(NewDatasetScreenData),
     Settings(GlobalSettings),
-    TouchDevice,
+    TouchDevice(TouchDeviceState),
     Errors,
 }
 
@@ -181,4 +181,9 @@ pub struct LayerDescriptor {
     #[serde(flatten)]
     pub band: LayerIndex,
     pub dataset_file: PathBuf,
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+pub struct TouchDeviceState {
+    pub use_labels: bool,
 }
