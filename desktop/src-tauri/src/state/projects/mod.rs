@@ -50,7 +50,7 @@ impl Project {
         Self::from_stored_project(stored_project, path)
     }
 
-    fn save(&self) -> Result<(), ApplicationError> {
+    pub fn save(&self) -> Result<(), ErrorDetails> {
         let stored_project = self.to_stored_project();
         let serialised_project = serde_json::to_string_pretty(&stored_project)
             .map_err(|err| ErrorDetails::SerdeError(err.to_string()))?;

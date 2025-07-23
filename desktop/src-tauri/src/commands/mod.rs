@@ -96,6 +96,7 @@ pub fn generate_handlers(
             mark_error_read,
             create_project,
             load_project,
+            save_project,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds

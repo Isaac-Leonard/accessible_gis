@@ -15,6 +15,10 @@ const globalKeyHandler = (e: KeyboardEvent) => {
         e.preventDefault();
         newProject();
         break;
+      case "s":
+        e.preventDefault();
+        client.saveProject();
+        break;
     }
   }
 };

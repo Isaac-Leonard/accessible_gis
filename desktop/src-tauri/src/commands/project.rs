@@ -19,3 +19,9 @@ pub fn load_project(path: PathBuf, state: AppState) {
         Err(err) => state.errors.push(err),
     })
 }
+
+#[tauri::command]
+#[specta::specta]
+pub fn save_project(state: AppState) {
+    state.with_project_fallible(|project| project.save());
+}

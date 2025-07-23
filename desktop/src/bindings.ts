@@ -238,6 +238,9 @@ export const commands = {
   async loadProject(path: string): Promise<void> {
     await TAURI_INVOKE("load_project", { path });
   },
+  async saveProject(): Promise<void> {
+    await TAURI_INVOKE("save_project");
+  },
 };
 
 /** user-defined events **/
@@ -464,7 +467,7 @@ export type MyCsvErrorKind =
         /**
          * The corresponding UTF-8 error.
          */
-        err: MyUtf8Error;
+        err: MyCsvUtf8Error;
       };
     }
   /**
@@ -526,6 +529,16 @@ export type MyCsvErrorKind =
    */
   | "__Nonexhaustive";
 export type MyCsvPosition = { byte: number; line: number; record: number };
+export type MyCsvUtf8Error = {
+  /**
+   * The field index of a byte record in which UTF-8 validation failed.
+   */
+  field: number;
+  /**
+   * The index into the given field up to which valid UTF-8 was verified.
+   */
+  valid_up_to: number;
+};
 export type MyExtendedDataTypeClass = "Compound" | "Numeric" | "String";
 export type MyGdalError =
   | { kind: "FfiNulError"; data: MyNulError }
