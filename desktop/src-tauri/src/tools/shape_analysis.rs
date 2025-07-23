@@ -12,8 +12,8 @@ pub fn shape_correspondence(shape1: Polygon, shape2: Polygon) -> f64 {
     // The first and last points are the same so we must get rid of one of them.
     // We get the exteria ring, which is all we care about, then get the inner vecter and slice out all but the first element.
     // Thandkfully the geo crate has implemented all of their methods on slices of Coords so we don't need to reconstruct polygon objects.
-    let shape1 = &shape1.exterior().into_inner()[1..];
-    let shape2 = &shape2.exterior().into_inner()[1..];
+    let shape1 = &shape1.exterior().0[1..];
+    let shape2 = &shape2.exterior().0[1..];
     // The first shape must be the one with fewer points
     // o will be rotated to match p
     // Using short names p and o to match the algorithm in the paper
@@ -130,6 +130,29 @@ mod test {
         assert!(
             approx_eq(score, 0.0, 1e-6),
             "Identical shapes should have zero distance, got a score of {score} instead"
+        );
+    }
+
+    #[test]
+    fn translated_shapes() {
+        let triangle1 = polygon![
+            (x: 0.0, y: 0.0),
+            (x: 1.0, y: 0.0),
+            (x: 0.5, y: 1.0),
+            (x: 0.0, y: 0.0),
+        ];
+
+        let triangle2 = polygon![
+            (x: 10.0, y: 10.0),
+            (x: 11.0, y: 10.0),
+            (x: 10.5, y: 11.0),
+            (x: 10.0, y: 10.0),
+        ];
+
+        let score = shape_correspondence(triangle1, triangle2);
+        assert!(
+            approx_eq(score, 0.0, 1e-6),
+            "Translated shape should match perfectly"
         );
     }
 }
