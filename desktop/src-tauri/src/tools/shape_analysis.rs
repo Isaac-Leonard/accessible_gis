@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use geo::{Centroid, Coord, CoordsIter, EuclideanDistance, MapCoords, Polygon};
+use geo::{Centroid, Coord, CoordsIter, EuclideanDistance, MapCoords, Polygon, Rotate, Simplify};
 
 /// Algorithm derived from the paper at:
 /// https://www.graphyonline.com/archives/IJCSE/2018/IJCSE-139/
@@ -9,11 +9,6 @@ pub fn shape_correspondence(shape1: Polygon, shape2: Polygon) -> f64 {
     let shape1 = normalise_polygon(shape1);
     let shape2 = normalise_polygon(shape2);
 
-    // The first and last points are the same so we must get rid of one of them.
-    // We get the exteria ring, which is all we care about, then get the inner vecter and slice out all but the first element.
-    // Thandkfully the geo crate has implemented all of their methods on slices of Coords so we don't need to reconstruct polygon objects.
-    let shape1 = &shape1.exterior().0[1..];
-    let shape2 = &shape2.exterior().0[1..];
     // The first shape must be the one with fewer points
     // o will be rotated to match p
     // Using short names p and o to match the algorithm in the paper
@@ -23,38 +18,57 @@ pub fn shape_correspondence(shape1: Polygon, shape2: Polygon) -> f64 {
         (shape2, shape1)
     };
 
-    let mut correspondence_list = Vec::<(Coord, Coord)>::new();
-    let mut outliers = Vec::new();
-    for o_i in o.coords_iter() {
-        let mut candidates = Vec::new();
-        for p_j in p.coords_iter() {
-            let theta_o = normalize_angle(o_i.y.atan2(o_i.x));
-            let theta_p = normalize_angle(p_j.y.atan2(p_j.x));
-            if (theta_p - theta_o).abs() < 2.0 * PI / o.coords_count() as f64 {
-                candidates.push(p_j);
-            };
-        }
-        let mut matched = false;
-        candidates.sort_by_key(|a| FloatWrapper(a.euclidean_distance(&o_i)));
-        for candidate in candidates {
-            if !correspondence_list.contains(&(o_i, candidate)) {
-                correspondence_list.push((o_i, candidate));
-                matched = true;
-                break;
+    let mut best_score = 1.0;
+    let mut delta = 0.0;
+    // Currently just test each possible rotation to find matches, the paper outlines a way that this is not necessary but it is unclear and the figures and math are not accessible properly.
+    for _ in 0..o.coords_count() * 100 {
+        delta += PI / o.coords_count() as f64 / 50.0;
+        let o = o.rotate_around_centroid(delta * 180.0 / PI);
+        // The first and last points are the same so we must get rid of one of them.
+        // We get the exteria ring, which is all we care about, then get the inner vecter and slice out all but the first element.
+        // Thandkfully the geo crate has implemented all of their methods on slices of Coords so we don't need to reconstruct polygon objects.
+        let o = &o.exterior().0[1..];
+        let p = &p.exterior().0[1..];
+        let mut correspondence_list = Vec::<(Coord, Coord)>::new();
+        let mut outliers = Vec::new();
+        for o_i in o.coords_iter() {
+            let mut candidates = Vec::new();
+            for p_j in p.coords_iter() {
+                let theta_o = normalize_angle(o_i.y.atan2(o_i.x));
+                let theta_p = normalize_angle(p_j.y.atan2(p_j.x));
+                if (theta_p - theta_o).abs() < 4.0 * PI / o.coords_count() as f64 {
+                    candidates.push(p_j);
+                };
+            }
+            let mut matched = false;
+            candidates.sort_by_key(|a| FloatWrapper(a.euclidean_distance(&o_i)));
+            for candidate in candidates {
+                if !correspondence_list.contains(&(o_i, candidate)) {
+                    correspondence_list.push((o_i, candidate));
+                    matched = true;
+                    break;
+                }
+            }
+            if !matched {
+                outliers.push(o_i)
             }
         }
-        if !matched {
-            outliers.push(o_i)
+
+        let distance_iter = correspondence_list
+            .iter()
+            .map(|(a, b)| a.euclidean_distance(b));
+        let mean_distance: f64 = (distance_iter.clone().sum::<f64>() + outliers.len() as f64)
+            / (correspondence_list.len() + outliers.len()) as f64;
+        let max_distance = distance_iter.clone().max_by(f64::total_cmp).unwrap();
+        let score = mean_distance * 0.5 + max_distance * 0.5;
+        if score < best_score {
+            best_score = score;
+        }
+        if best_score == 0.0 {
+            return best_score;
         }
     }
-
-    let distance_iter = correspondence_list
-        .iter()
-        .map(|(a, b)| a.euclidean_distance(b));
-    let mean_distance: f64 = (distance_iter.clone().sum::<f64>() + outliers.len() as f64)
-        / (correspondence_list.len() + outliers.len()) as f64;
-    let max_distance = distance_iter.clone().max_by(f64::total_cmp).unwrap();
-    return mean_distance * 0.5 + max_distance * 0.5;
+    best_score
 }
 
 pub fn normalise_polygon(polygon: Polygon) -> Polygon {
@@ -76,10 +90,13 @@ pub fn normalise_polygon(polygon: Polygon) -> Polygon {
         // Unwrap here is safe, polygons must have at least 3 points so we're guaranteed a result.
         .unwrap();
 
-    polygon.map_coords(|Coord { x, y }| Coord {
-        x: x / max_distance,
-        y: y / max_distance,
-    })
+    polygon
+        .map_coords(|Coord { x, y }| Coord {
+            x: x / max_distance,
+            y: y / max_distance,
+        })
+        // We want to remove points that don't contribute to the shapes
+        .simplify(&0.05)
 }
 
 fn normalize_angle(theta: f64) -> f64 {
@@ -105,7 +122,7 @@ impl Ord for FloatWrapper {
 
 #[cfg(test)]
 mod test {
-    use geo::{Polygon, coord, polygon};
+    use geo::{Polygon, Rotate, coord, polygon};
 
     use crate::tools::shape_analysis::shape_correspondence;
 
@@ -174,6 +191,73 @@ mod test {
         assert!(
             approx_eq(score, 0.0, 1e-6),
             "Scaled shape should match perfectly, instead got score of {score}"
+        );
+    }
+
+    #[test]
+    fn rotated_shapes() {
+        let square1 = polygon![
+            (x: -1.0, y: -1.0),
+            (x: 1.0, y: -1.0),
+            (x: 1.0, y: 1.0),
+            (x: -1.0, y: 1.0),
+            (x: -1.0, y: -1.0),
+        ];
+        let square2 = square1.rotate_around_centroid(45.0);
+
+        let score = shape_correspondence(square1, square2);
+        assert!(
+            score < 0.01,
+            "Rotated square should match well, instead got a score of {score}"
+        );
+    }
+
+    #[test]
+    fn noisey_shape() {
+        let triangle = polygon![
+            (x: 0.0, y: 0.0),
+            (x: 1.0, y: 0.0),
+            (x: 0.5, y: 1.0),
+            (x: 0.0, y: 0.0),
+        ];
+
+        let noisy_triangle = polygon![
+            (x: 0.0, y: 0.0),
+            (x: 0.3, y: 0.1), // Noise point
+            (x: 1.0, y: 0.0),
+            (x: 0.75, y: 0.5), // Noise point
+            (x: 0.5, y: 1.0),
+            (x: 0.0, y: 0.0),
+        ];
+
+        let score = shape_correspondence(triangle, noisy_triangle);
+        assert!(
+            score < 0.5,
+            "Noisy triangle should match fairly well, instead got score of {score}"
+        );
+    }
+
+    #[test]
+    fn different_shapes() {
+        let triangle = polygon![
+            (x: 0.0, y: 0.0),
+            (x: 1.0, y: 0.0),
+            (x: 0.5, y: 1.0),
+            (x: 0.0, y: 0.0),
+        ];
+
+        let square = polygon![
+            (x: 0.0, y: 0.0),
+            (x: 1.0, y: 0.0),
+            (x: 1.0, y: 1.0),
+            (x: 0.0, y: 1.0),
+            (x: 0.0, y: 0.0),
+        ];
+
+        let score = shape_correspondence(triangle, square);
+        assert!(
+            score > 0.2,
+            "Triangle and square should not match perfectly, got score of {score}"
         );
     }
 }
