@@ -140,13 +140,12 @@ pub fn set_current_audio_settings(
 #[specta::specta]
 pub fn get_image_pixels(state: AppState) -> Result<Vec<u8>, String> {
     state
-        .with_current_raster_band(|band| {
+        .with_current_raster_band_fallible(|band| {
             band.band
                 .band()
                 .read_band_as::<u8>()
-                .expect("Not u8 data")
-                .into_shape_and_vec()
-                .1
+                .map(|data| data.into_shape_and_vec().1)
+                .map_err(|err| ErrorDetails::Other(format!("Not u8 data: {err:?}")))
         })
         .ok_or_else(|| "Couldn't read band data".to_owned())
 }
