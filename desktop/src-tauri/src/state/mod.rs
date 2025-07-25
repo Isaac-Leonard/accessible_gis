@@ -8,6 +8,7 @@ mod ui_state;
 
 use std::sync::{Arc, Mutex};
 
+use dataset_collection::NonEmptyDelegatorImpl;
 use projects::Project;
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -60,7 +61,21 @@ impl AppDataSync {
     {
         self.with_current_dataset_mut(|dataset, _| Some(f(dataset.get_current_layer()?)))
             .flatten()
-            .flatten()
+    }
+
+    pub fn with_current_layer_mut_fallible<T, F>(&self, f: F) -> Option<T>
+    where
+        F: FnOnce(StatefulLayerEnum) -> Result<T, ErrorDetails>,
+    {
+        let res = self.with_current_layer_mut(f);
+        match res {
+            Some(Err(err)) => {
+                self.with_lock(|state| state.errors.push(err.into()));
+                None
+            }
+            Some(Ok(val)) => Some(val),
+            None => None,
+        }
     }
 
     pub fn with_current_raster_band<T, F>(&self, f: F) -> Option<T>
@@ -80,27 +95,26 @@ impl AppDataSync {
             Some(f(&mut layer))
         })
         .flatten()
-        .flatten()
     }
 
-    pub fn with_current_dataset_mut<T, F>(&self, f: F) -> Option<Option<T>>
+    pub fn with_current_dataset_mut<T, F>(&self, f: F) -> Option<T>
     where
         F: FnOnce(&mut StatefulDataset, usize) -> T,
     {
         self.with_lock(|state| state.with_current_dataset_mut(f))
     }
 
-    pub fn with_current_dataset_mut_fallible<T, F>(&self, f: F) -> Option<Option<T>>
+    pub fn with_current_dataset_mut_fallible<T, F>(&self, f: F) -> Option<T>
     where
         F: FnOnce(&mut StatefulDataset, usize) -> Result<T, ErrorDetails>,
     {
         self.with_lock(|state| match state.with_current_dataset_mut(f) {
-            Some(Some(Ok(v))) => Some(Some(v)),
-            Some(Some(Err(err))) => {
+            Some(Ok(v)) => Some(v),
+            Some(Err(err)) => {
                 state.errors.push(err.into());
                 None
             }
-            None | Some(None) => None,
+            None => None,
         })
     }
 }

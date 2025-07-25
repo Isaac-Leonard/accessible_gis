@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     FeatureInfo,
+    dataset_collection::NonEmptyDelegatorImpl,
     errors::ApplicationError,
     gdal_if::{FieldSchema, FieldValue, LayerExt, LayerIndex},
     state::{

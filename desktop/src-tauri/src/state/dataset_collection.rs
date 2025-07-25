@@ -90,6 +90,47 @@ pub trait NonEmptyDelegatorImpl: NonEmptyDelegator {
         let datasets = non_empty.flat_map(|x| &mut x.datasets);
         datasets.flat_map(|ds| ds.layers())
     }
+
+    fn with_current_dataset_mut<T, F>(&mut self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut StatefulDataset, usize) -> T,
+    {
+        let datasets = self.get_non_empty_mut()?;
+        Some(f(
+            datasets.datasets.get_mut(datasets.index)?,
+            datasets.index,
+        ))
+    }
+
+    fn with_current_layer_mut<T, F>(&mut self, f: F) -> Option<T>
+    where
+        F: FnOnce(StatefulLayerEnum) -> T,
+    {
+        self.with_current_dataset_mut(|dataset, _| Some(f(dataset.get_current_layer()?)))?
+    }
+
+    fn with_current_raster_band<T, F>(&mut self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut StatefulRasterBand) -> T,
+    {
+        self.with_current_dataset_mut(|dataset, _| {
+            let index = *dataset.layer_index?.as_raster()?;
+            let mut band = dataset.get_raster(index)?;
+            Some(f(&mut band))
+        })
+        .flatten()
+    }
+
+    fn with_current_vector_layer<T, F>(&mut self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut StatefulVectorLayer) -> T,
+    {
+        self.with_current_dataset_mut(|dataset, _| {
+            let index = *dataset.layer_index?.as_vector()?;
+            dataset.get_vector(index).as_mut().map(f)
+        })
+        .flatten()
+    }
 }
 
 impl<T: NonEmptyDelegator> NonEmptyDelegatorImpl for T {}
@@ -117,19 +158,6 @@ impl NonEmptyDatasetCollection {
             datasets: vec![dataset],
             index: 0,
         }
-    }
-
-    pub fn with_current_dataset_mut<T, F>(&mut self, f: F) -> T
-    where
-        F: FnOnce(&mut StatefulDataset) -> T,
-    {
-        let dataset = &mut self.datasets[self.index];
-        let res = f(dataset);
-        dataset
-            .dataset
-            .save_changes()
-            .expect("Could not flush changes to disc");
-        res
     }
 
     pub fn create_from_current_dataset<E, F>(

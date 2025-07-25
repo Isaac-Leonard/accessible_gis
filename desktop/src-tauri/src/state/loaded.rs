@@ -16,7 +16,8 @@ use crate::{
 
 use super::{
     CountryImpl, Screen,
-    gis::{dataset::StatefulDataset, raster::StatefulRasterBand, vector::StatefulVectorLayer},
+    dataset_collection::{NonEmptyDelegator, NonEmptyDelegatorImpl},
+    gis::dataset::StatefulDataset,
     preloaded::Country,
     projects::Project,
     settings::GlobalSettings,
@@ -83,47 +84,10 @@ impl AppData {
         }
     }
 
-    pub fn with_current_vector_layer<T, F>(&mut self, f: F) -> Option<T>
-    where
-        F: FnOnce(StatefulVectorLayer) -> T,
-    {
-        self.with_current_dataset_mut(|dataset, _| {
-            dataset.get_current_layer()?.try_into_vector().ok().map(f)
-        })??
-    }
-
-    pub fn with_current_dataset_mut<T, F>(&mut self, f: F) -> Option<Option<T>>
-    where
-        F: FnOnce(&mut StatefulDataset, usize) -> T,
-    {
-        self.with_project(|project| project.with_current_dataset_mut(f))
-    }
-
     pub fn raster_point_to_wgs84(&mut self, point: Point) -> Point {
         self.with_current_raster_band(|band| band.band.point_to_wgs84(point))
             .flatten()
-            .flatten()
             .expect("Expected raster band and couldn't find it")
-    }
-
-    pub fn with_current_raster_band<T, F>(&mut self, f: F) -> Option<Option<T>>
-    where
-        F: Fn(StatefulRasterBand) -> T,
-    {
-        self.with_project(|project| {
-            project
-                .datasets
-                .with_current_dataset_mut(|dataset, _| {
-                    let band = dataset.get_current_layer()?.try_into_raster().ok()?;
-                    let res = f(band);
-                    dataset
-                        .dataset
-                        .save_changes()
-                        .expect("Could not flush cache");
-                    Some(res)
-                })
-                .flatten()
-        })
     }
 
     pub fn get_towns_by_code(
@@ -214,6 +178,18 @@ impl AppData {
         self.settings = settings;
         self.settings.write_to_file(resolver);
         &self.settings
+    }
+}
+
+impl NonEmptyDelegator for AppData {
+    fn get_non_empty(&self) -> Option<&super::dataset_collection::NonEmptyDatasetCollection> {
+        self.project.as_ref()?.get_non_empty()
+    }
+
+    fn get_non_empty_mut(
+        &mut self,
+    ) -> Option<&mut super::dataset_collection::NonEmptyDatasetCollection> {
+        self.project.as_mut()?.get_non_empty_mut()
     }
 }
 

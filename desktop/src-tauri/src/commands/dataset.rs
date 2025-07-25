@@ -9,6 +9,8 @@ use crate::{
     state::{AppState, Screen, gis::dataset::StatefulDataset},
 };
 
+use super::dataset_collection::NonEmptyDelegatorImpl;
+
 #[tauri::command]
 #[specta::specta]
 pub fn edit_dataset(state: AppState) {

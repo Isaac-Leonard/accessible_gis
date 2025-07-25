@@ -283,7 +283,6 @@ pub fn get_polygons_around_point(point: Point, layer: usize, state: AppState) ->
                 })
                 .collect()
         })
-        .flatten()
         .unwrap_or_default()
 }
 

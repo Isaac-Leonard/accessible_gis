@@ -10,7 +10,7 @@ use crate::{
 };
 
 use super::{
-    dataset_collection::{DatasetCollection, NonEmptyDelegatorImpl},
+    dataset_collection::{DatasetCollection, NonEmptyDelegator, NonEmptyDelegatorImpl},
     gis::{
         combined::RasterIndex, dataset::StatefulDataset, raster::StatefulRasterBand,
         vector::StatefulVectorLayer,
@@ -129,13 +129,6 @@ impl Project {
         self.datasets.create_from_current_dataset(f, settings)
     }
 
-    pub fn with_current_dataset_mut<T, F>(&mut self, f: F) -> Option<T>
-    where
-        F: FnOnce(&mut StatefulDataset, usize) -> T,
-    {
-        self.datasets.with_current_dataset_mut(f)
-    }
-
     /// Gets all of the data needed to update the touch devices configuration
     /// Note that names of enums and structs are still not finalised as the end result is not yet clear
     pub fn get_touch_device_settings(&mut self) -> GisMessage {
@@ -165,6 +158,18 @@ impl Project {
             Some(f(&mut band))
         })
         .flatten()
+    }
+}
+
+impl NonEmptyDelegator for Project {
+    fn get_non_empty(&self) -> Option<&super::dataset_collection::NonEmptyDatasetCollection> {
+        self.datasets.get_non_empty()
+    }
+
+    fn get_non_empty_mut(
+        &mut self,
+    ) -> Option<&mut super::dataset_collection::NonEmptyDatasetCollection> {
+        self.datasets.get_non_empty_mut()
     }
 }
 
