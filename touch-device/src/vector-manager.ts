@@ -1,11 +1,5 @@
 import * as turf from "@turf/turf";
-import {
-  Feature,
-  GeoJsonProperties,
-  MultiPolygon,
-  Polygon,
-  Position,
-} from "geojson";
+import { Feature, GeoJsonProperties, Polygon, Position } from "geojson";
 import { CoordinateManager } from "./coordinate-manager.js";
 import { getCanvas } from "./canvas-manager.js";
 import { speak } from "./speach.js";
@@ -89,7 +83,17 @@ export class VectorManager {
           geometry.coordinates.forEach((poly) =>
             poly.forEach((ring) => this.drawLine(ring))
           );
-          this.labelPolygon({ type: "Feature", properties, geometry });
+          let largestArea = 0;
+          let largestPolygon;
+          for (let poly of geometry.coordinates) {
+            let polygon = turf.polygon(poly, properties);
+            let area = turf.area(polygon);
+            if (area > largestArea) {
+              largestArea = area;
+              largestPolygon = polygon;
+            }
+          }
+          this.labelPolygon(largestPolygon!);
           return;
       }
     });
@@ -212,17 +216,25 @@ export class VectorManager {
     })[1];
   }
 
-  labelPolygon(polygon: Feature<Polygon | MultiPolygon, GeoJsonProperties>) {
+  labelPolygon(polygon: Feature<Polygon, GeoJsonProperties>) {
     if (!this.settings.useLabels) {
       return;
     }
     const label = `${this.getPreferedNameForFeature(polygon.properties)}`;
+    polygon = turf.polygon(
+      [polygon.geometry.coordinates[0]],
+      polygon.properties
+    );
 
     const labelPoint = this.coordinateManager.coordsToScreen(
       turf.centerOfMass(polygon).geometry.coordinates as [number, number]
     );
     const { width } = this.ctx.measureText(label);
     labelPoint[0] -= width / 2;
-    this.ctx.strokeText(label, labelPoint[0], labelPoint[1]);
+    this.ctx.save();
+    this.ctx.fillStyle = "lightyellow";
+    this.ctx.font = "20px sans-serif";
+    this.ctx.fillText(label, labelPoint[0], labelPoint[1]);
+    this.ctx.restore();
   }
 }
