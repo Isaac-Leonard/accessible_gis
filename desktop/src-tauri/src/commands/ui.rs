@@ -25,7 +25,10 @@ pub fn get_app_info(state: AppState) -> UiState {
                     .unwrap_or_default(),
             ),
             Screen::NewDataset => UiScreen::NewDataset(NewDatasetScreenData {
-                drivers: list_drivers(),
+                // Kind of hacky but this function cannot return an error
+                drivers: list_drivers()
+                    .map_err(|err| state.errors.push(err.into()))
+                    .unwrap_or_default(),
             }),
             Screen::Settings => UiScreen::Settings(state.settings().clone()),
             Screen::TouchDevice => UiScreen::TouchDevice(TouchDeviceState {

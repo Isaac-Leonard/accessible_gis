@@ -20,6 +20,8 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 pub use vector::*;
 
+use crate::errors::ErrorDetails;
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, specta::Type)]
 pub struct Envelope {
     pub min_x: f64,
@@ -39,23 +41,33 @@ impl From<GdalEnvelope> for Envelope {
     }
 }
 
-pub fn list_drivers() -> Vec<String> {
+pub fn list_drivers() -> Result<Vec<String>, ErrorDetails> {
     let mut drivers = Vec::new();
     for i in 0..DriverManager::count() {
-        drivers.push(DriverManager::get_driver(i).unwrap().short_name())
+        drivers.push(
+            DriverManager::get_driver(i)
+                .map_err(|err| ErrorDetails::Other(err.to_string()))?
+                .short_name(),
+        )
     }
-    drivers
+    Ok(drivers)
 }
 
 pub fn get_driver_for_file<P: AsRef<Path>>(path: P) -> Option<Driver> {
     (0..DriverManager::count())
-        .map(|index| DriverManager::get_driver(index).unwrap())
+        .filter_map(|index| DriverManager::get_driver(index).ok())
         .find(|driver| {
             let meta = driver
                 .metadata()
                 .find(|meta| meta.key == "gdal.DMD_EXTENSIONS");
             let Some(meta) = meta else { return false };
             let mut extentions = meta.value.split(' ');
-            extentions.any(|x| x == path.as_ref().extension().unwrap().to_str().unwrap())
+            extentions.any(|x| {
+                x == path
+                    .as_ref()
+                    .extension()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+            })
         })
 }
