@@ -119,25 +119,23 @@ async fn get_vector(app: Data<AppHandle>) -> impl Responder {
         .resolve("vector.json", BaseDirectory::Temp)
         .unwrap();
     let state = app.state::<AppDataSync>();
-    let succeeded = state.with_lock(|state| {
-        let Some(layer_names) = state.with_project(|project| {
+    let succeeded = state
+        .with_project_fallible(|project| {
             let layers = project.get_vectors_for_display();
-            layers
+            let layer_names = layers
                 .into_iter()
                 .map(|layer| layer.info.shared.name.clone())
                 .dedup()
-                .collect_vec()
-        }) else {
-            return false;
-        };
-        if layer_names.is_empty() {
-            return false;
-        }
+                .collect_vec();
+            if layer_names.is_empty() {
+                return Ok(false);
+            }
 
-        let output = merge_layers(layer_names, true, Srs::Epsg(4326), &json_name, true).unwrap();
-        eprintln!("{:?}", output);
-        true
-    });
+            let output = merge_layers(layer_names, true, Srs::Epsg(4326), &json_name, true)?;
+            eprintln!("{output:?}");
+            Ok(true)
+        })
+        .is_some_and(|b| b);
     if succeeded {
         let data = std::fs::read(json_name).unwrap();
         HttpResponse::Ok()

@@ -5,6 +5,8 @@ use std::{
 
 use gdal::vector::{Layer, LayerAccess};
 
+use crate::errors::ErrorDetails;
+
 use super::{dataset::Srs, field_schema::FieldSchema};
 
 pub struct WrappedLayer<'a> {
@@ -71,7 +73,12 @@ pub fn merge_layers(
     srs: Srs,
     output_name: impl AsRef<OsStr>,
     overwrite: bool,
-) -> std::io::Result<Output> {
+) -> Result<Output, ErrorDetails> {
+    let target_srs = srs
+        .try_to_gdal()
+        .map_err(|err| ErrorDetails::Other(err.to_string()))?
+        .to_wkt()
+        .map_err(|err| ErrorDetails::Other(err.to_string()))?;
     let mut command = Command::new("ogrmerge");
     if single {
         command.arg("-single");
@@ -79,10 +86,10 @@ pub fn merge_layers(
     if overwrite {
         command.arg("-overwrite_ds");
     }
-    command
-        .arg("-t_srs")
-        .arg(srs.try_to_gdal().unwrap().to_wkt().unwrap());
+    command.arg("-t_srs").arg(target_srs);
     command.arg("-o").arg(output_name);
     command.args(names);
-    command.output()
+    command
+        .output()
+        .map_err(|err| ErrorDetails::IoError(err.to_string()))
 }

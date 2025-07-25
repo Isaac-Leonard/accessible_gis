@@ -87,7 +87,7 @@ impl AppDataSync {
 
 /// These methods take a function that may return errors, run it and add the error to the apps error list.
 impl AppDataSync {
-    fn with_fallible<T, E, F>(&self, f: F) -> Option<T>
+    pub fn with_fallible<T, E, F>(&self, f: F) -> Option<T>
     where
         F: FnOnce(&mut AppData) -> Option<Result<T, E>>,
         E: Into<ErrorDetails>,
