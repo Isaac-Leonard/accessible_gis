@@ -1,3 +1,4 @@
+use chrono::{DateTime, FixedOffset, NaiveDate};
 use gdal::vector::{Feature, FieldValue as GdalFieldValue};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -50,8 +51,8 @@ pub enum FieldValue {
     Real(f64),
     RealList(Vec<f64>),
     // TODO: Handle dates safely
-    Date(String),
-    DateTime(String),
+    Date(NaiveDate),
+    DateTime(DateTime<FixedOffset>),
     None,
 }
 
@@ -66,8 +67,8 @@ impl ToString for FieldValue {
             FieldValue::StringList(val) => val.join(", "),
             FieldValue::Real(val) => val.to_string(),
             FieldValue::RealList(val) => val.iter().map(ToString::to_string).join(", "),
-            FieldValue::Date(val) => val.to_owned(),
-            FieldValue::DateTime(val) => val.to_owned(),
+            FieldValue::Date(val) => val.to_string(),
+            FieldValue::DateTime(val) => val.to_string(),
             FieldValue::None => "Empty".to_owned(),
         }
     }
@@ -84,8 +85,8 @@ impl From<GdalFieldValue> for FieldValue {
             GdalFieldValue::StringListValue(val) => Self::StringList(val),
             GdalFieldValue::RealValue(val) => Self::Real(val),
             GdalFieldValue::RealListValue(val) => Self::RealList(val),
-            GdalFieldValue::DateValue(val) => Self::Date(val.to_string()),
-            GdalFieldValue::DateTimeValue(val) => Self::DateTime(val.to_string()),
+            GdalFieldValue::DateValue(val) => Self::Date(val),
+            GdalFieldValue::DateTimeValue(val) => Self::DateTime(val),
         }
     }
 }
@@ -101,8 +102,8 @@ impl From<FieldValue> for GdalFieldValue {
             FieldValue::StringList(val) => Self::StringListValue(val),
             FieldValue::Real(val) => Self::RealValue(val),
             FieldValue::RealList(val) => Self::RealListValue(val),
-            FieldValue::Date(val) => Self::DateValue(val.parse().unwrap()),
-            FieldValue::DateTime(val) => Self::DateTimeValue(val.parse().unwrap()),
+            FieldValue::Date(val) => Self::DateValue(val),
+            FieldValue::DateTime(val) => Self::DateTimeValue(val),
             FieldValue::None => unreachable!(),
         }
     }
