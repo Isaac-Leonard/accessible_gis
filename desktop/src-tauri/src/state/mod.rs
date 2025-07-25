@@ -8,7 +8,8 @@ mod ui_state;
 
 use std::sync::{Arc, Mutex};
 
-use dataset_collection::NonEmptyDelegatorImpl;
+use dataset_collection::NonEmptyDelegatorImplExt;
+use gis::{raster::StatefulRasterBand, vector::StatefulVectorLayer};
 use projects::Project;
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -18,10 +19,7 @@ use crate::{errors::ErrorDetails, gdal_if::Envelope};
 pub use loaded::*;
 pub use preloaded::*;
 
-use self::gis::{
-    combined::StatefulLayerEnum, dataset::StatefulDataset, raster::StatefulRasterBand,
-    vector::StatefulVectorLayer,
-};
+use self::gis::{combined::StatefulLayerEnum, dataset::StatefulDataset};
 
 pub type AppState<'a> = State<'a, AppDataSync>;
 
@@ -55,14 +53,6 @@ impl AppDataSync {
         self.with_lock(|state| state.with_project_fallible(f))
     }
 
-    pub fn with_current_layer_mut<T, F>(&self, f: F) -> Option<T>
-    where
-        F: FnOnce(StatefulLayerEnum) -> T,
-    {
-        self.with_current_dataset_mut(|dataset, _| Some(f(dataset.get_current_layer()?)))
-            .flatten()
-    }
-
     pub fn with_current_layer_mut_fallible<T, F>(&self, f: F) -> Option<T>
     where
         F: FnOnce(StatefulLayerEnum) -> Result<T, ErrorDetails>,
@@ -78,32 +68,6 @@ impl AppDataSync {
         }
     }
 
-    pub fn with_current_raster_band<T, F>(&self, f: F) -> Option<T>
-    where
-        F: FnOnce(&mut StatefulRasterBand) -> T,
-    {
-        self.with_project(|project| project.with_current_raster_band(f))?
-    }
-
-    pub fn with_current_vector_layer<T, F>(&self, f: F) -> Option<T>
-    where
-        F: FnOnce(&mut StatefulVectorLayer) -> T,
-    {
-        self.with_current_dataset_mut(|dataset, _| {
-            let index = *dataset.layer_index?.as_vector()?;
-            let mut layer = dataset.get_vector(index)?;
-            Some(f(&mut layer))
-        })
-        .flatten()
-    }
-
-    pub fn with_current_dataset_mut<T, F>(&self, f: F) -> Option<T>
-    where
-        F: FnOnce(&mut StatefulDataset, usize) -> T,
-    {
-        self.with_lock(|state| state.with_current_dataset_mut(f))
-    }
-
     pub fn with_current_dataset_mut_fallible<T, F>(&self, f: F) -> Option<T>
     where
         F: FnOnce(&mut StatefulDataset, usize) -> Result<T, ErrorDetails>,
@@ -116,6 +80,46 @@ impl AppDataSync {
             }
             None => None,
         })
+    }
+}
+
+// We can't implement NonEmptyDelegator or NonEmptyDelegatorImpl on this because they both require returning inner data and NonEmptyDelegatorImplExt requires taking &mut self, which won't work for the same reasons
+impl AppDataSync {
+    pub fn with_current_dataset_mut<T, F>(&self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut StatefulDataset, usize) -> T,
+    {
+        self.with_lock(|state| state.with_current_dataset_mut(f))
+    }
+
+    pub fn with_current_layer_mut<T, F>(&self, f: F) -> Option<T>
+    where
+        F: FnOnce(StatefulLayerEnum) -> T,
+    {
+        self.with_current_dataset_mut(|dataset, _| Some(f(dataset.get_current_layer()?)))?
+    }
+
+    pub fn with_current_raster_band<T, F>(&self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut StatefulRasterBand) -> T,
+    {
+        self.with_current_dataset_mut(|dataset, _| {
+            let index = *dataset.layer_index?.as_raster()?;
+            let mut band = dataset.get_raster(index)?;
+            Some(f(&mut band))
+        })
+        .flatten()
+    }
+
+    pub fn with_current_vector_layer<T, F>(&self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut StatefulVectorLayer) -> T,
+    {
+        self.with_current_dataset_mut(|dataset, _| {
+            let index = *dataset.layer_index?.as_vector()?;
+            dataset.get_vector(index).as_mut().map(f)
+        })
+        .flatten()
     }
 }
 

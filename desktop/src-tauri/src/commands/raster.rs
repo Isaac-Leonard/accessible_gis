@@ -19,6 +19,8 @@ use crate::{
     web_socket::{AppMessage, TouchDevice},
 };
 
+use super::dataset_collection::NonEmptyDelegatorImplExt;
+
 #[tauri::command]
 #[specta::specta]
 pub fn generate_counts_report(name: PathBuf, state: AppState) {

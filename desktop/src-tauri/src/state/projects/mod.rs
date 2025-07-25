@@ -10,7 +10,9 @@ use crate::{
 };
 
 use super::{
-    dataset_collection::{DatasetCollection, NonEmptyDelegator, NonEmptyDelegatorImpl},
+    dataset_collection::{
+        DatasetCollection, NonEmptyDelegator, NonEmptyDelegatorImpl, NonEmptyDelegatorImplExt,
+    },
     gis::{
         combined::RasterIndex, dataset::StatefulDataset, raster::StatefulRasterBand,
         vector::StatefulVectorLayer,

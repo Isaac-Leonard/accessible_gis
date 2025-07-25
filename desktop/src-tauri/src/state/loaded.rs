@@ -16,7 +16,7 @@ use crate::{
 
 use super::{
     CountryImpl, Screen,
-    dataset_collection::{NonEmptyDelegator, NonEmptyDelegatorImpl},
+    dataset_collection::{NonEmptyDelegator, NonEmptyDelegatorImplExt},
     gis::dataset::StatefulDataset,
     preloaded::Country,
     projects::Project,

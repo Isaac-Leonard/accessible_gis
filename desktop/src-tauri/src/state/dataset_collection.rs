@@ -90,17 +90,12 @@ pub trait NonEmptyDelegatorImpl: NonEmptyDelegator {
         let datasets = non_empty.flat_map(|x| &mut x.datasets);
         datasets.flat_map(|ds| ds.layers())
     }
+}
 
+pub trait NonEmptyDelegatorImplExt {
     fn with_current_dataset_mut<T, F>(&mut self, f: F) -> Option<T>
     where
-        F: FnOnce(&mut StatefulDataset, usize) -> T,
-    {
-        let datasets = self.get_non_empty_mut()?;
-        Some(f(
-            datasets.datasets.get_mut(datasets.index)?,
-            datasets.index,
-        ))
-    }
+        F: FnOnce(&mut StatefulDataset, usize) -> T;
 
     fn with_current_layer_mut<T, F>(&mut self, f: F) -> Option<T>
     where
@@ -134,6 +129,19 @@ pub trait NonEmptyDelegatorImpl: NonEmptyDelegator {
 }
 
 impl<T: NonEmptyDelegator> NonEmptyDelegatorImpl for T {}
+
+impl<S: NonEmptyDelegatorImpl> NonEmptyDelegatorImplExt for S {
+    fn with_current_dataset_mut<T, F>(&mut self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut StatefulDataset, usize) -> T,
+    {
+        let datasets = self.get_non_empty_mut()?;
+        Some(f(
+            datasets.datasets.get_mut(datasets.index)?,
+            datasets.index,
+        ))
+    }
+}
 
 impl NonEmptyDelegator for NonEmptyDatasetCollection {
     fn get_non_empty(&self) -> Option<&NonEmptyDatasetCollection> {
