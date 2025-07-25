@@ -45,12 +45,15 @@ impl AppData {
     }
 
     pub fn new<R: Runtime>(resolver: &PathResolver<R>) -> Self {
+        let mut errors = ErrorList::new();
         Self {
             towns: HashMap::new(),
             screen: Screen::Main,
             project: None,
-            errors: ErrorList::new(),
-            settings: GlobalSettings::read(resolver),
+            settings: GlobalSettings::read(resolver)
+                .map_err(|err| errors.push(err.into()))
+                .unwrap_or_default(),
+            errors,
         }
     }
 
@@ -189,7 +192,9 @@ impl AppData {
         resolver: &PathResolver<R>,
     ) -> &GlobalSettings {
         self.settings = settings;
-        self.settings.write_to_file(resolver);
+        self.settings
+            .write_to_file(resolver)
+            .map_err(|err| self.errors.push(err.into()));
         &self.settings
     }
 }

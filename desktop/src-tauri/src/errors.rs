@@ -27,6 +27,7 @@ pub enum ErrorDetails {
     TouchDeviceError(String),
     IoError(String),
     SerdeError(String),
+    TauriError(String),
     Other(String),
 }
 

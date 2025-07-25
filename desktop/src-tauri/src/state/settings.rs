@@ -6,7 +6,10 @@ use tauri::{
     path::{BaseDirectory, PathResolver},
 };
 
-use crate::audio::{graph::RasterGraphSettings, histogram::HistogramSettings};
+use crate::{
+    audio::{graph::RasterGraphSettings, histogram::HistogramSettings},
+    errors::ErrorDetails,
+};
 
 use super::gis::raster::RenderMethod;
 
@@ -23,29 +26,32 @@ pub struct GlobalSettings {
 }
 
 impl GlobalSettings {
-    pub fn write_to_file<R: Runtime>(&self, resolver: &PathResolver<R>) {
-        let app_data_dir = resolver.app_data_dir().unwrap();
+    pub fn write_to_file<R: Runtime>(
+        &self,
+        resolver: &PathResolver<R>,
+    ) -> Result<(), ErrorDetails> {
+        let app_data_dir = resolver
+            .app_data_dir()
+            .map_err(|err| ErrorDetails::TauriError(err.to_string()))?;
         if !app_data_dir.exists() {
-            std::fs::create_dir(&app_data_dir).unwrap()
+            std::fs::create_dir(&app_data_dir)
+                .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
         };
         let dest = resolver
             .resolve(DEFAULT_SETTINGS_FILE_NAME, BaseDirectory::AppData)
-            .unwrap();
-        let settings_json =
-            serde_json::to_string_pretty(&self).expect("Could not serialise settings");
-        std::fs::write(dest, settings_json).expect("Could not save settings");
+            .map_err(|err| ErrorDetails::TauriError(err.to_string()))?;
+        let settings_json = serde_json::to_string_pretty(&self)
+            .map_err(|err| ErrorDetails::SerdeError(err.to_string()))?;
+        std::fs::write(dest, settings_json).map_err(|err| ErrorDetails::IoError(err.to_string()))
     }
 
-    pub fn read<R: Runtime>(resolver: &PathResolver<R>) -> Self {
+    pub fn read<R: Runtime>(resolver: &PathResolver<R>) -> Result<Self, ErrorDetails> {
         let dest = resolver
             .resolve(DEFAULT_SETTINGS_FILE_NAME, BaseDirectory::AppData)
-            .unwrap();
+            .map_err(|err| ErrorDetails::TauriError(err.to_string()))?;
         eprintln!("Reading settings from {:?}", dest);
-        std::fs::read(dest)
-            .map(|x| serde_json::from_slice(&x).expect("Could not read settings file"))
-            .inspect(|settings| eprintln!("Read settings: {:?}", settings))
-            .inspect_err(|err| eprintln!("Got err when reading settings: {:?}", err))
-            .unwrap_or_default()
+        let json = std::fs::read(dest).map_err(|err| ErrorDetails::IoError(err.to_string()))?;
+        serde_json::from_slice(&json).map_err(|err| ErrorDetails::SerdeError(err.to_string()))
     }
 
     pub fn display_first_raster(&self) -> bool {
