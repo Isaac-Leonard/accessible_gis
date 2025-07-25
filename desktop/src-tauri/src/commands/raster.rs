@@ -80,24 +80,19 @@ pub fn classify_current_raster(
         .join("+");
     state.with_current_dataset_mut_fallible(|dataset, _| {
         let mut cmd = Command::new("gdal_calc.py");
-        cmd.arg("-A")
-            .arg(&dataset.dataset.file_name)
-            .arg(format!("--outfile={:?}", dest))
-            .arg(format!("--calc=\"{}\"", classifications))
-            .arg(format!(
-                "--NoDataValue={}",
-                dataset
-                    .dataset
-                    .dataset
-                    .rasterband(1)
-                    .unwrap()
-                    .no_data_value()
-                    .unwrap()
-            ));
+        cmd.arg("-A").arg(&dataset.dataset.file_name);
+        cmd.arg(format!("--outfile={:?}", dest));
+        cmd.arg(format!("--calc=\"{}\"", classifications));
+        if let Some(nda) = dataset
+            .get_raster(1)
+            .and_then(|band| band.band.no_data_value())
+        {
+            cmd.arg(format!("--NoDataValue={nda}"));
+        }
         let output = cmd
             .output()
             .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
-        eprint!("{:?}", output);
+        eprint!("{output:?}");
         Ok(())
     });
 }
