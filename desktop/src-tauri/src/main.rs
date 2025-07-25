@@ -119,7 +119,11 @@ fn load_countries<R: tauri::Runtime>(
             .features()
             .flat_map(|feature| {
                 Vec::<Country>::from(LocalFeatureInfo {
-                    geometry: feature.geometry().unwrap().to_geo().unwrap(),
+                    geometry: feature
+                        .geometry()
+                        .map(|geom| geom.to_geo())
+                        .transpose()
+                        .unwrap(),
                     fields: feature.fields().map(Into::into).collect(),
                 })
             })

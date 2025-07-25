@@ -11,7 +11,7 @@ pub type Country = GeomWithData<Polygon, Vec<Field>>;
 
 impl From<LocalFeatureInfo> for Vec<Country> {
     fn from(value: LocalFeatureInfo) -> Self {
-        let polygons = match value.geometry {
+        let polygons = match value.geometry.unwrap() {
             GeoGeometry::Polygon(polygon) => vec![polygon],
             GeoGeometry::MultiPolygon(polygons) => polygons.0,
             _ => panic!("Unexpected geometry in country"),
@@ -26,7 +26,7 @@ impl From<LocalFeatureInfo> for Vec<Country> {
 impl From<Country> for LocalFeatureInfo {
     fn from(value: Country) -> Self {
         Self {
-            geometry: GeoGeometry::Polygon(value.geom().clone()),
+            geometry: Some(GeoGeometry::Polygon(value.geom().clone())),
             fields: value.data,
         }
     }

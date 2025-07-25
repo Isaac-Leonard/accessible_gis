@@ -107,7 +107,11 @@ impl AppData {
                 .unwrap();
             let towns_dataset = Dataset::open(dataset_path).unwrap();
             let mut layer = towns_dataset.layer(0).unwrap();
-            layer.features().map_into::<LocalFeatureInfo>().collect()
+            layer
+                .features()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap()
         })
     }
 
@@ -123,7 +127,11 @@ impl AppData {
                 self.get_towns_by_code(country.get_code(), resolver)
                     .clone()
                     .into_iter()
-                    .filter(move |town| polygon2.contains(&town.geometry))
+                    .filter(move |town| {
+                        town.geometry
+                            .as_ref()
+                            .is_some_and(|geom| polygon2.contains(geom))
+                    })
                     .collect::<Vec<_>>()
             })
             .sorted_by(|a, b| {
@@ -148,16 +156,18 @@ impl AppData {
                     .clone()
                     .into_iter()
                     .filter(move |town| {
-                        match polygon2
-                            .clone()
-                            .closest_point(town.geometry.as_point().unwrap())
-                        {
-                            Closest::Indeterminate => false,
-                            Closest::Intersection(_) => true,
-                            Closest::SinglePoint(p) => {
-                                p.geodesic_distance(town.geometry.as_point().unwrap()) < distance
-                            }
-                        }
+                        town.geometry
+                            .as_ref()
+                            .map(|geom| {
+                                match polygon2.clone().closest_point(geom.as_point().unwrap()) {
+                                    Closest::Indeterminate => false,
+                                    Closest::Intersection(_) => true,
+                                    Closest::SinglePoint(p) => {
+                                        p.geodesic_distance(geom.as_point().unwrap()) < distance
+                                    }
+                                }
+                            })
+                            .is_some_and(|b| b)
                     })
                     .collect::<Vec<_>>()
             })
