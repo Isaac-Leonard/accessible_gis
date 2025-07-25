@@ -34,7 +34,7 @@ pub trait NonEmptyDelegator {
 pub trait NonEmptyDelegatorImpl: NonEmptyDelegator {
     fn get_current_index(&self) -> Option<DatasetLayerIndex> {
         let non_empty = self.get_non_empty()?;
-        let dataset = non_empty.datasets.get(non_empty.index).unwrap();
+        let dataset = non_empty.datasets.get(non_empty.index)?;
         Some(DatasetLayerIndex {
             dataset: non_empty.index,
             layer: dataset.layer_index?,
@@ -43,7 +43,7 @@ pub trait NonEmptyDelegatorImpl: NonEmptyDelegator {
 
     fn get_current_vector_index(&self) -> Option<VectorIndex> {
         let non_empty = self.get_non_empty()?;
-        let dataset = non_empty.datasets.get(non_empty.index).unwrap();
+        let dataset = non_empty.datasets.get(non_empty.index)?;
         Some(VectorIndex {
             dataset: non_empty.index,
             layer: *dataset.layer_index?.as_vector()?,
@@ -52,7 +52,7 @@ pub trait NonEmptyDelegatorImpl: NonEmptyDelegator {
 
     fn get_current_raster_index(&self) -> Option<RasterIndex> {
         let non_empty = self.get_non_empty()?;
-        let dataset = non_empty.datasets.get(non_empty.index).unwrap();
+        let dataset = non_empty.datasets.get(non_empty.index)?;
         Some(RasterIndex {
             dataset: non_empty.index,
             band: *dataset.layer_index?.as_raster()?,
@@ -169,21 +169,21 @@ impl NonEmptyDatasetCollection {
         }
     }
 
-    pub fn create_from_current_dataset<E, F>(
+    pub fn create_from_current_dataset<F>(
         &mut self,
         f: F,
         settings: &GlobalSettings,
-    ) -> Result<&mut StatefulDataset, E>
+    ) -> Result<&mut StatefulDataset, ErrorDetails>
     where
-        F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, E>,
+        F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, ErrorDetails>,
     {
-        let dataset = &mut self.datasets[self.index];
+        let dataset = self
+            .datasets
+            .get_mut(self.index)
+            .ok_or_else(|| ErrorDetails::Other("Dataset missing".to_string()))?;
         let res = f(dataset)?;
-        dataset
-            .dataset
-            .save_changes()
-            .expect("Could not flush changes to disc");
         self.add(StatefulDataset::new(res, settings));
+        // Unwrap here is fine as we have just added a dataset ensuring there is at least one dataset in the Vec
         Ok(self.datasets.last_mut().unwrap())
     }
 }
@@ -212,13 +212,13 @@ impl NonEmptyDelegator for DatasetCollection {
 }
 
 impl DatasetCollection {
-    pub fn create_from_current_dataset<E, F>(
+    pub fn create_from_current_dataset<F>(
         &mut self,
         f: F,
         settings: &GlobalSettings,
-    ) -> Option<Result<&mut StatefulDataset, E>>
+    ) -> Option<Result<&mut StatefulDataset, ErrorDetails>>
     where
-        F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, E>,
+        F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, ErrorDetails>,
     {
         self.get_non_empty_mut()
             .map(|datasets| datasets.create_from_current_dataset(f, settings))
@@ -265,9 +265,11 @@ impl DatasetCollection {
     pub fn add(&mut self, dataset: StatefulDataset) -> &mut StatefulDataset {
         if let Self::NonEmpty(datasets) = self {
             datasets.add(dataset);
+            // Unwrap here is fine as we have just added a dataset ensuring there is at least one dataset in the Vec
             datasets.datasets.last_mut().unwrap()
         } else {
             *self = Self::NonEmpty(NonEmptyDatasetCollection::new(dataset));
+            // Unwrap here is fine as we have just added a dataset ensuring there is at least one dataset in the Vec
             self.iter_mut().next().unwrap()
         }
     }
@@ -280,10 +282,6 @@ impl DatasetCollection {
         let index = datasets.index;
         let dataset = &mut datasets.datasets[index];
         let res = f(dataset, index);
-        dataset
-            .dataset
-            .save_changes()
-            .expect("Could not save changes");
         Some(res)
     }
 }

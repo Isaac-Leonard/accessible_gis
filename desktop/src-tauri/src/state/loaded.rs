@@ -54,12 +54,12 @@ impl AppData {
         }
     }
 
-    pub fn create_from_current_dataset<E, F>(
+    pub fn create_from_current_dataset<F>(
         &mut self,
         f: F,
-    ) -> Option<Result<&mut StatefulDataset, E>>
+    ) -> Option<Result<&mut StatefulDataset, ErrorDetails>>
     where
-        F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, E>,
+        F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, ErrorDetails>,
     {
         self.with_project(|project| {
             project.create_from_current_dataset(f, &project.settings.clone())

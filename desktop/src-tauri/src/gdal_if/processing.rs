@@ -8,7 +8,7 @@ pub fn gdal_dem(
     mode: &'static str,
     dataset: &WrappedDataset,
     name: impl AsRef<Path>,
-) -> Result<WrappedDataset, ApplicationError> {
+) -> Result<WrappedDataset, ErrorDetails> {
     let mut command = Command::new("gdaldem");
     command.arg(mode).arg(&dataset.file_name).arg(name.as_ref());
     let output = command
@@ -17,55 +17,55 @@ pub fn gdal_dem(
     if output.status.success() {
         Err(ErrorDetails::Other(String::from_utf8_lossy(&output.stderr).to_string()).into())
     } else {
-        WrappedDataset::open(name).map_err(|err| ErrorDetails::OpenDatasetError(err).into())
+        WrappedDataset::open(name).map_err(|err| ErrorDetails::OpenDatasetError(err))
     }
 }
 
 pub fn hillshade(
     dataset: &WrappedDataset,
     name: impl AsRef<Path>,
-) -> Result<WrappedDataset, ApplicationError> {
+) -> Result<WrappedDataset, ErrorDetails> {
     gdal_dem("hillshade", dataset, name)
 }
 
 pub fn slope(
     dataset: &WrappedDataset,
     name: impl AsRef<Path>,
-) -> Result<WrappedDataset, ApplicationError> {
+) -> Result<WrappedDataset, ErrorDetails> {
     gdal_dem("slope", dataset, name)
 }
 
 pub fn aspect(
     dataset: &WrappedDataset,
     name: impl AsRef<Path>,
-) -> Result<WrappedDataset, ApplicationError> {
+) -> Result<WrappedDataset, ErrorDetails> {
     gdal_dem("aspect", dataset, name)
 }
 
 pub fn color_relief(
     dataset: &WrappedDataset,
     name: impl AsRef<Path>,
-) -> Result<WrappedDataset, ApplicationError> {
+) -> Result<WrappedDataset, ErrorDetails> {
     gdal_dem("color-relief", dataset, name)
 }
 
 pub fn tri(
     dataset: &WrappedDataset,
     name: impl AsRef<Path>,
-) -> Result<WrappedDataset, ApplicationError> {
+) -> Result<WrappedDataset, ErrorDetails> {
     gdal_dem("tri", dataset, name)
 }
 
 pub fn tpi(
     dataset: &WrappedDataset,
     name: impl AsRef<Path>,
-) -> Result<WrappedDataset, ApplicationError> {
+) -> Result<WrappedDataset, ErrorDetails> {
     gdal_dem("tpi", dataset, name)
 }
 
 pub fn roughness(
     dataset: &WrappedDataset,
     name: impl AsRef<Path>,
-) -> Result<WrappedDataset, ApplicationError> {
+) -> Result<WrappedDataset, ErrorDetails> {
     gdal_dem("roughness", dataset, name)
 }

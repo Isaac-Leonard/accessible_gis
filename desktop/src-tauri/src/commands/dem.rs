@@ -20,7 +20,7 @@ macro_rules! gen_processing_command {
         						"Attempted to operate on current dataset but there is no current dataset selected",
         					);
                 match res {
-                    Err(e) => state.errors.push(e),
+                    Err(err) => state.errors.push(err.into()),
                     _ => {}
                 }
             })

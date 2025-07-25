@@ -120,13 +120,13 @@ impl Project {
             .collect_vec()
     }
 
-    pub fn create_from_current_dataset<E, F>(
+    pub fn create_from_current_dataset<F>(
         &mut self,
         f: F,
         settings: &GlobalSettings,
-    ) -> Option<Result<&mut StatefulDataset, E>>
+    ) -> Option<Result<&mut StatefulDataset, ErrorDetails>>
     where
-        F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, E>,
+        F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, ErrorDetails>,
     {
         self.datasets.create_from_current_dataset(f, settings)
     }
