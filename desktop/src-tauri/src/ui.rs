@@ -123,7 +123,7 @@ impl AppData {
                                 fid: feature.fid().unwrap(),
                             })
                             .collect_vec();
-                        Some(LayerScreenInfo::Vector(VectorScreenData {
+                        Ok(Some(LayerScreenInfo::Vector(VectorScreenData {
                             name_field: primary_field_name.cloned(),
                             display: layer.info.display,
                             dataset_index: ds_index,
@@ -134,15 +134,15 @@ impl AppData {
                                 .and_then(|x| x.to_wkt().ok()),
                             field_schema: layer.layer.get_field_schema(),
                             features,
-                            feature,
+                            feature: feature.transpose()?,
                             editable: ds.dataset.editable,
                             layer_index: index,
-                        }))
+                        })))
                     }
                     Some(LayerIndex::Raster(index)) => {
                         let band = ds.get_raster(index).unwrap();
                         let (cols, rows) = band.band.band().size();
-                        Some(LayerScreenInfo::Raster(RasterScreenData {
+                        Ok(Some(LayerScreenInfo::Raster(RasterScreenData {
                             dataset_index: ds_index,
                             layer_index: index,
                             cols,
@@ -156,10 +156,11 @@ impl AppData {
                             render_method: band.info.render,
                             ocr: band.info.ocr,
                             audio_settings: band.info.audio_settings.clone(),
-                        }))
+                        })))
                     }
-                    None => None,
+                    None => Ok(None),
                 })
+                .transpose()?
                 .flatten();
             let port = 80;
             Ok(ProjectScreenInfo {

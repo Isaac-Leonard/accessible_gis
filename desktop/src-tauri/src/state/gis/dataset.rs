@@ -139,13 +139,13 @@ impl StatefulDataset {
         }
     }
 
-    pub fn get_current_feature(&mut self) -> Option<FeatureInfo> {
+    pub fn get_current_feature(&mut self) -> Option<Result<FeatureInfo, ErrorDetails>> {
         let layer = self.get_current_layer()?;
         let layer = layer.as_vector()?;
         let feature = layer
             .layer
             .layer
             .feature(layer.info.selected_feature? as u64);
-        feature.map(Into::into)
+        feature.map(TryInto::try_into)
     }
 }

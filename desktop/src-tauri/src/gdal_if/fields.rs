@@ -2,7 +2,7 @@ use gdal::vector::{Feature, FieldValue as GdalFieldValue};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::FeatureInfo;
+use crate::{FeatureInfo, errors::ErrorDetails};
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize, specta::Type)]
 pub struct Field {
@@ -11,13 +11,20 @@ pub struct Field {
     pub value: FieldValue,
 }
 
-impl<'a> From<Feature<'a>> for FeatureInfo {
-    fn from(value: Feature<'a>) -> Self {
-        Self {
+impl<'a> TryFrom<Feature<'a>> for FeatureInfo {
+    type Error = ErrorDetails;
+
+    fn try_from(value: Feature<'a>) -> Result<Self, Self::Error> {
+        Ok(Self {
             fields: get_fields(&value),
-            geometry: value.geometry().map(|x| x.to_geo().unwrap().into()),
+            geometry: value
+                .geometry()
+                .map(|x| x.to_geo())
+                .transpose()
+                .map_err(|err| ErrorDetails::Other(err.to_string()))?
+                .map(Into::into),
             fid: value.fid(),
-        }
+        })
     }
 }
 
