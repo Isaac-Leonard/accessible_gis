@@ -11,6 +11,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::audio::graph::{RasterGraphSettings, play_rasta};
 use crate::audio::{Waveform, histogram::play_histogram};
+use crate::errors::ErrorDetails;
 use crate::gdal_if::read_raster_data;
 
 #[derive(Parser, Debug)]
@@ -173,7 +174,7 @@ pub struct GraphArgs {
 }
 
 pub fn launch_commandline_app(args: Input) {
-    match args.command {
+    let Err(err) = (match args.command {
         AllCommands::Commands(cmd) => match cmd {
             Commands::Graph(args) => run_single_graph(args),
             Commands::Histogram(args) => run_histogram(args),
@@ -182,7 +183,10 @@ pub fn launch_commandline_app(args: Input) {
             JsonCommands::Histogram(args) => run_histogram(args),
             JsonCommands::Graph(args) => run_multiple_graph(args),
         },
-    }
+    }) else {
+        return;
+    };
+    eprintln!("Got error: {err:?}");
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
@@ -230,7 +234,7 @@ impl From<WaveType> for Waveform {
     }
 }
 
-fn run_histogram(args: HistogramArgs) {
+fn run_histogram(args: HistogramArgs) -> Result<(), ErrorDetails> {
     let name = args.name;
     let Ok(dataset) = Dataset::open(&name) else {
         eprint!("Failed to read dataset at {}", name.to_string_lossy());
@@ -254,11 +258,12 @@ fn run_histogram(args: HistogramArgs) {
     let wave: Waveform = args.wave.into();
     let counts = histogram.counts().iter().map(|x| (*x) as f64).collect_vec();
     play_histogram(counts, Default::default(), wave);
+    Ok(())
 }
 
 fn gen_graph_options(
     args: IndividualGraphArgs,
-) -> (Array2<f64>, f64, f64, Option<f64>, RasterGraphSettings) {
+) -> Result<(Array2<f64>, f64, f64, Option<f64>, RasterGraphSettings), ErrorDetails> {
     let name = args.name;
     let Ok(dataset) = Dataset::open(&name) else {
         eprint!("Failed to read dataset at {}", name);
@@ -272,13 +277,12 @@ fn gen_graph_options(
         exit(-1)
     };
     let wave: Waveform = args.wave.into();
-    let data = read_raster_data(&band);
-    let Ok(StatisticsMinMax { min, max }) = band.compute_raster_min_max(false) else {
-        eprint!(
-            "Could not calculate the minimum and maximum pixel values of the specified band of the dataset"
-        );
-        exit(-1)
-    };
+    let data = read_raster_data(&band)?;
+    let StatisticsMinMax { min, max } = band.compute_raster_min_max(false).map_err(|err| {
+        ErrorDetails::Other(format!(
+            "Could not calculate minimum and maximum values of the given band of the dataset: {err}"
+        ))
+    })?;
     let no_data_value = band.no_data_value();
     let settings = RasterGraphSettings {
         min_freq: args.freq_settings.min_freq,
@@ -291,16 +295,21 @@ fn gen_graph_options(
         min_value: None,
         max_value: None,
     };
-    (data, min, max, no_data_value, settings)
+    Ok((data, min, max, no_data_value, settings))
 }
 
-fn run_single_graph(args: IndividualGraphArgs) {
-    let vals = gen_graph_options(args);
-    play_rasta(vec![vals]);
+fn run_single_graph(args: IndividualGraphArgs) -> Result<(), ErrorDetails> {
+    let vals = gen_graph_options(args)?;
+    Ok(play_rasta(vec![vals]))
 }
-fn run_multiple_graph(args: Vec<IndividualGraphArgs>) {
-    let vals = args.into_iter().map(gen_graph_options).collect();
+
+fn run_multiple_graph(args: Vec<IndividualGraphArgs>) -> Result<(), ErrorDetails> {
+    let vals = args
+        .into_iter()
+        .map(gen_graph_options)
+        .collect::<Result<Vec<_>, _>>()?;
     play_rasta(vals);
+    Ok(())
 }
 
 fn deserialize_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>

@@ -8,6 +8,8 @@ use ndarray::Array2;
 use proj::{Coord, Transform};
 use serde::{Deserialize, Serialize};
 
+use crate::errors::ErrorDetails;
+
 pub struct WrappedRasterBand<'a> {
     pub band: RasterBand<'a>,
     pub geo_transform: Option<GeoTransform>,
@@ -66,62 +68,66 @@ impl RasterData {
     }
 }
 
-pub fn read_raster_data(band: &RasterBand) -> Array2<f64> {
-    match band.band_type() {
+pub fn read_raster_data(band: &RasterBand) -> Result<Array2<f64>, ErrorDetails> {
+    Ok(match band.band_type() {
         GdalDataType::UInt8 => band
             .read_as::<u8>((0, 0), band.size(), band.size(), None)
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .to_array()
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .mapv_into_any(|x| x as f64),
+
         GdalDataType::UInt16 => band
             .read_as::<u16>((0, 0), band.size(), band.size(), None)
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .to_array()
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .mapv_into_any(|x| x as f64),
+
         GdalDataType::UInt32 => band
             .read_as::<u32>((0, 0), band.size(), band.size(), None)
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .to_array()
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .mapv_into_any(|x| x as f64),
 
         GdalDataType::Int8 => band
             .read_as::<i8>((0, 0), band.size(), band.size(), None)
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .to_array()
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .mapv_into_any(|x| x as f64),
 
         GdalDataType::Int16 => band
             .read_as::<i16>((0, 0), band.size(), band.size(), None)
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .to_array()
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .mapv_into_any(|x| x as f64),
 
         GdalDataType::Int32 => band
             .read_as::<i32>((0, 0), band.size(), band.size(), None)
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .to_array()
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .mapv_into_any(|x| x as f64),
 
         GdalDataType::Float32 => band
             .read_as::<f32>((0, 0), band.size(), band.size(), None)
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .to_array()
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .mapv_into_any(|x| x as f64),
 
         GdalDataType::Float64 => band
             .read_as::<f64>((0, 0), band.size(), band.size(), None)
-            .unwrap()
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .to_array()
-            .unwrap(),
-        _ => panic!("Unknown datatype in raster band"),
-    }
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?,
+        other => Err(ErrorDetails::Other(
+            "Unknown datatype in raster band{other:?}".to_string(),
+        ))?,
+    })
 }
 
 pub fn read_raster_data_enum(band: &RasterBand) -> Option<RasterData> {

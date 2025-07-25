@@ -4,30 +4,32 @@ use gdal::raster::StatisticsMinMax;
 use itertools::Itertools;
 use tauri::State;
 
-use crate::{audio::AudioMessage, gdal_if::read_raster_data, state::AppState};
+use crate::{
+    audio::AudioMessage, errors::ErrorDetails, gdal_if::read_raster_data, state::AppState,
+};
 
 #[tauri::command]
 #[specta::specta]
 pub fn play_as_sound(state: AppState, audio: State<SyncSender<AudioMessage>>) {
-    state
-        .with_current_raster_band(|band| {
-            let Ok(StatisticsMinMax { min, max }) = band.band.band.compute_raster_min_max(false)
-            else {
-                eprint!("Failed to ge min max for raster");
-                return;
-            };
-            let data = read_raster_data(&band.band.band);
-            audio
-                .send(AudioMessage::PlayRaster(
-                    data,
-                    min,
-                    max,
-                    band.band.no_data_value(),
-                    band.info.audio_settings.graph().clone(),
-                ))
-                .unwrap();
-        })
-        .expect("Not a raster band");
+    state.with_current_raster_band_fallible(|band| {
+        let StatisticsMinMax { min, max } =
+            band.band
+                .band
+                .compute_raster_min_max(false)
+                .map_err(|err| {
+                    ErrorDetails::Other(format!("Failed to ge min max for raster: {err:?}"))
+                })?;
+        let data = read_raster_data(&band.band.band)?;
+        audio
+            .send(AudioMessage::PlayRaster(
+                data,
+                min,
+                max,
+                band.band.no_data_value(),
+                band.info.audio_settings.graph().clone(),
+            ))
+            .map_err(|err| ErrorDetails::Other(err.to_string()))
+    });
 }
 
 #[tauri::command]

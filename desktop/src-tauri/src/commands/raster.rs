@@ -25,7 +25,7 @@ use super::dataset_collection::NonEmptyDelegatorImplExt;
 #[specta::specta]
 pub fn generate_counts_report(name: PathBuf, state: AppState) {
     let pixels = state
-        .with_current_raster_band(|band| read_raster_data(&band.band.band))
+        .with_current_raster_band_fallible(|band| read_raster_data(&band.band.band))
         .unwrap();
     let counts = pixels
         .into_iter()
@@ -159,27 +159,26 @@ pub fn get_image_pixels(state: AppState) -> Result<Vec<u8>, String> {
 #[tauri::command]
 #[specta::specta]
 pub fn get_point_of_max_value(state: AppState) -> Option<Point> {
-    state
-        .with_current_raster_band(|band| {
-            let data = read_raster_data(&band.band.band);
-            let data_iter = data.indexed_iter();
-            match band.band.no_data_value() {
-                Some(no_data_value) => itertools::Either::Left(data_iter.filter(move |x| {
-                    x.1.total_cmp(&no_data_value) != Ordering::Equal && !x.1.is_nan()
-                })),
-                _ => itertools::Either::Right(data_iter.filter(|x| !x.1.is_nan())),
-            }
-            .max_by(|a, b| a.1.total_cmp(b.1))
-            .map(|(index, _)| Point::from_2d_index(index))
-        })
-        .unwrap()
+    state.with_current_raster_band_fallible(|band| {
+        let data = read_raster_data(&band.band.band)?;
+        let data_iter = data.indexed_iter();
+        match band.band.no_data_value() {
+            Some(no_data_value) => itertools::Either::Left(data_iter.filter(move |x| {
+                x.1.total_cmp(&no_data_value) != Ordering::Equal && !x.1.is_nan()
+            })),
+            _ => itertools::Either::Right(data_iter.filter(|x| !x.1.is_nan())),
+        }
+        .max_by(|a, b| a.1.total_cmp(b.1))
+        .map(|(index, _)| Point::from_2d_index(index))
+        .ok_or_else(|| ErrorDetails::Other("Error generating counts report".to_string()))
+    })
 }
 
 #[tauri::command]
 #[specta::specta]
 pub fn get_point_of_min_value(state: AppState) -> Option<Point> {
-    state.with_current_raster_band(|band| {
-        let data = read_raster_data(&band.band.band);
+    state.with_current_raster_band_fallible(|band| {
+        let data = read_raster_data(&band.band.band)?;
         let data_iter = data.indexed_iter();
         match band.band.no_data_value() {
             Some(no_data_value) => itertools::Either::Left(data_iter.filter(move |x| {
@@ -189,7 +188,8 @@ pub fn get_point_of_min_value(state: AppState) -> Option<Point> {
         }
         .min_by(|a, b| a.1.total_cmp(b.1))
         .map(|(index, _)| Point::from_2d_index(index))
-    })?
+        .ok_or_else(|| ErrorDetails::Other("Error generating counts report".to_string()))
+    })
 }
 
 pub trait IntoIndex {
