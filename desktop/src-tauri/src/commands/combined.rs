@@ -9,7 +9,7 @@ use crate::{
 #[tauri::command]
 #[specta::specta]
 pub fn reproject_layer(srs: Srs, name: &str, state: AppState) {
-    state.with_current_dataset_mut_fallible(|ds, _| {
+    state.with_current_dataset_mut_fallible(|ds, _| -> Result<(), ErrorDetails> {
         let layer = ds.get_current_layer();
         Ok(match layer {
             Some(StatefulLayerEnum::Vector(layer)) => {

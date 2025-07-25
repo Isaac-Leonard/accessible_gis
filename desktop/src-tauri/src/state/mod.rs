@@ -52,35 +52,6 @@ impl AppDataSync {
     {
         self.with_lock(|state| state.with_project_fallible(f))
     }
-
-    pub fn with_current_layer_mut_fallible<T, F>(&self, f: F) -> Option<T>
-    where
-        F: FnOnce(StatefulLayerEnum) -> Result<T, ErrorDetails>,
-    {
-        let res = self.with_current_layer_mut(f);
-        match res {
-            Some(Err(err)) => {
-                self.with_lock(|state| state.errors.push(err.into()));
-                None
-            }
-            Some(Ok(val)) => Some(val),
-            None => None,
-        }
-    }
-
-    pub fn with_current_dataset_mut_fallible<T, F>(&self, f: F) -> Option<T>
-    where
-        F: FnOnce(&mut StatefulDataset, usize) -> Result<T, ErrorDetails>,
-    {
-        self.with_lock(|state| match state.with_current_dataset_mut(f) {
-            Some(Ok(v)) => Some(v),
-            Some(Err(err)) => {
-                state.errors.push(err.into());
-                None
-            }
-            None => None,
-        })
-    }
 }
 
 // We can't implement NonEmptyDelegator or NonEmptyDelegatorImpl on this because they both require returning inner data and NonEmptyDelegatorImplExt requires taking &mut self, which won't work for the same reasons
@@ -96,30 +67,71 @@ impl AppDataSync {
     where
         F: FnOnce(StatefulLayerEnum) -> T,
     {
-        self.with_current_dataset_mut(|dataset, _| Some(f(dataset.get_current_layer()?)))?
+        self.with_lock(|state| state.with_current_layer_mut(f))
     }
 
     pub fn with_current_raster_band<T, F>(&self, f: F) -> Option<T>
     where
         F: FnOnce(&mut StatefulRasterBand) -> T,
     {
-        self.with_current_dataset_mut(|dataset, _| {
-            let index = *dataset.layer_index?.as_raster()?;
-            let mut band = dataset.get_raster(index)?;
-            Some(f(&mut band))
-        })
-        .flatten()
+        self.with_lock(|state| state.with_current_raster_band(f))
     }
 
     pub fn with_current_vector_layer<T, F>(&self, f: F) -> Option<T>
     where
         F: FnOnce(&mut StatefulVectorLayer) -> T,
     {
-        self.with_current_dataset_mut(|dataset, _| {
-            let index = *dataset.layer_index?.as_vector()?;
-            dataset.get_vector(index).as_mut().map(f)
+        self.with_lock(|state| state.with_current_vector_layer(f))
+    }
+}
+
+/// These methods take a function that may return errors, run it and add the error to the apps error list.
+impl AppDataSync {
+    fn with_fallible<T, E, F>(&self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut AppData) -> Option<Result<T, E>>,
+        E: Into<ErrorDetails>,
+    {
+        self.with_lock(|state| match f(state) {
+            Some(Ok(val)) => Some(val),
+            Some(Err(err)) => {
+                let err = err.into();
+                state.errors.push(err.into());
+                None
+            }
+            None => None,
         })
-        .flatten()
+    }
+
+    pub fn with_current_dataset_mut_fallible<T, F>(&self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut StatefulDataset, usize) -> Result<T, ErrorDetails>,
+    {
+        self.with_fallible(|state| state.with_current_dataset_mut(f))
+    }
+
+    pub fn with_current_layer_mut_fallible<T, E, F>(&self, f: F) -> Option<T>
+    where
+        F: FnOnce(StatefulLayerEnum) -> Result<T, E>,
+        E: Into<ErrorDetails>,
+    {
+        self.with_fallible(|state| state.with_current_layer_mut(f))
+    }
+
+    pub fn with_current_raster_band_fallible<T, E, F>(&self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut StatefulRasterBand) -> Result<T, E>,
+        E: Into<ErrorDetails>,
+    {
+        self.with_fallible(|state| state.with_current_raster_band(f))
+    }
+
+    pub fn with_current_vector_layer_fallible<T, E, F>(&self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut StatefulVectorLayer) -> Result<T, E>,
+        E: Into<ErrorDetails>,
+    {
+        self.with_fallible(|state| state.with_current_vector_layer(f))
     }
 }
 

@@ -17,7 +17,10 @@ use crate::{
 use super::{
     CountryImpl, Screen,
     dataset_collection::{NonEmptyDelegator, NonEmptyDelegatorImplExt},
-    gis::dataset::StatefulDataset,
+    gis::{
+        combined::StatefulLayerEnum, dataset::StatefulDataset, raster::StatefulRasterBand,
+        vector::StatefulVectorLayer,
+    },
     preloaded::Country,
     projects::Project,
     settings::GlobalSettings,
@@ -193,6 +196,56 @@ impl NonEmptyDelegator for AppData {
     }
 }
 
+/// Methods to run a function and catch errors
+impl AppData {
+    fn with_fallible<T, E, F>(&mut self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut AppData) -> Option<Result<T, E>>,
+        E: Into<ErrorDetails>,
+    {
+        match f(self) {
+            Some(Ok(val)) => Some(val),
+            Some(Err(err)) => {
+                let err = err.into();
+                self.errors.push(err.into());
+                None
+            }
+            None => None,
+        }
+    }
+
+    pub fn with_current_dataset_mut_fallible<T, F>(&mut self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut StatefulDataset, usize) -> Result<T, ErrorDetails>,
+    {
+        self.with_fallible(|state| state.with_current_dataset_mut(f))
+    }
+
+    pub fn with_current_layer_mut_fallible<T, E, F>(&mut self, f: F) -> Option<T>
+    where
+        F: FnOnce(StatefulLayerEnum) -> Result<T, E>,
+        E: Into<ErrorDetails>,
+    {
+        self.with_fallible(|state| state.with_current_layer_mut(f))
+    }
+
+    pub fn with_current_raster_band_fallible<T, E, F>(&mut self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut StatefulRasterBand) -> Result<T, E>,
+        E: Into<ErrorDetails>,
+    {
+        self.with_fallible(|state| state.with_current_raster_band(f))
+    }
+
+    pub fn with_current_vector_layer_fallible<T, E, F>(&mut self, f: F) -> Option<T>
+    where
+        F: FnOnce(&mut StatefulVectorLayer) -> Result<T, E>,
+        E: Into<ErrorDetails>,
+    {
+        self.with_fallible(|state| state.with_current_vector_layer(f))
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
 pub struct ErrorList(Vec<ApplicationError>);
 
@@ -210,6 +263,6 @@ impl ErrorList {
     }
 
     pub fn get(&mut self, id: Uuid) -> Option<&mut ApplicationError> {
-        return self.0.iter_mut().find(|err| err.id == id);
+        self.0.iter_mut().find(|err| err.id == id)
     }
 }
