@@ -8,6 +8,7 @@ use itertools::Itertools;
 use crate::{
     FeatureInfo,
     dataset_collection::{IndexedLayer, get_default_field_name},
+    errors::ErrorDetails,
     gdal_if::{LayerIndex, OpenDatasetError, WrappedDataset},
     state::settings::GlobalSettings,
 };
@@ -87,7 +88,7 @@ impl StatefulDataset {
         Self::new(WrappedDataset::wrap_existing(dataset, name), settings)
     }
 
-    pub fn get_all_layers(&mut self) -> Vec<IndexedLayer> {
+    pub fn get_all_layers(&mut self) -> Result<Vec<IndexedLayer>, ErrorDetails> {
         self.dataset.get_all_layers()
     }
 

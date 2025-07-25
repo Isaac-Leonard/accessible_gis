@@ -6,6 +6,7 @@ use std::{
 use gdal::vector::Layer;
 
 use crate::{
+    errors::ErrorDetails,
     gdal_if::{LayerEnum, LayerExt, LayerIndex, OpenDatasetError, WrappedDataset},
     ui::LayerDescriptor,
 };
@@ -223,11 +224,11 @@ impl DatasetCollection {
             .map(|datasets| datasets.create_from_current_dataset(f, settings))
     }
 
-    pub fn get_all_layers(&mut self) -> Vec<IndexedDatasetLayer> {
+    pub fn get_all_layers(&mut self) -> Result<Vec<IndexedDatasetLayer>, ErrorDetails> {
         let mut layers = Vec::new();
         for (ds_idx, dataset) in self.iter_mut().enumerate() {
             let ds_file = dataset.dataset.file_name.clone();
-            for layer in dataset.get_all_layers() {
+            for layer in dataset.get_all_layers()? {
                 layers.push(IndexedDatasetLayer {
                     layer,
                     dataset_index: ds_idx,
@@ -235,7 +236,7 @@ impl DatasetCollection {
                 })
             }
         }
-        layers
+        Ok(layers)
     }
 
     pub fn open(

@@ -5,7 +5,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::{EnumDiscriminants, EnumIter};
 
-use crate::dataset_collection::IndexedLayer;
+use crate::{dataset_collection::IndexedLayer, errors::ErrorDetails};
 
 use super::{LayerEnum, WrappedLayer, errors::MyGdalError, raster::WrappedRasterBand};
 
@@ -16,7 +16,7 @@ pub struct WrappedDataset {
 }
 
 impl WrappedDataset {
-    pub fn get_all_layers(&self) -> Vec<IndexedLayer> {
+    pub fn get_all_layers(&self) -> Result<Vec<IndexedLayer>, ErrorDetails> {
         let mut layers = Vec::new();
         for (index, layer) in self.dataset.layers().enumerate() {
             layers.push(IndexedLayer {
@@ -28,11 +28,16 @@ impl WrappedDataset {
         let geo_transform = self.dataset.geo_transform().ok();
         self.dataset
             .rasterbands()
-            .map(|band| WrappedRasterBand {
-                geo_transform,
-                srs: srs.clone(),
-                band: band.unwrap(),
+            .map(|band| {
+                Ok(WrappedRasterBand {
+                    geo_transform,
+                    srs: srs.clone(),
+                    band: band.map_err(|err| ErrorDetails::Other(err.to_string()))?,
+                })
             })
+            // We need to return early if theres an error getting a band
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
             .enumerate()
             .for_each(|(index, band)| {
                 layers.push(IndexedLayer {
@@ -40,7 +45,7 @@ impl WrappedDataset {
                     layer_index: index + 1,
                 })
             });
-        layers
+        Ok(layers)
     }
 
     pub fn vectors(&mut self) -> Vec<WrappedLayer> {
@@ -51,17 +56,19 @@ impl WrappedDataset {
             .collect_vec()
     }
 
-    pub fn bands(&mut self) -> Vec<WrappedRasterBand> {
+    pub fn bands(&mut self) -> Result<Vec<WrappedRasterBand>, ErrorDetails> {
         let srs = self.dataset.spatial_ref().and_then(|srs| srs.to_wkt()).ok();
         let geo_transform = self.dataset.geo_transform().ok();
         self.dataset
             .rasterbands()
-            .map(|band| WrappedRasterBand {
-                geo_transform,
-                srs: srs.clone(),
-                band: band.unwrap(),
+            .map(|band| {
+                Ok(WrappedRasterBand {
+                    geo_transform,
+                    srs: srs.clone(),
+                    band: band.map_err(|err| ErrorDetails::Other(err.to_string()))?,
+                })
             })
-            .collect_vec()
+            .collect::<Result<Vec<_>, _>>()
     }
 
     pub fn save_changes(&mut self) -> Result<(), FlushCacheError> {

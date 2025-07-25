@@ -96,10 +96,10 @@ pub struct RasterScreenData {
 
 impl AppData {
     pub fn get_project_screen_info(&mut self) -> Option<ProjectScreenInfo> {
-        self.with_project(|project| {
+        self.with_project_fallible(|project| {
             let layers = project
                 .datasets
-                .get_all_layers()
+                .get_all_layers()?
                 .into_iter()
                 .map_into()
                 .collect_vec();
@@ -162,7 +162,7 @@ impl AppData {
                 })
                 .flatten();
             let port = 80;
-            ProjectScreenInfo {
+            Ok(ProjectScreenInfo {
                 layers,
                 layer_info,
                 ip: local_ip()
@@ -171,7 +171,7 @@ impl AppData {
                         format!("Unable to get local IP address, got error: {}", e)
                     }),
                 prefered_display_fields: project.prefered_display_fields.clone(),
-            }
+            })
         })
     }
 }
