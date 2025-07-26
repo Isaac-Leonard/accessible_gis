@@ -19,7 +19,6 @@ pub struct ApplicationError {
 #[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
 #[serde(tag = "type", content = "error")]
 pub enum ErrorDetails {
-    ExternalProgramError(DemClassificationError),
     DatasetCreationError(DatasetCreationError),
     EditDatasetError(EditDatasetError),
     OpenDatasetError(OpenDatasetError),
@@ -28,6 +27,7 @@ pub enum ErrorDetails {
     IoError(String),
     SerdeError(String),
     TauriError(String),
+    DemClassificationError(DemClassificationError),
     Other(String),
 }
 

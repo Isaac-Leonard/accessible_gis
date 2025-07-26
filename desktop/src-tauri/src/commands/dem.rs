@@ -3,8 +3,9 @@ use std::path::PathBuf;
 use tauri::AppHandle;
 
 use crate::{
+    errors::ErrorDetails,
     gdal_if::processing::{aspect, roughness, slope},
-    state::AppState,
+    state::{AppData, AppState},
     tools::{DemClassificationError, dem_to_landform_polygons},
 };
 
@@ -42,17 +43,15 @@ pub fn classify_landforms(
     filter: usize,
     app: AppState,
     handle: AppHandle,
-) -> Result<(), DemClassificationError> {
-    app.with_current_raster_band(|band| {
-        let input = &band.info.shared.name;
-        dem_to_landform_polygons(input, &output, search, threshold, distance, filter, handle)
-            .unwrap()
-    })
-    .unwrap();
+) {
     app.with_lock(|state| {
+        state.with_current_raster_band_fallible(|band| {
+            let input = &band.info.shared.name;
+            dem_to_landform_polygons(input, &output, search, threshold, distance, filter, handle)
+                .map_err(|err| ErrorDetails::DemClassificationError(err))
+        })?;
         state
             .open_dataset(output.to_string_lossy().to_string())
-            .unwrap();
+            .map(|_| ())
     });
-    Ok(())
 }

@@ -204,22 +204,14 @@ export const commands = {
     threshold: number,
     distance: number,
     filter: number
-  ): Promise<Result<null, DemClassificationError>> {
-    try {
-      return {
-        status: "ok",
-        data: await TAURI_INVOKE("classify_landforms", {
-          output,
-          search,
-          threshold,
-          distance,
-          filter,
-        }),
-      };
-    } catch (e) {
-      if (e instanceof Error) throw e;
-      else return { status: "error", error: e as any };
-    }
+  ): Promise<void> {
+    await TAURI_INVOKE("classify_landforms", {
+      output,
+      search,
+      threshold,
+      distance,
+      filter,
+    });
   },
   async markErrorRead(id: string): Promise<void> {
     await TAURI_INVOKE("mark_error_read", { id });
@@ -251,7 +243,6 @@ export const events = __makeEvents__<{
 /** user-defined types **/
 
 export type ApplicationError = (
-  | { type: "ExternalProgramError"; error: DemClassificationError }
   | { type: "DatasetCreationError"; error: DatasetCreationError }
   | { type: "EditDatasetError"; error: EditDatasetError }
   | { type: "OpenDatasetError"; error: OpenDatasetError }
@@ -260,6 +251,7 @@ export type ApplicationError = (
   | { type: "IoError"; error: string }
   | { type: "SerdeError"; error: string }
   | { type: "TauriError"; error: string }
+  | { type: "DemClassificationError"; error: DemClassificationError }
   | { type: "Other"; error: string }
 ) & { read: boolean; id: string };
 export type AudioIndicator =
