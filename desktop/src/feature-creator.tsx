@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import {
   FeatureInfo,
   Field,
@@ -26,22 +26,27 @@ export const FeatureCreator = ({
   setFeature: (f: FeatureInfo) => void;
   schema: FieldSchema[];
 }) => {
+  const getDefaultFields = () =>
+    schema.map(({ name, field_type }) => ({
+      name,
+      ...defaultTypeFromSchema(field_type!),
+    }));
+  const [fields, setFields] = useState<Field[]>(getDefaultFields);
+
+  useEffect(() => {
+    setFields(getDefaultFields());
+  }, [schema]);
   const [geometry, setGeometry] = useState<Geometry>({
     type: "Point",
     x: 0,
     y: 0,
   });
-  const [fields, setFields] = useState<Field[]>(() =>
-    schema.map((schema) => ({
-      name: schema.name,
-      ...defaultTypeFromSchema(schema.field_type!),
-    }))
-  );
+
   return (
     <div ref={focusRef} tabIndex={0}>
-      <GeometryEditor geometry={geometry} setGeometry={setGeometry} />{" "}
+      <GeometryEditor geometry={geometry} setGeometry={setGeometry} />
       <div>
-        Fields:{" "}
+        Fields:
         {fields.map((field, i) => (
           <FieldEditor
             key={field.name}
@@ -362,7 +367,7 @@ const LineStringEditor = ({
               }}
             >
               Remove this point
-            </button>{" "}
+            </button>
           </li>
         ))}
       </ol>
@@ -412,7 +417,7 @@ const PolygonEditor = ({
                 }}
               >
                 Remove this interior line
-              </button>{" "}
+              </button>
             </li>
           ))}
         </ol>
@@ -458,7 +463,7 @@ const MultiPointEditor = ({
               }}
             >
               Remove this point
-            </button>{" "}
+            </button>
           </li>
         ))}
       </ol>
@@ -502,7 +507,7 @@ const MultiLineStringEditor = ({
               }}
             >
               Remove this line
-            </button>{" "}
+            </button>
           </li>
         ))}
       </ol>
@@ -546,7 +551,7 @@ const MultiPolygonEditor = ({
               }}
             >
               Remove this polygon
-            </button>{" "}
+            </button>
           </li>
         ))}
       </ol>
@@ -590,7 +595,7 @@ const GeometryCollectionEditor = ({
               }}
             >
               Remove this geometry
-            </button>{" "}
+            </button>
           </li>
         ))}
       </ol>

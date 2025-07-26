@@ -1,6 +1,6 @@
 use std::{ffi::CString, process::Command};
 
-use gdal::vector::{Feature, LayerAccess, ToGdal};
+use gdal::vector::{Feature, FieldValue, LayerAccess, ToGdal};
 use geo_types::Geometry as GeoGeometry;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -47,7 +47,7 @@ pub fn simplify_layer(tolerance: f64, name: String, state: AppState) {
         let output = command
             .output()
             .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
-        eprint!("{:?}", output);
+        eprint!("{output:?}",);
         Ok(())
     });
 }
@@ -64,41 +64,42 @@ pub fn set_name_field(field: String, state: AppState) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn add_feature_to_layer(feature: FeatureInfo, state: AppState) -> Result<(), String> {
-    state
-        .with_current_vector_layer(|layer| {
-            let geometry = feature
-                .geometry
-                .ok_or("Cannot create feature with null geometry")?;
-            let geom = GeoGeometry::from(geometry)
-                .to_gdal()
-                .map_err(|_| "Failed to convert geometry to gdal geometry")?;
-            let fields = feature
-                .fields
-                .iter()
-                .flat_map(|field| {
-                    Some((
-                        field.name.as_str(),
-                        gdal::vector::FieldValue::from(field.value.clone()),
+pub fn add_feature_to_layer(feature: FeatureInfo, state: AppState) {
+    eprintln!("{feature:?}");
+    state.with_current_vector_layer_fallible(|layer| {
+        let geom = feature
+            .geometry
+            .map(|geom| {
+                GeoGeometry::from(geom).to_gdal().map_err(|err| {
+                    ErrorDetails::Other(format!(
+                        "Failed to convert geometry to gdal geometry, got err {err:?}"
                     ))
                 })
-                .unzip::<_, _, Vec<_>, Vec<_>>();
-            let layer = layer.layer.layer();
-            let defn = layer.defn();
-            let mut ft = Feature::new(defn).unwrap();
-            ft.set_geometry(geom).unwrap();
-            for field in feature.fields {
-                let index = defn.field_index(&field.name).unwrap();
-                let val = gdal::vector::FieldValue::from(field.value);
-                ft.set_field(index, &val).unwrap();
-            }
-            ft.create(layer)
-                .inspect_err(|e| eprintln!("{:?}", e))
-                .map_err(|_| "Failed to add fields to schema".to_string())?;
-            // eprintln!("{:?}", FeatureInfo::from(layer.features().last().unwrap()));
-            Ok(())
-        })
-        .ok_or_else(|| "Tried to add feature to layer when state is uninitialised".to_string())?
+            })
+            .transpose()?;
+        let layer = layer.layer.layer();
+        let defn = layer.defn();
+        let mut ft = Feature::new(defn).map_err(|err| {
+            ErrorDetails::Other(format!(
+                "Could not initialise feature from defn, error {err:?}"
+            ))
+        })?;
+        if let Some(geom) = geom {
+            ft.set_geometry(geom).map_err(|err| {
+                ErrorDetails::Other(format!("Could not set feature geometry, error {err:?}"))
+            })?;
+        }
+        for field in feature.fields {
+            let index = defn.field_index(&field.name).unwrap();
+            let val = FieldValue::from(field.value);
+            ft.set_field(index, &val).map_err(|err| {
+                ErrorDetails::Other(format!("Could not set field on feature, error {err:?}"))
+            })?;
+        }
+        ft.create(layer)
+            .map_err(|err| ErrorDetails::Other(format!("Failed to create feature, error {err:?}")))
+    });
+    state.with_lock(|state| eprintln!("{:?}", state.errors))
 }
 
 #[tauri::command]

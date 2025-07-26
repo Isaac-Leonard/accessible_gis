@@ -1,7 +1,6 @@
 import { FeatureInfo, Field, FieldType, VectorScreenData } from "./bindings";
 import { GeometryViewer } from "./geometry";
 import { OptionPicker } from "./option-picker";
-import { Drawer, useDrawer } from "./drawer";
 import { FeatureCreator } from "./feature-creator";
 import { useContext, useState } from "preact/hooks";
 import { client } from "./api";
@@ -249,11 +248,16 @@ const fieldTypes = [
 ] as const;
 
 const FieldSchemaAdder = () => {
-  const { open, setOpen, innerRef } = useDrawer<HTMLInputElement>();
+  const { open, setOpen, innerRef } = useDialog<HTMLInputElement>();
   const [name, setName] = useState("");
   const [fieldType, setFieldType] = useState<FieldType>(fieldTypes[0]);
   return (
-    <Drawer open={open} setOpen={setOpen} openText="Add field to schema">
+    <Dialog
+      modal={true}
+      open={open}
+      setOpen={setOpen}
+      openText="Add field to schema"
+    >
       <div>
         <label>
           Field name
@@ -280,7 +284,7 @@ const FieldSchemaAdder = () => {
           Add
         </button>
       </div>
-    </Drawer>
+    </Dialog>
   );
 };
 

@@ -106,16 +106,8 @@ export const commands = {
   async editDataset(): Promise<void> {
     await TAURI_INVOKE("edit_dataset");
   },
-  async addFeatureToLayer(feature: FeatureInfo): Promise<Result<null, string>> {
-    try {
-      return {
-        status: "ok",
-        data: await TAURI_INVOKE("add_feature_to_layer", { feature }),
-      };
-    } catch (e) {
-      if (e instanceof Error) throw e;
-      else return { status: "error", error: e as any };
-    }
+  async addFeatureToLayer(feature: FeatureInfo): Promise<void> {
+    await TAURI_INVOKE("add_feature_to_layer", { feature });
   },
   async getImagePixels(): Promise<Result<number[], string>> {
     try {
@@ -314,7 +306,9 @@ export type DemClassificationError =
   | { type: "FailToRun"; error: string };
 export type DistanceFromBoarder = { name: string; distance: number };
 export type Duration = { secs: number; nanos: number };
-export type EditDatasetError = { OpenError: OpenDatasetError };
+export type EditDatasetError =
+  | { OpenError: OpenDatasetError }
+  | { SaveError: FlushCacheError };
 export type FeatureIdentifier = { name: string | null; fid: number };
 export type FeatureInfo = {
   fields: Field[];
