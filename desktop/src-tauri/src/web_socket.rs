@@ -134,6 +134,8 @@ pub enum AppMessage {
     Gis(GisMessage),
     FocusRaster,
     FocusBox([f64; 4]),
+    RefetchRaster,
+    RefetchVector,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

@@ -147,9 +147,12 @@ pub fn set_layer_index(index: LayerIndex, state: AppState) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn set_display_vector(state: AppState) {
+pub fn set_display_vector(state: AppState, touch_device: State<TouchDevice>) {
     state
-        .with_current_vector_layer(|layer| layer.info.display = true)
+        .with_current_vector_layer(|layer| {
+            layer.info.display = true;
+            touch_device.send(AppMessage::RefetchVector)
+        })
         .expect("No vector found when trying to set display");
 }
 

@@ -107,8 +107,15 @@ impl Classification {
 
 #[tauri::command]
 #[specta::specta]
-pub fn set_display_raster(raster: Option<RasterIndex>, state: AppState) {
-    state.with_project(|project| project.display_current_raster(raster));
+pub fn set_display_raster(
+    raster: Option<RasterIndex>,
+    state: AppState,
+    touch_device: State<TouchDevice>,
+) {
+    state.with_project(|project| {
+        project.display_current_raster(raster);
+        touch_device.send(AppMessage::RefetchRaster)
+    });
 }
 
 #[tauri::command]
