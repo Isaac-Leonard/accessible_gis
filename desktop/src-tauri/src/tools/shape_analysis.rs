@@ -1,6 +1,10 @@
-use std::f64::consts::PI;
+use std::{f64::consts::PI, fmt::Display};
 
-use geo::{Centroid, Coord, CoordsIter, EuclideanDistance, MapCoords, Polygon, Rotate, Simplify};
+use geo::{
+    BooleanOps, Centroid, ConcaveHull, ConvexHull, Coord, CoordsIter, EuclideanDistance,
+    GeodesicArea, MapCoords, Polygon, Relate, Rotate, Simplify, TriangulateSpade,
+};
+use serde::{Deserialize, Serialize};
 
 /// Algorithm derived from the paper at:
 /// https://www.graphyonline.com/archives/IJCSE/2018/IJCSE-139/
@@ -109,8 +113,8 @@ fn normalize_angle(theta: f64) -> f64 {
 
 /// Just used so we can use the sort_by_key method for an iterator of floats
 /// Implements the Ord trait using the f64::total_cmp method
-#[derive(PartialEq, PartialOrd)]
-pub struct FloatWrapper(f64);
+#[derive(Clone, PartialEq, PartialOrd, Debug, Serialize, Deserialize, specta::Type)]
+pub struct FloatWrapper(pub f64);
 
 impl Eq for FloatWrapper {}
 
@@ -118,6 +122,30 @@ impl Ord for FloatWrapper {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.0.total_cmp(&other.0)
     }
+}
+
+impl From<f64> for FloatWrapper {
+    fn from(value: f64) -> Self {
+        Self(value)
+    }
+}
+
+impl From<FloatWrapper> for f64 {
+    fn from(value: FloatWrapper) -> Self {
+        value.0
+    }
+}
+
+impl Display for FloatWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+fn find_concavities(polygon: Polygon) {
+    let convex = polygon.convex_hull();
+    let area_ratio = convex.geodesic_area_signed() / polygon.geodesic_area_signed();
+    convex.intersection(&polygon);
 }
 
 #[cfg(test)]
