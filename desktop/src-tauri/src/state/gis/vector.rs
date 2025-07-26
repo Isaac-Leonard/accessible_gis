@@ -1,6 +1,9 @@
 use std::process::{Command, Output};
 
-use crate::gdal_if::{Srs, WrappedLayer};
+use crate::{
+    commands::SortOption,
+    gdal_if::{Srs, WrappedLayer},
+};
 
 use super::shared::SharedInfo;
 
@@ -12,6 +15,7 @@ pub struct StatefulVectorInfo {
     pub primary_field_name: Option<String>,
     pub shared: SharedInfo,
     pub display: bool,
+    pub sort_features_by: SortOption,
 }
 
 pub struct StatefulVectorLayer<'a> {

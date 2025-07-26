@@ -3,7 +3,7 @@ use gdal::vector::{Feature, FieldValue as GdalFieldValue};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::{FeatureInfo, errors::ErrorDetails};
+use crate::{FeatureInfo, errors::ErrorDetails, tools::shape_analysis::FloatWrapper};
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize, specta::Type)]
 pub struct Field {
@@ -39,7 +39,7 @@ pub fn get_fields(feature: &Feature) -> Vec<Field> {
         .collect::<Vec<_>>()
 }
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, specta::Type)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, PartialOrd, Ord, specta::Type)]
 #[serde(tag = "type", content = "value")]
 pub enum FieldValue {
     Integer(i32),
@@ -48,9 +48,8 @@ pub enum FieldValue {
     Integer64List(Vec<i64>),
     String(String),
     StringList(Vec<String>),
-    Real(f64),
-    RealList(Vec<f64>),
-    // TODO: Handle dates safely
+    Real(FloatWrapper),
+    RealList(Vec<FloatWrapper>),
     Date(NaiveDate),
     DateTime(DateTime<FixedOffset>),
     None,
@@ -83,8 +82,10 @@ impl From<GdalFieldValue> for FieldValue {
             GdalFieldValue::Integer64ListValue(val) => Self::Integer64List(val),
             GdalFieldValue::StringValue(val) => Self::String(val),
             GdalFieldValue::StringListValue(val) => Self::StringList(val),
-            GdalFieldValue::RealValue(val) => Self::Real(val),
-            GdalFieldValue::RealListValue(val) => Self::RealList(val),
+            GdalFieldValue::RealValue(val) => Self::Real(val.into()),
+            GdalFieldValue::RealListValue(val) => {
+                Self::RealList(val.into_iter().map_into().collect())
+            }
             GdalFieldValue::DateValue(val) => Self::Date(val),
             GdalFieldValue::DateTimeValue(val) => Self::DateTime(val),
         }
@@ -100,8 +101,8 @@ impl From<FieldValue> for GdalFieldValue {
             FieldValue::Integer64List(val) => Self::Integer64ListValue(val),
             FieldValue::String(val) => Self::StringValue(val),
             FieldValue::StringList(val) => Self::StringListValue(val),
-            FieldValue::Real(val) => Self::RealValue(val),
-            FieldValue::RealList(val) => Self::RealListValue(val),
+            FieldValue::Real(val) => Self::RealValue(val.into()),
+            FieldValue::RealList(val) => Self::RealListValue(val.into_iter().map_into().collect()),
             FieldValue::Date(val) => Self::DateValue(val),
             FieldValue::DateTime(val) => Self::DateTimeValue(val),
             FieldValue::None => unreachable!(),

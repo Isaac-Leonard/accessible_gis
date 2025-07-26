@@ -6,7 +6,7 @@ use gdal::{
 use geo_types::Point;
 use itertools::Itertools;
 use ndarray::Array2;
-use proj::{Coord, Transform};
+use proj::Coord;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::ErrorDetails;

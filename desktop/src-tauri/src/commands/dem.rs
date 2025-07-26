@@ -5,8 +5,8 @@ use tauri::AppHandle;
 use crate::{
     errors::ErrorDetails,
     gdal_if::processing::{aspect, roughness, slope},
-    state::{AppData, AppState},
-    tools::{DemClassificationError, dem_to_landform_polygons},
+    state::AppState,
+    tools::dem_to_landform_polygons,
 };
 
 macro_rules! gen_processing_command {

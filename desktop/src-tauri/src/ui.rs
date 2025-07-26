@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     FeatureInfo,
+    commands::SortOption,
     dataset_collection::NonEmptyDelegatorImplExt,
     errors::ApplicationError,
     gdal_if::{FieldSchema, FieldValue, LayerExt, LayerIndex},
@@ -15,6 +16,7 @@ use crate::{
         gis::{combined::RasterIndex, raster::RenderMethod},
         settings::{AudioSettings, GlobalSettings},
     },
+    tools::shape_analysis::FloatWrapper,
 };
 
 #[derive(Clone, Serialize, PartialEq, Debug, specta::Type)]
@@ -110,10 +112,31 @@ impl AppData {
                         let feature = ds.get_current_feature();
                         let mut layer = ds.get_vector(index).expect("Failed to get vector layer");
                         let primary_field_name = layer.info.primary_field_name.as_ref();
-                        let features = layer
-                            .layer
-                            .layer
-                            .features()
+
+                        let features = match &layer.info.sort_features_by {
+                            SortOption::Default => layer.layer.layer.features().collect_vec(),
+                            SortOption::Field(field) => {
+                                let index = layer.layer.get_field_index(&field).unwrap();
+                                layer
+                                    .layer
+                                    .layer
+                                    .features()
+                                    .sorted_by_key(|feature| {
+                                        feature.field(index).unwrap().map(FieldValue::from)
+                                    })
+                                    .collect_vec()
+                            }
+                            SortOption::Area => layer
+                                .layer
+                                .layer
+                                .features()
+                                .sorted_by_key(|feature| {
+                                    feature.geometry().map(|geom| FloatWrapper(geom.area()))
+                                })
+                                .collect_vec(),
+                        };
+                        let features = features
+                            .into_iter()
                             .map(move |feature| FeatureIdentifier {
                                 name: primary_field_name
                                     .and_then(|name| {

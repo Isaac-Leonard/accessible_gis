@@ -7,6 +7,7 @@ use itertools::Itertools;
 
 use crate::{
     FeatureInfo,
+    commands::SortOption,
     dataset_collection::{IndexedLayer, get_default_field_name},
     errors::ErrorDetails,
     gdal_if::{LayerIndex, OpenDatasetError, WrappedDataset},
@@ -46,6 +47,7 @@ impl StatefulDataset {
                     name: dataset.file_name.clone(),
                 },
                 display: false,
+                sort_features_by: SortOption::Default,
             })
             .collect_vec();
 

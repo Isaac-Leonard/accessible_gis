@@ -168,3 +168,17 @@ pub fn set_prefered_display_fields(
         device.send(AppMessage::Gis(project.get_touch_device_settings()));
     });
 }
+
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize, specta::Type)]
+pub enum SortOption {
+    #[default]
+    Default,
+    Field(String),
+    Area,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn sort_features_by(by: SortOption, state: AppState) {
+    state.with_current_vector_layer(|layer| layer.info.sort_features_by = by);
+}

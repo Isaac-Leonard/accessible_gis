@@ -39,6 +39,13 @@ impl<'a> WrappedLayer<'a> {
             .ok()
             .map(|extent| [extent.MinX, extent.MinY, extent.MaxY, extent.MaxY])
     }
+
+    pub fn get_field_index(&self, name: &str) -> Result<usize, ErrorDetails> {
+        self.layer
+            .defn()
+            .field_index(name)
+            .map_err(|err| ErrorDetails::Other(err.to_string()))
+    }
 }
 
 pub trait LayerExt {
