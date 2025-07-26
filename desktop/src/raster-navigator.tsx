@@ -12,6 +12,7 @@ import { AudioSettingsScreen } from "./settings-screen";
 export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
   return (
     <div>
+      <RasterInfoDialog layer={layer} />
       <ReprojectionDialog />
       <DemMethodsDialog />
       <ClassificationDialog />
@@ -231,6 +232,18 @@ const AudioSettingsDialog = ({ settings }: { settings: AudioSettings }) => {
         settings={settings}
         setSettings={client.setCurrentAudioSettings}
       />
+    </Dialog>
+  );
+};
+
+const RasterInfoDialog = ({ layer }: { layer: RasterScreenData }) => {
+  const { open, setOpen } = useDialog();
+  return (
+    <Dialog openText="Band Metadata" modal={true} open={open} setOpen={setOpen}>
+      <div>
+        Size: {layer.cols} by {layer.rows}
+      </div>
+      <div>srs: {layer.srs}</div>
     </Dialog>
   );
 };

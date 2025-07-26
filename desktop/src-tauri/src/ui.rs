@@ -147,7 +147,11 @@ impl AppData {
                             layer_index: index,
                             cols,
                             rows,
-                            srs: band.band.srs.clone(),
+                            srs: band
+                                .band
+                                .srs
+                                .clone()
+                                .map(|srs| srs.to_pretty_wkt().unwrap()),
                             display: visible_raster_index
                                 == Some(RasterIndex {
                                     dataset: ds_index,

@@ -1,8 +1,7 @@
 use std::{cmp::Ordering, path::PathBuf, process::Command};
 
-use gdal::vector::LayerAccess;
+use gdal::spatial_ref::{CoordTransform, SpatialRef};
 use itertools::Itertools;
-use proj::Transform;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -11,11 +10,7 @@ use crate::{
     errors::ErrorDetails,
     gdal_if::{read_raster_data, read_raster_data_enum_as},
     geometry::Point,
-    state::{
-        AppState,
-        gis::combined::{RasterIndex, StatefulLayerEnum},
-        settings::AudioSettings,
-    },
+    state::{AppState, gis::combined::RasterIndex, settings::AudioSettings},
     web_socket::{AppMessage, TouchDevice},
 };
 
@@ -267,62 +262,31 @@ pub struct RasterSize {
 #[specta::specta]
 pub fn focus_dataset(state: AppState, device: State<TouchDevice>) {
     state.with_project_fallible(|project| {
-        let (srs, min, max) = project
-            .with_current_layer_mut(|layer| {
-                Ok(match layer {
-                    StatefulLayerEnum::Raster(band) => {
-                        let Some(srs) = band.band.srs.clone() else {
-                            return Err(ErrorDetails::Other(
-                                "No srs available for raster band.".to_string(),
-                            ));
-                        };
+        let (srs, bounds) = project
+            .with_current_layer_mut(|mut layer| (layer.get_srs(), layer.get_bounds()))
+            .ok_or_else(|| ErrorDetails::Other("No layer to work on".to_string()))?;
 
-                        let Some([ulx, xres, _xskew, uly, _yskew, yres]) = band.band.geo_transform
-                        else {
-                            return Err(ErrorDetails::Other(
-                                "No geo transform for this dataset".to_string(),
-                            ));
-                        };
+        let Some(srs) = srs else {
+            return Err(ErrorDetails::Other(
+                "No srs available for dataset".to_string(),
+            ));
+        };
 
-                        let lrx = ulx + (band.band.band().x_size() as f64 * xres);
-                        let lry = uly + (band.band.band().y_size() as f64 * yres);
-                        let min = geo::point! { x: ulx, y: lry };
-                        let max = geo::point! { x:  lrx, y: uly };
+        let Some(bounds) = bounds else {
+            return Err(ErrorDetails::Other(
+                "Could not get bounds for layer".to_string(),
+            ));
+        };
 
-                        (srs, min, max)
-                    }
-                    StatefulLayerEnum::Vector(mut layer) => {
-                        let Some(srs) = layer.layer.layer.spatial_ref() else {
-                            return Err(ErrorDetails::Other(
-                                "No spatial reference system set for this dataset".to_string(),
-                            ));
-                        };
-                        let srs = srs
-                            .to_proj4()
-                            .map_err(|err| ErrorDetails::Other(err.to_string()))?;
-
-                        let extent = layer.layer.layer().get_extent().map_err(|err| {
-                    ErrorDetails::Other(format!(
-                        "Could not get extent for layer, there may be no geometries, got error: {}",
-                        err
-                    ))
-                })?;
-
-                        let min = geo_types::point! { x: extent.MinX, y: extent.MinY };
-                        let max = geo_types::point! { x: extent.MaxX, y: extent.MaxY };
-                        (srs, min, max)
-                    }
-                })
-            })
-            .unwrap_or_else(|| Err(ErrorDetails::Other("No layer to work on".to_string())))?;
-        let min = min
-            .transformed_crs_to_crs(&srs, "WGS84")
-            .map_err(|err| ErrorDetails::Other(err.to_string()))?;
-        let max = max
-            .transformed_crs_to_crs(&srs, "WGS84")
+        // Unwrap is ssafe here as we have hard coded the epsg code which we know is valid.
+        let transform = CoordTransform::new(&srs, &SpatialRef::from_epsg(4326).unwrap())
             .map_err(|err| ErrorDetails::Other(err.to_string()))?;
 
-        device.send(AppMessage::FocusBox([min.0.x, min.0.y, max.0.x, max.0.y]));
+        let bounds = transform
+            .transform_bounds(&bounds, 21)
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?;
+
+        device.send(AppMessage::FocusBox(bounds));
         Ok(())
     });
 }

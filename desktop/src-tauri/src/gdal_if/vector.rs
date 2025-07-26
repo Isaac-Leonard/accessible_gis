@@ -32,6 +32,13 @@ impl<'a> WrappedLayer<'a> {
     pub fn index(&self) -> usize {
         self.index
     }
+
+    pub fn get_bounds(&self) -> Option<[f64; 4]> {
+        self.layer
+            .get_extent()
+            .ok()
+            .map(|extent| [extent.MinX, extent.MinY, extent.MaxY, extent.MaxY])
+    }
 }
 
 pub trait LayerExt {

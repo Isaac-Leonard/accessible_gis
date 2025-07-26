@@ -267,6 +267,7 @@ export type ApplicationError = (
   | { type: "TouchDeviceError"; error: string }
   | { type: "IoError"; error: string }
   | { type: "SerdeError"; error: string }
+  | { type: "TauriError"; error: string }
   | { type: "Other"; error: string }
 ) & { read: boolean; id: string };
 export type AudioIndicator =

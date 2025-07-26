@@ -1,6 +1,7 @@
 use gdal::{
     GeoTransform, GeoTransformEx,
     raster::{GdalDataType, RasterBand, ResampleAlg},
+    spatial_ref::{CoordTransform, SpatialRef},
 };
 use geo_types::Point;
 use itertools::Itertools;
@@ -10,19 +11,21 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::ErrorDetails;
 
+use super::extra_implementations::TransformPoint;
+
 pub struct WrappedRasterBand<'a> {
     pub band: RasterBand<'a>,
     pub geo_transform: Option<GeoTransform>,
-    pub srs: Option<String>,
+    pub srs: Option<SpatialRef>,
 }
 
 impl<'a> WrappedRasterBand<'a> {
     pub fn point_to_wgs84(&self, point: Point) -> Option<Point> {
         let point = self.geo_transform?.apply(point.x(), point.y());
         let point = Point::from_xy(point.0, point.1);
-        point
-            .transformed_crs_to_crs(self.srs.as_ref()?, "WGS84")
-            .ok()
+        let transform =
+            CoordTransform::new(self.srs.as_ref()?, &SpatialRef::from_epsg(2346).unwrap()).ok()?;
+        Some(transform.transform_point(point))
     }
 
     pub fn no_data_value(&self) -> Option<f64> {
@@ -31,6 +34,13 @@ impl<'a> WrappedRasterBand<'a> {
 
     pub fn band(&self) -> &RasterBand<'a> {
         &self.band
+    }
+
+    pub fn get_bounds(&self) -> Option<[f64; 4]> {
+        let [ulx, xres, _xskew, uly, _yskew, yres] = self.geo_transform?;
+        let lrx = ulx + (self.band.x_size() as f64 * xres);
+        let lry = uly + (self.band.y_size() as f64 * yres);
+        Some([ulx, lry, lrx, uly])
     }
 }
 

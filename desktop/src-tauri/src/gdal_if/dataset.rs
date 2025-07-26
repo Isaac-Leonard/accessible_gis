@@ -24,7 +24,7 @@ impl WrappedDataset {
                 layer_index: index,
             });
         }
-        let srs = self.dataset.spatial_ref().and_then(|srs| srs.to_wkt()).ok();
+        let srs = self.dataset.spatial_ref().ok();
         let geo_transform = self.dataset.geo_transform().ok();
         self.dataset
             .rasterbands()
@@ -57,7 +57,7 @@ impl WrappedDataset {
     }
 
     pub fn bands(&mut self) -> Result<Vec<WrappedRasterBand>, ErrorDetails> {
-        let srs = self.dataset.spatial_ref().and_then(|srs| srs.to_wkt()).ok();
+        let srs = self.dataset.spatial_ref().ok();
         let geo_transform = self.dataset.geo_transform().ok();
         self.dataset
             .rasterbands()
@@ -146,11 +146,7 @@ impl WrappedDataset {
         Some(WrappedRasterBand {
             band,
             geo_transform: self.dataset.geo_transform().ok(),
-            srs: self
-                .dataset
-                .spatial_ref()
-                .ok()
-                .and_then(|srs| srs.to_wkt().ok()),
+            srs: self.dataset.spatial_ref().ok(),
         })
     }
 

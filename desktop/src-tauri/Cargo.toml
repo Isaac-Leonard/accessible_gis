@@ -31,7 +31,7 @@ mint = "0.5.9"
 specta = { "version" = "=2.0.0-rc.20", "features" = ["function", "uuid", "chrono"] }
 tauri-specta = { version = "=2.0.0-rc.20", features = ["javascript", "typescript", "derive"] }
 enum-as-inner = "0.6.0"
-chrono = { version = "0.4.38", features = [ "serde" ]}
+chrono = { version = "0.4.38", features = [ "serde" ] }
 enum_dispatch = "0.3.13"
 strum = {"version" = "0.26.2", "features" = ["derive"] }
 tauri-plugin-dialog = "2.0.0-rc.7"

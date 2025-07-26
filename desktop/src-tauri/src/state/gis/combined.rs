@@ -1,3 +1,4 @@
+use gdal::{spatial_ref::SpatialRef, vector::LayerAccess};
 use serde::{Deserialize, Serialize};
 
 use crate::gdal_if::LayerIndex;
@@ -58,6 +59,20 @@ impl<'a> StatefulLayerEnum<'a> {
             Ok(v)
         } else {
             Err(self)
+        }
+    }
+
+    pub fn get_srs(&mut self) -> Option<SpatialRef> {
+        match self {
+            Self::Vector(layer) => layer.layer.layer().spatial_ref(),
+            Self::Raster(band) => band.band.srs.clone(),
+        }
+    }
+
+    pub fn get_bounds(&self) -> Option<[f64; 4]> {
+        match self {
+            Self::Vector(layer) => layer.layer.get_bounds(),
+            Self::Raster(band) => band.band.get_bounds(),
         }
     }
 }

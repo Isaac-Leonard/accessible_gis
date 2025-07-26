@@ -1,6 +1,6 @@
 use std::{path::Path, process::Command};
 
-use crate::errors::{ApplicationError, ErrorDetails};
+use crate::errors::ErrorDetails;
 
 use super::WrappedDataset;
 
