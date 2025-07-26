@@ -5,7 +5,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::{EnumDiscriminants, EnumIter};
 
-use crate::{dataset_collection::IndexedLayer, errors::ErrorDetails};
+use crate::{commands::EditDatasetError, dataset_collection::IndexedLayer, errors::ErrorDetails};
 
 use super::{LayerEnum, WrappedLayer, errors::MyGdalError, raster::WrappedRasterBand};
 
@@ -155,6 +155,14 @@ impl WrappedDataset {
         spatial_ref: &gdal::spatial_ref::SpatialRef,
     ) -> gdal::errors::Result<()> {
         self.dataset.set_spatial_ref(spatial_ref)
+    }
+
+    pub fn save(&mut self) -> Result<(), ErrorDetails> {
+        self.dataset.flush_cache().map_err(|err| {
+            ErrorDetails::EditDatasetError(EditDatasetError::SaveError(FlushCacheError {
+                gdal_error: err.into(),
+            }))
+        })
     }
 }
 

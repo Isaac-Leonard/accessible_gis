@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use crate::{
     errors::ErrorDetails,
-    gdal_if::{OpenDatasetError, WrappedDataset},
+    gdal_if::{FlushCacheError, OpenDatasetError, WrappedDataset},
     state::{AppState, Screen, gis::dataset::StatefulDataset},
 };
 
@@ -71,4 +71,5 @@ pub fn load_file(name: PathBuf, state: AppState) {
 #[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
 pub enum EditDatasetError {
     OpenError(OpenDatasetError),
+    SaveError(FlushCacheError),
 }
