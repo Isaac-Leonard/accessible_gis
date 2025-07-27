@@ -98,6 +98,7 @@ pub fn generate_handlers(
             load_project,
             save_project,
             toggle_labels,
+            sort_features_by,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds

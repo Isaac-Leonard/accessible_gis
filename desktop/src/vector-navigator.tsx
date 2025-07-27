@@ -32,6 +32,7 @@ export const VectorNavigator = ({ layer }: VectorLayerProp) => {
       )}
       <NameFieldPicker layer={layer} />
       <FeaturePicker layer={layer} />
+      <FeatureSorter layer={layer} />
       <FeatureViewer layer={layer} />
     </div>
   );
@@ -307,6 +308,44 @@ const DatasetEditor = ({ layer }: VectorLayerProp) => {
           }}
         />
       </Dialog>
+    </div>
+  );
+};
+
+const FeatureSorter = ({ layer }: NameFieldPickerProps) => {
+  const { name_field } = layer;
+  const field_names = layer.field_schema.map((field) => field.name);
+  const options = ["Default", "Field", "Area"] as const;
+
+  const setOption = (option: (typeof options)[number]) => {
+    if (option === "Field") {
+      client.sortFeaturesBy({ option, settings: name_field });
+    } else {
+      client.sortFeaturesBy({ option });
+    }
+  };
+
+  return (
+    <div>
+      <OptionPicker
+        options={options}
+        selectedOption={layer.sort_features_by.option}
+        setOption={setOption}
+        emptyText="This should not be empty"
+      />
+      {layer.sort_features_by.option === "Field" ? (
+        <OptionPicker
+          options={field_names}
+          selectedOption={layer.sort_features_by.settings}
+          setOption={(field) => {
+            client.sortFeaturesBy({ option: "Field", settings: field });
+          }}
+          emptyText=" This layer has no fields"
+          prompt="Set name field"
+        />
+      ) : (
+        ""
+      )}
     </div>
   );
 };

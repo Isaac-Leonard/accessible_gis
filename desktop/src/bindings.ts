@@ -228,6 +228,9 @@ export const commands = {
   async toggleLabels(): Promise<void> {
     await TAURI_INVOKE("toggle_labels");
   },
+  async sortFeaturesBy(by: SortOption): Promise<void> {
+    await TAURI_INVOKE("sort_features_by", { by });
+  },
 };
 
 /** user-defined events **/
@@ -314,8 +317,8 @@ export type Field = (
   | { type: "Integer64List"; value: number[] }
   | { type: "String"; value: string }
   | { type: "StringList"; value: string[] }
-  | { type: "Real"; value: number }
-  | { type: "RealList"; value: number[] }
+  | { type: "Real"; value: FloatWrapper }
+  | { type: "RealList"; value: FloatWrapper[] }
   | { type: "Date"; value: string }
   | { type: "DateTime"; value: string }
   | { type: "None" }
@@ -378,6 +381,11 @@ export type FieldType =
    * List of 64 bit integers
    */
   | "OFTInteger64List";
+/**
+ * Just used so we can use the sort_by_key method for an iterator of floats
+ * Implements the Ord trait using the f64::total_cmp method
+ */
+export type FloatWrapper = number;
 export type FlushCacheError = { gdal_error: MyGdalError };
 export type Geometry =
   | ({ type: "Point" } & Point)
@@ -643,6 +651,10 @@ export type Screen =
   | "Settings"
   | "TouchDevice"
   | "Errors";
+export type SortOption =
+  | { option: "Default" }
+  | { option: "Field"; settings: string }
+  | { option: "Area" };
 export type Srs =
   | { type: "Proj"; value: string }
   | { type: "Wkt"; value: string }
@@ -673,6 +685,7 @@ export type VectorScreenData = {
   dataset_index: number;
   display: boolean;
   name_field: string | null;
+  sort_features_by: SortOption;
 };
 export type Waveform = "Sine" | "Square" | "Triangle" | "Sawtooth";
 

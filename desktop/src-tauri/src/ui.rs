@@ -75,6 +75,7 @@ pub struct VectorScreenData {
     pub dataset_index: usize,
     pub display: bool,
     pub name_field: Option<String>,
+    pub sort_features_by: SortOption,
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -158,8 +159,9 @@ impl AppData {
                             field_schema: layer.layer.get_field_schema(),
                             features,
                             feature: feature.transpose()?,
-                            editable: ds.dataset.editable,
                             layer_index: index,
+                            sort_features_by: layer.info.sort_features_by.clone(),
+                            editable: ds.dataset.editable,
                         })))
                     }
                     Some(LayerIndex::Raster(index)) => {

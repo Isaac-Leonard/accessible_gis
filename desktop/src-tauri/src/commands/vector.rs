@@ -170,6 +170,7 @@ pub fn set_prefered_display_fields(
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize, specta::Type)]
+#[serde(tag = "option", content = "settings")]
 pub enum SortOption {
     #[default]
     Default,
