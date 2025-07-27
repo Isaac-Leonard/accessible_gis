@@ -328,6 +328,7 @@ const FeatureSorter = ({ layer }: NameFieldPickerProps) => {
   return (
     <div>
       <OptionPicker
+        prompt="Sort features by"
         options={options}
         selectedOption={layer.sort_features_by.option}
         setOption={setOption}
