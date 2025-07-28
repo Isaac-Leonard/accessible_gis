@@ -37,7 +37,7 @@ impl<'a> WrappedLayer<'a> {
         self.layer
             .get_extent()
             .ok()
-            .map(|extent| [extent.MinX, extent.MinY, extent.MaxY, extent.MaxY])
+            .map(|extent| [extent.MinX, extent.MinY, extent.MaxX, extent.MaxY])
     }
 
     pub fn get_field_index(&self, name: &str) -> Result<usize, ErrorDetails> {
