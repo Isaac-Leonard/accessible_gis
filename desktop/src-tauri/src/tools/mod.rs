@@ -118,6 +118,37 @@ fn wbt() -> Command {
     Command::new("whitebox_tools")
 }
 
+pub enum Connectedness {
+    Four,
+    Eight,
+}
+
+/// Runs the GDAL sieve filter to remove small regions from a classified raster.
+///
+/// - `input`: Path to the input raster.
+/// - `output`: Path to the output raster.
+/// - `threshold`: Minimum region size (in pixels) to keep.
+/// - `connectedness`: Use for 4- or 8-connected components.
+pub fn sieve_filter(
+    input: impl AsRef<Path>,
+    output: impl AsRef<Path>,
+    threshold: usize,
+    connectedness: Connectedness, // should be 4 or 8
+) -> Result<Output, DemClassificationError> {
+    let mut command = Command::new("gdal_sieve.py");
+    command.arg("-st").arg(threshold.to_string());
+
+    match connectedness {
+        Connectedness::Four => command.arg("-4"),
+        Connectedness::Eight => command.arg("-8"),
+    };
+
+    command.arg(input.as_ref());
+    command.arg(output.as_ref());
+
+    run_program(command)
+}
+
 fn proc_to_result(output: Output) -> Result<String, String> {
     if !output.status.success() {
         Err(String::from_utf8_lossy(&output.stderr).to_string())
