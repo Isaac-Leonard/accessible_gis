@@ -272,13 +272,13 @@ pub fn focus_dataset(state: AppState, device: State<TouchDevice>) {
         let (srs, bounds) = project
             .with_current_layer_mut(|mut layer| (layer.get_srs(), layer.get_bounds()))
             .ok_or_else(|| ErrorDetails::Other("No layer to work on".to_string()))?;
-
         let Some(srs) = srs else {
             return Err(ErrorDetails::Other(
                 "No srs available for dataset".to_string(),
             ));
         };
-
+        eprintln!("{:?}", srs.to_pretty_wkt());
+        eprintln!("{bounds:?}");
         let Some(bounds) = bounds else {
             return Err(ErrorDetails::Other(
                 "Could not get bounds for layer".to_string(),
@@ -286,13 +286,13 @@ pub fn focus_dataset(state: AppState, device: State<TouchDevice>) {
         };
 
         // Unwrap is ssafe here as we have hard coded the epsg code which we know is valid.
-        let transform = CoordTransform::new(&srs, &SpatialRef::from_epsg(4326).unwrap())
-            .map_err(|err| ErrorDetails::Other(err.to_string()))?;
+        // let transform = CoordTransform::new(&srs, &SpatialRef::from_epsg(4326).unwrap())
+        // .map_err(|err| ErrorDetails::Other(err.to_string()))?;
 
-        let bounds = transform
-            .transform_bounds(&bounds, 21)
-            .map_err(|err| ErrorDetails::Other(err.to_string()))?;
-
+        // let bounds = transform
+        // .transform_bounds(&bounds, 21)
+        // .map_err(|err| ErrorDetails::Other(err.to_string()))?;
+        // eprintln!("{bounds:?}");
         device.send(AppMessage::FocusBox(bounds));
         Ok(())
     });
