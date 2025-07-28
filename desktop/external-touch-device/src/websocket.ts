@@ -96,8 +96,9 @@ export class WsConnection {
 export type AppMessage =
   | { type: "Image"; data: ImageMessage }
   | { type: "Gis"; data: GisMessage }
-  | { type: "FocusRaster" }
-  | { type: "FocusBox"; data: BBox };
+  | { type: "FocusBox"; data: BBox }
+  | { type: "RefetchRaster" }
+  | { type: "RefetchVector" };
 
 export type ImageMessage = { ocr: boolean };
 
@@ -128,9 +129,10 @@ const GisParser = z.object({
 const messageParser: ZodType<AppMessage> = z.union([
   z.object({ type: z.literal("Image"), data: z.object({ ocr: z.boolean() }) }),
   z.object({ type: z.literal("Gis"), data: GisParser }),
-  z.object({ type: z.literal("FocusRaster") }),
   z.object({
     type: z.literal("FocusBox"),
     data: geoJsonParsers.bBox,
   }),
+  z.object({ type: z.literal("RefetchRaster") }),
+  z.object({ type: z.literal("RefetchVector") }),
 ]);

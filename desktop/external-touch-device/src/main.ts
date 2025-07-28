@@ -172,17 +172,6 @@ class GisManager {
       this.vectorManager.setSettings(msg.data.vector);
       this.render();
       // speak("Updated settings");
-    } else if (msg.type === "FocusRaster") {
-      if (this.raster) {
-        speak("Focusing raster");
-        this.coordinateManager.focusScreen(
-          this.raster?.topLeft,
-          this.raster?.bottomRight()
-        );
-        this.render();
-      } else {
-        speak("Tried to focus raster but no raster is loaded");
-      }
     } else if (msg.type === "FocusBox") {
       speak("Focusing bounding box");
       this.coordinateManager.focusScreen(
@@ -190,6 +179,10 @@ class GisManager {
         [msg.data[2], msg.data[1]]
       );
       this.render();
+    } else if (msg.type === "RefetchRaster") {
+      this.getRaster();
+    } else if (msg.type === "RefetchVector") {
+      this.getVectors();
     }
   }
 
