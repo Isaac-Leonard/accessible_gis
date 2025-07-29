@@ -11,7 +11,7 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
 pub struct ApplicationError {
     #[serde(flatten)]
-    pub details: ErrorDetails,
+    pub details: Box<ErrorDetails>,
     pub read: bool,
     pub id: uuid::Uuid,
 }
@@ -40,7 +40,7 @@ impl From<ErrorDetails> for ApplicationError {
 impl ErrorDetails {
     pub fn into_application_error(self) -> ApplicationError {
         ApplicationError {
-            details: self,
+            details: Box::new(self),
             read: false,
             id: uuid::Uuid::new_v4(),
         }
