@@ -231,6 +231,17 @@ export const commands = {
   async sortFeaturesBy(by: SortOption): Promise<void> {
     await TAURI_INVOKE("sort_features_by", { by });
   },
+  async getLandformDescription(): Promise<Result<string, string>> {
+    try {
+      return {
+        status: "ok",
+        data: await TAURI_INVOKE("get_landform_description"),
+      };
+    } catch (e) {
+      if (e instanceof Error) throw e;
+      else return { status: "error", error: e as any };
+    }
+  },
 };
 
 /** user-defined events **/

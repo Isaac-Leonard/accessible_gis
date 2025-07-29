@@ -11,6 +11,7 @@ use crate::{
     errors::ErrorDetails,
     gdal_if::{FieldType, LayerIndex},
     state::AppState,
+    tools::describe_landforms::describe_landforms,
     web_socket::{AppMessage, TouchDevice},
 };
 
@@ -182,4 +183,12 @@ pub enum SortOption {
 #[specta::specta]
 pub fn sort_features_by(by: SortOption, state: AppState) {
     state.with_current_vector_layer(|layer| layer.info.sort_features_by = by);
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_landform_description(state: AppState) -> Result<String, String> {
+    state
+        .with_current_dataset_mut(|ds, _| describe_landforms(&ds.dataset.file_name))
+        .unwrap()
 }

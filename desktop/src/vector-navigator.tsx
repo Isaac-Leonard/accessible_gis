@@ -21,6 +21,15 @@ export const VectorNavigator = ({ layer }: VectorLayerProp) => {
       <ReprojectionDialog />
       <FeatureCoppierDialog layer={layer} />
       <LayerSimplifierDialog />
+      <button
+        onClick={(_) =>
+          client
+            .getLandformDescription()
+            .then((description) => alert(description))
+        }
+      >
+        View Landform Description
+      </button>
       {layer.editable ? <DatasetEditor layer={layer} /> : <EditDatasetButton />}
       {layer.display ? (
         <>
