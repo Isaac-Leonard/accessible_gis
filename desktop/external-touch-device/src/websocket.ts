@@ -119,6 +119,8 @@ const rasterParser: ZodType<RasterSettings> = z.object({
 const vectorSettingsParser = z.object({
   preferedKeys: z.string().array(),
   useLabels: z.boolean(),
+  announceLeaving: z.boolean(),
+  announceGeometryType: z.boolean(),
 });
 
 const GisParser = z.object({

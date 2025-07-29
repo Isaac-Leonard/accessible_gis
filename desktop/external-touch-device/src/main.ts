@@ -32,7 +32,12 @@ const createButton = () => {
 
 const defaultSettings: GisMessage = {
   raster: { minFreq: 220, maxFreq: 880 },
-  vector: { preferedKeys: [], useLabels: false },
+  vector: {
+    preferedKeys: [],
+    useLabels: false,
+    announceLeaving: true,
+    announceGeometryType: true,
+  },
 };
 
 class GisManager {

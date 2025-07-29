@@ -4,7 +4,12 @@ import { CoordinateManager } from "./coordinate-manager.js";
 import { getCanvas } from "./canvas-manager.js";
 import { speak } from "./speach.js";
 
-export type VectorSettings = { preferedKeys: string[]; useLabels: boolean };
+export type VectorSettings = {
+  preferedKeys: string[];
+  useLabels: boolean;
+  announceLeaving: boolean;
+  announceGeometryType: boolean;
+};
 
 export class VectorManager {
   radius = 5;
@@ -163,32 +168,39 @@ export class VectorManager {
       (feature) => !foundFeatures.includes(feature)
     );
 
-    const foundText = featuresToSpeak
+    let text = featuresToSpeak
       .map((feature) => {
         const { geometry, properties } = feature;
         const name = this.getPreferedNameForFeature(properties);
-        switch (geometry.type) {
-          case "Point":
-          case "MultiPoint":
-          case "LineString":
-          case "MultiLineString":
-            return `Near ${geometry.type} ${name}`;
-          case "Polygon":
-          case "MultiPolygon":
-          case "GeometryCollection":
-            return `In ${geometry.type} ${name}`;
+        if (this.settings.announceGeometryType) {
+          switch (geometry.type) {
+            case "Point":
+            case "MultiPoint":
+            case "LineString":
+            case "MultiLineString":
+              return `Near ${geometry.type} ${name}`;
+            case "Polygon":
+            case "MultiPolygon":
+            case "GeometryCollection":
+              return `In ${geometry.type} ${name}`;
+          }
+        } else {
+          // Convert to string if needed
+          return `${name}`;
         }
       })
       .join();
 
-    const leftText = leftFeatures
-      .map((feature) => {
-        const { properties } = feature;
-        const name = this.getPreferedNameForFeature(properties);
-        return `Leaving ${name}`;
-      })
-      .join();
-    const text = foundText + "\n" + leftText;
+    if (this.settings.announceLeaving) {
+      text += "\n";
+      text += +leftFeatures
+        .map((feature) => {
+          const { properties } = feature;
+          const name = this.getPreferedNameForFeature(properties);
+          return `Leaving ${name}`;
+        })
+        .join();
+    }
     console.log(text);
     // Speaking empty text while moving affectively makes any speach while moving impossible.
     if (text.length > 1) {
