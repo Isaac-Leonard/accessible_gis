@@ -214,7 +214,9 @@ pub struct LayerDescriptor {
     pub dataset_file: PathBuf,
 }
 
-#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+#[derive(Clone, Default, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
 pub struct TouchDeviceState {
     pub use_labels: bool,
+    pub announce_leaving: bool,
+    pub announce_geometry_type: bool,
 }

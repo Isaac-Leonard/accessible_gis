@@ -5,7 +5,7 @@ import { NumberInput, useBindedObjectProperties } from "./binded-input";
 import { Ref } from "preact";
 import { TouchDeviceState } from "./bindings";
 
-export const TouchDeviceScreen = ({ use_labels }: TouchDeviceState) => {
+export const TouchDeviceScreen = (device: TouchDeviceState) => {
   const { open, setOpen, innerRef } = useDialog<HTMLInputElement>();
   return (
     <div>
@@ -20,9 +20,23 @@ export const TouchDeviceScreen = ({ use_labels }: TouchDeviceState) => {
       <button
         onClick={() => client.toggleLabels()}
         role="switch"
-        aria-checked={use_labels}
+        aria-checked={device.use_labels}
       >
         Toggle Auto Labels
+      </button>
+      <button
+        onClick={() => client.toggleAnnounceLeaving()}
+        role="switch"
+        aria-checked={device.announce_leaving}
+      >
+        Toggle announcements when leaving polygons
+      </button>
+      <button
+        onClick={() => client.toggleAnnounceGeometryTypes()}
+        role="switch"
+        aria-checked={device.announce_geometry_type}
+      >
+        Toggle announcing types of geometries
       </button>
     </div>
   );

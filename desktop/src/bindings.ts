@@ -242,6 +242,12 @@ export const commands = {
       else return { status: "error", error: e as any };
     }
   },
+  async toggleAnnounceLeaving(): Promise<void> {
+    await TAURI_INVOKE("toggle_announce_leaving");
+  },
+  async toggleAnnounceGeometryTypes(): Promise<void> {
+    await TAURI_INVOKE("toggle_announce_geometry_types");
+  },
 };
 
 /** user-defined events **/
@@ -677,7 +683,11 @@ export type ThiessenPolygonRecord = {
   start_line: number;
   column: number;
 };
-export type TouchDeviceState = { use_labels: boolean };
+export type TouchDeviceState = {
+  use_labels: boolean;
+  announce_leaving: boolean;
+  announce_geometry_type: boolean;
+};
 export type UiScreen =
   | ({ name: "Project" } & ProjectScreen)
   | { name: "ThiessenPolygons" }

@@ -17,7 +17,7 @@ export const Router = () => {
     case "Settings":
       return <SettingsScreen settings={state.value.screen} />;
     case "TouchDevice":
-      return <TouchDeviceScreen use_labels={state.value.screen.use_labels} />;
+      return <TouchDeviceScreen {...state.value.screen} />;
     case "Errors":
       return <ErrorsScreen errors={state.value.errors} />;
   }

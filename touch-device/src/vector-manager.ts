@@ -193,7 +193,7 @@ export class VectorManager {
 
     if (this.settings.announceLeaving) {
       text += "\n";
-      text += +leftFeatures
+      text += leftFeatures
         .map((feature) => {
           const { properties } = feature;
           const name = this.getPreferedNameForFeature(properties);

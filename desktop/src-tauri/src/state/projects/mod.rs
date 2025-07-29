@@ -78,7 +78,7 @@ impl Project {
                 .collect(),
             settings: self.settings.clone(),
             prefered_display_fields: self.prefered_display_fields.clone(),
-            raster_to_display: self.raster_to_display.clone(),
+            raster_to_display: self.raster_to_display,
             use_labels: self.use_labels,
             announce_leaving: self.announce_leaving,
             announce_geometry_type: self.announce_geometry_type,
@@ -187,13 +187,20 @@ impl NonEmptyDelegator for Project {
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct StoredProject {
-    srs: Srs,
+    pub srs: Srs,
     pub datasets: Vec<PathBuf>,
     pub settings: GlobalSettings,
     pub prefered_display_fields: Vec<String>,
     pub raster_to_display: Option<RasterIndex>,
     #[serde(default)]
     pub use_labels: bool,
+    #[serde(default = "get_true")]
     pub announce_leaving: bool,
+    #[serde(default = "get_true")]
     pub announce_geometry_type: bool,
+}
+
+/// This just exists to use true as a default value for serde
+fn get_true() -> bool {
+    true
 }

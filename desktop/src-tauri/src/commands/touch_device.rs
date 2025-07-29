@@ -23,9 +23,12 @@ pub fn toggle_labels(state: AppState, device: State<TouchDevice>) {
 #[tauri::command]
 #[specta::specta]
 pub fn toggle_announce_leaving(state: AppState, device: State<TouchDevice>) {
+    println!("Here");
     state.with_project(|project| {
         project.announce_leaving = !project.announce_leaving;
-        device.send(AppMessage::Gis(project.get_touch_device_settings()))
+        println!("toggled");
+        device.send(AppMessage::Gis(project.get_touch_device_settings()));
+        println!("sent");
     });
 }
 
