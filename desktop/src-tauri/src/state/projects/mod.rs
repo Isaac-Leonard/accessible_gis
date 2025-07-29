@@ -28,6 +28,8 @@ pub struct Project {
     pub prefered_display_fields: Vec<String>,
     pub raster_to_display: Option<RasterIndex>,
     pub use_labels: bool,
+    pub announce_leaving: bool,
+    pub announce_geometry_type: bool,
 }
 
 impl Project {
@@ -40,6 +42,8 @@ impl Project {
             raster_to_display: None,
             prefered_display_fields: vec![],
             use_labels: false,
+            announce_geometry_type: true,
+            announce_leaving: true,
         };
         project.save()?;
         Ok(project)
@@ -76,6 +80,8 @@ impl Project {
             prefered_display_fields: self.prefered_display_fields.clone(),
             raster_to_display: self.raster_to_display.clone(),
             use_labels: self.use_labels,
+            announce_leaving: self.announce_leaving,
+            announce_geometry_type: self.announce_geometry_type,
         }
     }
 
@@ -98,6 +104,8 @@ impl Project {
             prefered_display_fields: project.prefered_display_fields.clone(),
             raster_to_display: project.raster_to_display,
             use_labels: project.use_labels,
+            announce_leaving: project.announce_leaving,
+            announce_geometry_type: project.announce_geometry_type,
         })
     }
 
@@ -146,6 +154,8 @@ impl Project {
             vector: VectorMessage {
                 prefered_keys: self.prefered_display_fields.clone(),
                 use_labels: self.use_labels,
+                announce_leaving: self.announce_leaving,
+                announce_geometry_type: self.announce_geometry_type,
             },
         }
     }
@@ -184,4 +194,6 @@ pub struct StoredProject {
     pub raster_to_display: Option<RasterIndex>,
     #[serde(default)]
     pub use_labels: bool,
+    pub announce_leaving: bool,
+    pub announce_geometry_type: bool,
 }

@@ -156,6 +156,8 @@ pub struct RasterMessage {
 pub struct VectorMessage {
     pub prefered_keys: Vec<String>,
     pub use_labels: bool,
+    pub announce_leaving: bool,
+    pub announce_geometry_type: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
