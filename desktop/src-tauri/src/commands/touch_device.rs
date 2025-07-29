@@ -19,3 +19,21 @@ pub fn toggle_labels(state: AppState, device: State<TouchDevice>) {
         device.send(AppMessage::Gis(project.get_touch_device_settings()))
     });
 }
+
+#[tauri::command]
+#[specta::specta]
+pub fn toggle_announce_leaving(state: AppState, device: State<TouchDevice>) {
+    state.with_project(|project| {
+        project.announce_leaving = !project.announce_leaving;
+        device.send(AppMessage::Gis(project.get_touch_device_settings()))
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn toggle_announce_geometry_types(state: AppState, device: State<TouchDevice>) {
+    state.with_project(|project| {
+        project.announce_geometry_type = !project.announce_geometry_type;
+        device.send(AppMessage::Gis(project.get_touch_device_settings()))
+    });
+}

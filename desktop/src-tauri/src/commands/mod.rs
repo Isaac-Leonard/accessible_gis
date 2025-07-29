@@ -99,7 +99,9 @@ pub fn generate_handlers(
             save_project,
             toggle_labels,
             sort_features_by,
-            get_landform_description
+            get_landform_description,
+            toggle_announce_leaving,
+            toggle_announce_geometry_types,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds
