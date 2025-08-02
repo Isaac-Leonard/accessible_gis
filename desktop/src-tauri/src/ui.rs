@@ -13,6 +13,7 @@ use crate::{
     gdal_if::{FieldSchema, FieldValue, LayerExt, LayerIndex},
     state::{
         AppData,
+        configurable_tools::{Input, SavedToolOutputAction},
         gis::{combined::RasterIndex, raster::RenderMethod},
         settings::{AudioSettings, GlobalSettings},
     },
@@ -23,6 +24,7 @@ use crate::{
 pub struct UiState {
     pub screen: UiScreen,
     pub errors: Vec<ApplicationError>,
+    pub tool_outputs: Vec<SavedToolOutputAction>,
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -34,6 +36,7 @@ pub enum UiScreen {
     Settings(GlobalSettings),
     TouchDevice(TouchDeviceState),
     Errors,
+    Tools(ToolsScreenInfo),
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -219,4 +222,16 @@ pub struct TouchDeviceState {
     pub use_labels: bool,
     pub announce_leaving: bool,
     pub announce_geometry_type: bool,
+}
+
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+pub struct ToolsScreenInfo {
+    pub tools: Vec<ToolDescriptor>,
+    pub layers: Vec<LayerDescriptor>,
+}
+
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+pub struct ToolDescriptor {
+    pub label: String,
+    pub inputs: Vec<Input>,
 }

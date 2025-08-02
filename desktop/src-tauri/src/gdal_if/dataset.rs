@@ -9,6 +9,7 @@ use crate::{commands::EditDatasetError, dataset_collection::IndexedLayer, errors
 
 use super::{LayerEnum, WrappedLayer, errors::MyGdalError, raster::WrappedRasterBand};
 
+#[derive(Debug)]
 pub struct WrappedDataset {
     pub file_name: PathBuf,
     pub dataset: Dataset,

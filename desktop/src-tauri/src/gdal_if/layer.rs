@@ -77,8 +77,19 @@ impl<'a> LayerEnum<'a> {
     }
 }
 
-#[derive(Clone, Copy, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+#[derive(
+    Clone,
+    Copy,
+    Deserialize,
+    Serialize,
+    PartialEq,
+    Debug,
+    specta::Type,
+    strum::EnumDiscriminants,
+    strum::EnumIs,
+)]
 #[serde(tag = "type", content = "index")]
+#[strum_discriminants(derive(Deserialize, Serialize, specta::Type))]
 pub enum LayerIndex {
     Vector(usize),
     Raster(usize),
@@ -99,21 +110,5 @@ impl LayerIndex {
         } else {
             None
         }
-    }
-
-    /// Returns `true` if the layer index is [`Vector`].
-    ///
-    /// [`Vector`]: LayerIndex::Vector
-    #[must_use]
-    pub fn is_vector(&self) -> bool {
-        matches!(self, Self::Vector(..))
-    }
-
-    /// Returns `true` if the layer index is [`Raster`].
-    ///
-    /// [`Raster`]: LayerIndex::Raster
-    #[must_use]
-    pub fn is_raster(&self) -> bool {
-        matches!(self, Self::Raster(..))
     }
 }

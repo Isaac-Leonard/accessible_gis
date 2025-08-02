@@ -6,10 +6,12 @@ use serde::{Deserialize, Serialize};
 use crate::{
     errors::{ApplicationError, ErrorDetails},
     gdal_if::{Srs, WrappedDataset},
+    tools::describe_landforms::DescribeLandformsTool,
     web_socket::{GisMessage, RasterMessage, VectorMessage},
 };
 
 use super::{
+    configurable_tools::{SavedToolOutputAction, Tool, ToolOutputAction},
     dataset_collection::{
         DatasetCollection, NonEmptyDelegator, NonEmptyDelegatorImpl, NonEmptyDelegatorImplExt,
     },
@@ -22,7 +24,7 @@ use super::{
 
 pub struct Project {
     location: PathBuf,
-    srs: Srs,
+    pub srs: Srs,
     pub datasets: DatasetCollection,
     pub settings: GlobalSettings,
     pub prefered_display_fields: Vec<String>,
@@ -30,6 +32,8 @@ pub struct Project {
     pub use_labels: bool,
     pub announce_leaving: bool,
     pub announce_geometry_type: bool,
+    pub tools: Vec<Box<dyn Tool>>,
+    pub tool_outputs: Vec<SavedToolOutputAction>,
 }
 
 impl Project {
@@ -44,6 +48,8 @@ impl Project {
             use_labels: false,
             announce_geometry_type: true,
             announce_leaving: true,
+            tools: vec![Box::new(DescribeLandformsTool)],
+            tool_outputs: Vec::new(),
         };
         project.save()?;
         Ok(project)
@@ -82,6 +88,7 @@ impl Project {
             use_labels: self.use_labels,
             announce_leaving: self.announce_leaving,
             announce_geometry_type: self.announce_geometry_type,
+            tool_outputs: self.tool_outputs.clone(),
         }
     }
 
@@ -106,6 +113,8 @@ impl Project {
             use_labels: project.use_labels,
             announce_leaving: project.announce_leaving,
             announce_geometry_type: project.announce_geometry_type,
+            tools: vec![Box::new(DescribeLandformsTool)],
+            tool_outputs: project.tool_outputs,
         })
     }
 
@@ -171,6 +180,10 @@ impl Project {
         })
         .flatten()
     }
+
+    pub fn get_tools(&self) -> Vec<Box<dyn Tool>> {
+        self.tools.clone()
+    }
 }
 
 impl NonEmptyDelegator for Project {
@@ -198,6 +211,8 @@ pub struct StoredProject {
     pub announce_leaving: bool,
     #[serde(default = "get_true")]
     pub announce_geometry_type: bool,
+    #[serde(default)]
+    pub tool_outputs: Vec<SavedToolOutputAction>,
 }
 
 /// This just exists to use true as a default value for serde

@@ -248,6 +248,15 @@ export const commands = {
   async toggleAnnounceGeometryTypes(): Promise<void> {
     await TAURI_INVOKE("toggle_announce_geometry_types");
   },
+  async runTool(
+    toolIndex: number,
+    parameters: ParameterValue[]
+  ): Promise<void> {
+    await TAURI_INVOKE("run_tool", { toolIndex, parameters });
+  },
+  async markToolOutputRead(id: string): Promise<void> {
+    await TAURI_INVOKE("mark_tool_output_read", { id });
+  },
 };
 
 /** user-defined events **/
@@ -310,6 +319,10 @@ export type DatasetCreationError =
   | { CreationError: CreationError }
   | { DriverError: MissingDriverError }
   | { FlushCacheError: FlushCacheError };
+/**
+ * Layer in this case refering to either a raster band or vector layer
+ */
+export type DatasetLayerIndex = { dataset: number; layer: LayerIndex };
 export type DemClassificationError =
   | { type: "Geomorphons"; error: string }
   | { type: "Polygonise"; error: string }
@@ -430,6 +443,19 @@ export type HistogramSettings = {
   min_freq: number;
   max_freq: number;
 };
+export type Input = {
+  label: string;
+  name: string | null;
+  param_type: InputType;
+};
+export type InputType =
+  | { type: "Float" }
+  | { type: "Int" }
+  | { type: "String" }
+  | { type: "Layer"; options: LayerIndexDiscriminants }
+  | { type: "Dataset" }
+  | { type: "Option"; options: string[] }
+  | { type: "Flag" };
 export type LayerDescriptor = (
   | { type: "Vector"; index: number }
   | { type: "Raster"; index: number }
@@ -437,6 +463,10 @@ export type LayerDescriptor = (
 export type LayerIndex =
   | { type: "Vector"; index: number }
   | { type: "Raster"; index: number };
+/**
+ * Auto-generated discriminant enum variants
+ */
+export type LayerIndexDiscriminants = "Vector" | "Raster";
 export type LayerScreenInfo =
   | ({ type: "Vector" } & VectorScreenData)
   | ({ type: "Raster" } & RasterScreenData);
@@ -614,6 +644,14 @@ export type OpenLineDescription = {
   distances: number;
   number_of_points: number;
 };
+export type ParameterValue =
+  | { Float: number }
+  | { Int: number }
+  | { String: string }
+  | { Layer: DatasetLayerIndex }
+  | { Dataset: number }
+  | { Option: string }
+  | { Flag: boolean };
 export type Point = { x: number; y: number };
 export type Polygon = { exterior: LineString; interior: LineString[] };
 export type PolygonInfo = { area: number; fields: Field[] };
@@ -662,10 +700,17 @@ export type RenderMethod =
    * Render pure raster values mapped to 256 grey scale
    */
   | "GDAL";
+export type SavedToolOutputAction = {
+  tool: string;
+  action: ToolOutputAction;
+  read: boolean;
+  id: string;
+};
 export type Screen =
   | "Main"
   | "NewDataset"
   | "Settings"
+  | "Tools"
   | "TouchDevice"
   | "Errors";
 export type SortOption =
@@ -683,6 +728,12 @@ export type ThiessenPolygonRecord = {
   start_line: number;
   column: number;
 };
+export type ToolDescriptor = { label: string; inputs: Input[] };
+export type ToolOutputAction = { type: "Alert"; data: string };
+export type ToolsScreenInfo = {
+  tools: ToolDescriptor[];
+  layers: LayerDescriptor[];
+};
 export type TouchDeviceState = {
   use_labels: boolean;
   announce_leaving: boolean;
@@ -694,8 +745,13 @@ export type UiScreen =
   | ({ name: "NewDataset" } & NewDatasetScreenData)
   | ({ name: "Settings" } & GlobalSettings)
   | ({ name: "TouchDevice" } & TouchDeviceState)
-  | { name: "Errors" };
-export type UiState = { screen: UiScreen; errors: ApplicationError[] };
+  | { name: "Errors" }
+  | ({ name: "Tools" } & ToolsScreenInfo);
+export type UiState = {
+  screen: UiScreen;
+  errors: ApplicationError[];
+  tool_outputs: SavedToolOutputAction[];
+};
 export type VectorScreenData = {
   field_schema: FieldSchema[];
   features: FeatureIdentifier[];

@@ -18,6 +18,7 @@ pub struct StatefulVectorInfo {
     pub sort_features_by: SortOption,
 }
 
+#[derive(Debug)]
 pub struct StatefulVectorLayer<'a> {
     pub layer: WrappedLayer<'a>,
     pub info: &'a mut StatefulVectorInfo,

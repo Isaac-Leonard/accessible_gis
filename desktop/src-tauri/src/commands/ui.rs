@@ -1,9 +1,12 @@
+use itertools::Itertools;
 use uuid::Uuid;
 
 use crate::{
     gdal_if::list_drivers,
     state::{AppState, Screen},
-    ui::{NewDatasetScreenData, ProjectScreen, TouchDeviceState, UiScreen, UiState},
+    ui::{
+        NewDatasetScreenData, ProjectScreen, ToolsScreenInfo, TouchDeviceState, UiScreen, UiState,
+    },
 };
 
 #[tauri::command]
@@ -31,6 +34,21 @@ pub fn get_app_info(state: AppState) -> UiState {
                     .unwrap_or_default(),
             }),
             Screen::Settings => UiScreen::Settings(state.settings().clone()),
+            Screen::Tools => UiScreen::Tools(
+                state
+                    .with_project_fallible(|project| {
+                        Ok(ToolsScreenInfo {
+                            tools: project.tools.iter().map(|tool| tool.for_ui()).collect(),
+                            layers: project
+                                .datasets
+                                .get_all_layers()?
+                                .into_iter()
+                                .map_into()
+                                .collect(),
+                        })
+                    })
+                    .unwrap_or_default(),
+            ),
             Screen::TouchDevice => UiScreen::TouchDevice(
                 state
                     .with_project(|project| TouchDeviceState {
@@ -43,6 +61,9 @@ pub fn get_app_info(state: AppState) -> UiState {
             Screen::Errors => UiScreen::Errors,
         },
         errors: state.errors.to_vec(),
+        tool_outputs: state
+            .with_project(|p| p.tool_outputs.clone())
+            .unwrap_or_default(),
     })
 }
 

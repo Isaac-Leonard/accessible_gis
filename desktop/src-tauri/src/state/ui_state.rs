@@ -2,6 +2,7 @@ pub enum RootScreen {
     Settings,
     Layers(Option<LayerScreen>),
     NewDataset,
+    Tools,
 }
 
 pub enum LayerScreen {

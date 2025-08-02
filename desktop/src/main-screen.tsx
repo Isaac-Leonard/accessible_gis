@@ -1,6 +1,7 @@
 import { VectorNavigator } from "./vector-navigator";
 import { RasterNavigator } from "./raster-navigator";
 import {
+  DatasetLayerIndex,
   LayerDescriptor,
   LayerScreenInfo,
   ProjectScreen,
@@ -19,7 +20,11 @@ export const MainScreen = ({ state }: { state: ProjectScreen }) => {
       <button onClick={newProject}>New Project</button>
       <button
         onClick={() =>
-          openFile("Load project from where").then(client.loadProject)
+          openFile("Load project from where").then((file) => {
+            if (file !== null) {
+              client.loadProject(file);
+            }
+          })
         }
       >
         Open Project
@@ -87,7 +92,15 @@ export const LoadedProjectScreen = ({
     <div className="container" onKeyDown={keyHandler}>
       <OpenDatasetDialog />
       <IpDialog ip={state.ip} />
-      <LayerSelector layers={state.layers} selectedIndex={selectedLayerIndex} />
+      <LayerSelector
+        layers={state.layers}
+        selectedIndex={selectedLayerIndex}
+        setLayer={async (layer_index) => {
+          // TODO: These should probably be put into a single function
+          client.setDatasetIndex(layer_index.dataset);
+          client.setLayerIndex(layer_index.layer);
+        }}
+      />
       <LayerView layer={state.layer_info} />
     </div>
   );
@@ -96,19 +109,24 @@ export const LoadedProjectScreen = ({
 type LayerSelectorProps = {
   layers: LayerDescriptor[];
   selectedIndex: number | null;
+  setLayer: (layer: DatasetLayerIndex) => void;
 };
 
-function LayerSelector({ layers, selectedIndex }: LayerSelectorProps) {
+export function LayerSelector({
+  layers,
+  selectedIndex,
+  setLayer,
+}: LayerSelectorProps) {
   return (
     <div>
       <IndexedOptionPicker
         index={selectedIndex}
-        setIndex={async (layer_index) => {
-          const { dataset, type, index } = layers[layer_index];
-          // TODO: These should probably be put into a single function
-          client.setDatasetIndex(dataset);
-          client.setLayerIndex({ type, index });
-        }}
+        setIndex={(index) =>
+          setLayer({
+            dataset: layers[index].dataset,
+            layer: { type: layers[index].type, index: layers[index].index },
+          })
+        }
         options={layers.map(
           (layer) => `${layer.dataset_file.split("/").pop()}: ${layer.type}`
         )}

@@ -5,6 +5,7 @@ import { state } from "./api";
 import { SettingsScreen } from "./settings-screen";
 import { TouchDeviceScreen } from "./touch-device-screen";
 import { ErrorsScreen } from "./errors-screen";
+import { ToolsScreen } from "./tools-screen";
 
 export const Router = () => {
   switch (state.value.screen.name) {
@@ -18,6 +19,8 @@ export const Router = () => {
       return <SettingsScreen settings={state.value.screen} />;
     case "TouchDevice":
       return <TouchDeviceScreen {...state.value.screen} />;
+    case "Tools":
+      return <ToolsScreen {...state.value.screen} />;
     case "Errors":
       return <ErrorsScreen errors={state.value.errors} />;
   }

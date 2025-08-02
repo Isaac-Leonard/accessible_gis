@@ -21,6 +21,7 @@ use super::{
     vector::{StatefulVectorInfo, StatefulVectorLayer},
 };
 
+#[derive(Debug)]
 pub struct StatefulDataset {
     pub dataset: WrappedDataset,
     pub layer_index: Option<LayerIndex>,

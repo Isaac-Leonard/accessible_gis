@@ -1,3 +1,4 @@
+pub mod configurable_tools;
 pub mod dataset_collection;
 pub mod gis;
 mod loaded;
@@ -155,6 +156,7 @@ pub enum Screen {
     Main,
     NewDataset,
     Settings,
+    Tools,
     TouchDevice,
     Errors,
 }

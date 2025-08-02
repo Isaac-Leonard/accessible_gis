@@ -25,6 +25,7 @@ pub enum ImageType {
     Unknown,
 }
 
+#[derive(Debug)]
 pub struct StatefulRasterInfo {
     pub audio_settings: AudioSettings,
     pub shared: SharedInfo,
@@ -47,6 +48,7 @@ impl RenderMethod {
     }
 }
 
+#[derive(Debug)]
 pub struct StatefulRasterBand<'a> {
     pub band: WrappedRasterBand<'a>,
     pub info: &'a mut StatefulRasterInfo,

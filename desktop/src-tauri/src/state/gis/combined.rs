@@ -5,6 +5,7 @@ use crate::gdal_if::LayerIndex;
 
 use super::{raster::StatefulRasterBand, shared::SharedInfo, vector::StatefulVectorLayer};
 
+#[derive(strum::EnumTryAs)]
 pub enum StatefulLayerEnum<'a> {
     Raster(StatefulRasterBand<'a>),
     Vector(StatefulVectorLayer<'a>),
@@ -78,7 +79,7 @@ impl<'a> StatefulLayerEnum<'a> {
 }
 
 /// Layer in this case refering to either a raster band or vector layer
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, specta::Type)]
 pub struct DatasetLayerIndex {
     pub dataset: usize,
     pub layer: LayerIndex,

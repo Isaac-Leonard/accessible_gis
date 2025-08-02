@@ -9,6 +9,7 @@ use crate::errors::ErrorDetails;
 
 use super::{dataset::Srs, field_schema::FieldSchema};
 
+#[derive(Debug)]
 pub struct WrappedLayer<'a> {
     pub layer: Layer<'a>,
     pub index: usize,

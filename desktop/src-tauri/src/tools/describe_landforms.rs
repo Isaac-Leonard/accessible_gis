@@ -7,6 +7,12 @@ use std::path::Path;
 use gdal::{Dataset, vector::LayerAccess};
 use geo::{BoundingRect, Centroid, ConvexHull, GeodesicArea, LinesIter, Rotate};
 
+use crate::{
+    errors::ErrorDetails,
+    gdal_if::LayerIndexDiscriminants,
+    state::configurable_tools::{Input, InputType, NamedParsedParamValue, Tool, ToolOutputAction},
+};
+
 #[derive(Debug)]
 struct Entry {
     landform: String,
@@ -195,4 +201,36 @@ pub fn describe_landforms(path: impl AsRef<Path>) -> Result<String, String> {
     }
 
     Ok(output.trim().to_string())
+}
+
+#[derive(Clone, Debug)]
+pub struct DescribeLandformsTool;
+
+impl Tool for DescribeLandformsTool {
+    fn get_label(&self) -> String {
+        "Describe landforms".to_string()
+    }
+
+    fn get_expected_input_parameters(&self) -> Vec<Input> {
+        vec![Input {
+            label: "Landforms layer".to_string(),
+            name: None,
+            param_type: InputType::Layer(LayerIndexDiscriminants::Vector),
+        }]
+    }
+
+    fn execute(
+        &self,
+        mut params: Vec<NamedParsedParamValue>,
+    ) -> Result<ToolOutputAction, ErrorDetails> {
+        let index = params.remove(0);
+        let layer = index.try_as_raw().unwrap().try_as_vector().unwrap();
+        let result =
+            describe_landforms(&layer.info.shared.name).map_err(|err| ErrorDetails::Other(err))?;
+        Ok(ToolOutputAction::Alert(result))
+    }
+
+    fn dyn_clone(&self) -> Box<dyn Tool> {
+        Box::new(Self)
+    }
 }

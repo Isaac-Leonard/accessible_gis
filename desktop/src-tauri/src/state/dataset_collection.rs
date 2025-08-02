@@ -64,14 +64,20 @@ pub trait NonEmptyDelegatorImpl: NonEmptyDelegator {
         dataset.get_layer(index.layer)
     }
 
+    fn get_dataset(&self, index: usize) -> Option<&StatefulDataset> {
+        self.get_non_empty()?.datasets.get(index)
+    }
+
+    fn get_dataset_mut(&mut self, index: usize) -> Option<&mut StatefulDataset> {
+        self.get_non_empty_mut()?.datasets.get_mut(index)
+    }
+
     fn get_vector(&mut self, index: VectorIndex) -> Option<StatefulVectorLayer> {
-        let dataset = self.get_non_empty_mut()?.datasets.get_mut(index.dataset)?;
-        dataset.get_vector(index.layer)
+        self.get_dataset_mut(index.dataset)?.get_vector(index.layer)
     }
 
     fn get_raster(&mut self, index: RasterIndex) -> Option<StatefulRasterBand> {
-        let dataset = self.get_non_empty_mut()?.datasets.get_mut(index.dataset)?;
-        dataset.get_raster(index.band)
+        self.get_dataset_mut(index.dataset)?.get_raster(index.band)
     }
 
     fn iter(&self) -> Iter<'_, StatefulDataset> {

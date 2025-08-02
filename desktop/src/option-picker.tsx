@@ -19,7 +19,14 @@ export const IndexedOptionPicker = ({
 }: IndexedOptionPickerProps) => {
   //  const [optionsPerPage, setOptionsPerPage] = useState(240);
   const [visableIndex, setVisableIndex] = useState(0);
-  const visableOptions = options.slice(visableIndex, visableIndex + 240);
+  let visableOptions;
+  try {
+    visableOptions = options.slice(visableIndex, visableIndex + 240);
+  } catch (e) {
+    console.log(e);
+    visableOptions = [];
+  }
+
   if (index === null) {
     visableOptions.unshift("Select option");
   }
@@ -100,12 +107,16 @@ export function OptionPicker<T extends readonly string[]>({
   prompt,
   emptyText,
 }: OptionPickerProps<T>) {
+  console.log(options);
   //  const [optionsPerPage, setOptionsPerPage] = useState(240);
   const [visableIndex, setVisableIndex] = useState(0);
-  const visableOptions: ("Select option" | T[number])[] = options.slice(
-    visableIndex,
-    visableIndex + 240
-  );
+  let visableOptions: ("Select option" | T[number])[];
+  try {
+    visableOptions = options.slice(visableIndex, visableIndex + 240);
+  } catch (e) {
+    console.log(e);
+    visableOptions = [];
+  }
   if (selectedOption === null || selectedOption === undefined) {
     visableOptions.unshift("Select option");
   }

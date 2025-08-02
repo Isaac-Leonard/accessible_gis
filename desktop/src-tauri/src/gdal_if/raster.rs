@@ -19,6 +19,16 @@ pub struct WrappedRasterBand<'a> {
     pub srs: Option<SpatialRef>,
 }
 
+impl<'a> std::fmt::Debug for WrappedRasterBand<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WrappedRasterBand")
+            .field("band", &"Missing Debug impl for RasterBand")
+            .field("geo_transform", &self.geo_transform)
+            .field("srs", &self.srs)
+            .finish()
+    }
+}
+
 impl<'a> WrappedRasterBand<'a> {
     pub fn point_to_wgs84(&self, point: Point) -> Option<Point> {
         let point = self.geo_transform?.apply(point.x(), point.y());
