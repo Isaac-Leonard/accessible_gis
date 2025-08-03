@@ -104,6 +104,7 @@ pub fn generate_handlers(
             toggle_announce_geometry_types,
             run_tool,
             mark_tool_output_read,
+            add_custom_tool,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds

@@ -102,7 +102,7 @@ pub struct SavedToolOutputAction {
     pub id: uuid::Uuid,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct UserDefinedTool {
     label: String,
     inputs: Vec<Input>,

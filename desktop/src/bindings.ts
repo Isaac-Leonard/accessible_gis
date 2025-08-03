@@ -257,6 +257,9 @@ export const commands = {
   async markToolOutputRead(id: string): Promise<void> {
     await TAURI_INVOKE("mark_tool_output_read", { id });
   },
+  async addCustomTool(tool: UserDefinedTool): Promise<void> {
+    await TAURI_INVOKE("add_custom_tool", { tool });
+  },
 };
 
 /** user-defined events **/
@@ -751,6 +754,11 @@ export type UiState = {
   screen: UiScreen;
   errors: ApplicationError[];
   tool_outputs: SavedToolOutputAction[];
+};
+export type UserDefinedTool = {
+  label: string;
+  inputs: Input[];
+  command: string;
 };
 export type VectorScreenData = {
   field_schema: FieldSchema[];

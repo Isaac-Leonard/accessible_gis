@@ -4,7 +4,11 @@ use uuid::Uuid;
 use crate::{
     errors::ErrorDetails,
     gdal_if::Srs,
-    state::{AppState, configurable_tools::ParameterValue, gis::combined::StatefulLayerEnum},
+    state::{
+        AppState,
+        configurable_tools::{ParameterValue, UserDefinedTool},
+        gis::combined::StatefulLayerEnum,
+    },
 };
 
 #[tauri::command]
@@ -76,4 +80,10 @@ pub fn mark_tool_output_read(id: Uuid, state: AppState) {
             .read = true;
         Ok(())
     });
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn add_custom_tool(tool: UserDefinedTool, state: AppState) {
+    state.with_project(|project| project.tools.push(Box::new(tool)));
 }
