@@ -11,7 +11,9 @@ use crate::{
 };
 
 use super::{
-    configurable_tools::{SavedToolOutputAction, Tool, ToolOutputAction},
+    configurable_tools::{
+        SavedToolOutputAction, Tool, ToolOutputAction, UserDefinedTool, get_built_in_tools,
+    },
     dataset_collection::{
         DatasetCollection, NonEmptyDelegator, NonEmptyDelegatorImpl, NonEmptyDelegatorImplExt,
     },
@@ -48,7 +50,8 @@ impl Project {
             use_labels: false,
             announce_geometry_type: true,
             announce_leaving: true,
-            tools: vec![Box::new(DescribeLandformsTool)],
+            // TODO: Have a list of project tools and global tools
+            tools: get_built_in_tools(),
             tool_outputs: Vec::new(),
         };
         project.save()?;
@@ -88,6 +91,11 @@ impl Project {
             use_labels: self.use_labels,
             announce_leaving: self.announce_leaving,
             announce_geometry_type: self.announce_geometry_type,
+            tools: self
+                .tools
+                .iter()
+                .filter_map(|tool| tool.as_user_defined_tool())
+                .collect(),
             tool_outputs: self.tool_outputs.clone(),
         }
     }
@@ -103,6 +111,14 @@ impl Project {
                 .map_err(ErrorDetails::OpenDatasetError)?;
         }
 
+        let mut tools = get_built_in_tools();
+        tools.extend(
+            project
+                .tools
+                .into_iter()
+                .map(|tool| Box::new(tool) as Box<dyn Tool>),
+        );
+
         Ok(Self {
             location: path,
             srs: project.srs,
@@ -113,7 +129,7 @@ impl Project {
             use_labels: project.use_labels,
             announce_leaving: project.announce_leaving,
             announce_geometry_type: project.announce_geometry_type,
-            tools: vec![Box::new(DescribeLandformsTool)],
+            tools,
             tool_outputs: project.tool_outputs,
         })
     }
@@ -211,6 +227,8 @@ pub struct StoredProject {
     pub announce_leaving: bool,
     #[serde(default = "get_true")]
     pub announce_geometry_type: bool,
+    #[serde(default)]
+    tools: Vec<UserDefinedTool>,
     #[serde(default)]
     pub tool_outputs: Vec<SavedToolOutputAction>,
 }

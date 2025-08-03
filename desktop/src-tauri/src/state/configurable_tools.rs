@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     errors::ErrorDetails,
     gdal_if::{LayerIndex, LayerIndexDiscriminants},
+    tools::describe_landforms::DescribeLandformsTool,
     ui::ToolDescriptor,
 };
 
@@ -79,6 +80,11 @@ pub trait Tool: Send + Sync {
     }
 
     fn dyn_clone(&self) -> Box<dyn Tool>;
+
+    /// All but one implementation will return false so we might as well implement it here
+    fn as_user_defined_tool(&self) -> Option<UserDefinedTool> {
+        None
+    }
 }
 
 impl Clone for Box<dyn Tool> {
@@ -140,6 +146,10 @@ impl Tool for UserDefinedTool {
 
     fn dyn_clone(&self) -> Box<dyn Tool> {
         Box::new(self.clone())
+    }
+
+    fn as_user_defined_tool(&self) -> Option<UserDefinedTool> {
+        Some(self.clone())
     }
 }
 
@@ -276,4 +286,8 @@ impl<'a> NamedParsedParamValue<'a> {
             None => Self::Raw(val),
         }))
     }
+}
+
+pub fn get_built_in_tools() -> Vec<Box<dyn Tool>> {
+    vec![Box::new(DescribeLandformsTool)]
 }
