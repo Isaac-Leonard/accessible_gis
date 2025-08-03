@@ -458,7 +458,8 @@ export type InputType =
   | { type: "Layer"; options: LayerIndexDiscriminants }
   | { type: "Dataset" }
   | { type: "Option"; options: string[] }
-  | { type: "Flag" };
+  | { type: "Flag" }
+  | { type: "File" };
 export type LayerDescriptor = (
   | { type: "Vector"; index: number }
   | { type: "Raster"; index: number }
@@ -654,7 +655,8 @@ export type ParameterValue =
   | { Layer: DatasetLayerIndex }
   | { Dataset: number }
   | { Option: string }
-  | { Flag: boolean };
+  | { Flag: boolean }
+  | { File: string };
 export type Point = { x: number; y: number };
 export type Polygon = { exterior: LineString; interior: LineString[] };
 export type PolygonInfo = { area: number; fields: Field[] };
@@ -705,7 +707,7 @@ export type RenderMethod =
   | "GDAL";
 export type SavedToolOutputAction = {
   tool: string;
-  action: ToolOutputAction;
+  message: string;
   read: boolean;
   id: string;
 };
@@ -732,7 +734,13 @@ export type ThiessenPolygonRecord = {
   column: number;
 };
 export type ToolDescriptor = { label: string; inputs: Input[] };
-export type ToolOutputAction = { type: "Alert"; data: string };
+export type ToolOutputActionDiscriptor =
+  | { Alert: string }
+  | { LoadAsDataset: number }
+  | { RequiresProject: ToolOutputActionDiscriptorRequiresProject };
+export type ToolOutputActionDiscriptorRequiresProject =
+  | "AlertOutput"
+  | { File: string };
 export type ToolsScreenInfo = {
   tools: ToolDescriptor[];
   layers: LayerDescriptor[];
@@ -759,6 +767,7 @@ export type UserDefinedTool = {
   label: string;
   inputs: Input[];
   command: string;
+  output_actions: ToolOutputActionDiscriptor[];
 };
 export type VectorScreenData = {
   field_schema: FieldSchema[];

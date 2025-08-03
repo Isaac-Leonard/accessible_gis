@@ -10,7 +10,10 @@ use geo::{BoundingRect, Centroid, ConvexHull, GeodesicArea, LinesIter, Rotate};
 use crate::{
     errors::ErrorDetails,
     gdal_if::LayerIndexDiscriminants,
-    state::configurable_tools::{Input, InputType, NamedParsedParamValue, Tool, ToolOutputAction},
+    state::configurable_tools::{
+        Input, InputType, NamedParsedParamValue, Tool, ToolOutput, ToolOutputActionDiscriptor,
+        ToolOutputActionDiscriptorRequiresProject,
+    },
 };
 
 #[derive(Debug)]
@@ -221,16 +224,27 @@ impl Tool for DescribeLandformsTool {
 
     fn execute(
         &self,
-        mut params: Vec<NamedParsedParamValue>,
-    ) -> Result<ToolOutputAction, ErrorDetails> {
-        let index = params.remove(0);
-        let layer = index.try_as_raw().unwrap().try_as_vector().unwrap();
+        params: &[NamedParsedParamValue],
+    ) -> Result<Option<ToolOutput>, ErrorDetails> {
+        let layer = params[0]
+            .try_as_raw_ref()
+            .unwrap()
+            .try_as_vector_ref()
+            .unwrap();
         let result =
             describe_landforms(&layer.info.shared.name).map_err(|err| ErrorDetails::Other(err))?;
-        Ok(ToolOutputAction::Alert(result))
+        Ok(Some(ToolOutput::String(result)))
     }
 
     fn dyn_clone(&self) -> Box<dyn Tool> {
         Box::new(Self)
+    }
+
+    fn get_output_actions(
+        &self,
+    ) -> Vec<crate::state::configurable_tools::ToolOutputActionDiscriptor> {
+        vec![ToolOutputActionDiscriptor::RequiresProject(
+            ToolOutputActionDiscriptorRequiresProject::AlertOutput,
+        )]
     }
 }

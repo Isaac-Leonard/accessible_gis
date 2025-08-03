@@ -6,14 +6,11 @@ use serde::{Deserialize, Serialize};
 use crate::{
     errors::{ApplicationError, ErrorDetails},
     gdal_if::{Srs, WrappedDataset},
-    tools::describe_landforms::DescribeLandformsTool,
     web_socket::{GisMessage, RasterMessage, VectorMessage},
 };
 
 use super::{
-    configurable_tools::{
-        SavedToolOutputAction, Tool, ToolOutputAction, UserDefinedTool, get_built_in_tools,
-    },
+    configurable_tools::{SavedToolOutputAction, Tool, UserDefinedTool, get_built_in_tools},
     dataset_collection::{
         DatasetCollection, NonEmptyDelegator, NonEmptyDelegatorImpl, NonEmptyDelegatorImplExt,
     },

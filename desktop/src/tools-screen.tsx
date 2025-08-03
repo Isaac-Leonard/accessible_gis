@@ -19,7 +19,7 @@ import {
 import { Dialog, useDialog } from "./dialog";
 import { IndexedOptionPicker, OptionPicker } from "./option-picker";
 import { client, state } from "./api";
-import { options } from "preact";
+import { SaveButton } from "./save-button";
 
 export const ToolsScreen = ({ tools, layers }: ToolsScreenInfo) => {
   return (
@@ -43,6 +43,7 @@ type Param = { label: string } & (
   | { type: "Layer"; value: DatasetLayerIndex; options: "Vector" | "Raster" }
   | { type: "Option"; value: string; options: string[] }
   | { type: "Flag"; value: boolean }
+  | { type: "File"; value: string }
 );
 
 type ToolDialogProps = {
@@ -92,6 +93,12 @@ const ToolDialog = ({ tool, index, layers }: ToolDialogProps) => {
             value: false,
             label: input.label,
           };
+        case "File":
+          return {
+            type: "File",
+            value: "",
+            label: input.label,
+          };
       }
     })
   );
@@ -104,7 +111,10 @@ const ToolDialog = ({ tool, index, layers }: ToolDialogProps) => {
       setParams(newArray);
     };
 
-  const makeParamBinding = <T extends Param>(param: T, index: number) => ({
+  const makeParamBinding = <T extends Param>(
+    param: T,
+    index: number
+  ): { value: T["value"]; setValue: (value: T["value"]) => void } => ({
     value: param.value,
     setValue: setValueAt(index),
   });
@@ -222,6 +232,14 @@ const ToolDialog = ({ tool, index, layers }: ToolDialogProps) => {
                 binding={makeParamBinding(param, index)}
               />
             );
+          case "File":
+            return (
+              <SaveButton
+                text={param.label + ": " + param.value}
+                prompt={param.label}
+                onSave={makeParamBinding(param, index).setValue}
+              />
+            );
           default:
             return <div>Got unknown type {JSON.stringify(param)}</div>;
         }
@@ -261,8 +279,8 @@ const ToolActionDialog = ({
       setOpen={setOpen}
       onClose={onClose}
     >
-      <h1 ref={innerRef}>{action.tool}</h1>
-      <div>{action.action.data}</div>
+      <h3 ref={innerRef}>{action.tool}</h3>
+      <div>{action.message}</div>
       {onClose && <button onClick={onClose}>Close</button>}
     </Dialog>
   );
@@ -325,6 +343,7 @@ const inputTypeDiscriminants: InputTypeDiscriminant[] = [
   "Layer",
   "Option",
   "Flag",
+  "File",
 ];
 
 const inputTypeFromDiscriminant = (
@@ -342,6 +361,10 @@ const inputTypeFromDiscriminant = (
       return { type: discriminant, options: [] };
     case "Flag":
       return { type: discriminant };
+    case "File":
+      return {
+        type: "File",
+      };
   }
 };
 
@@ -351,6 +374,7 @@ const ToolCreationDialog = () => {
       label: "",
       inputs: [],
       command: "",
+      output_actions: [],
     })
   );
   const setInputAt = (index: number, input: Input) => {
@@ -484,12 +508,18 @@ const ToolCreationDialog = () => {
           Add input
         </button>
       </div>
+      <div>
+        {tool.output_actions.value.map((outputAction, index) => (
+          <div>{outputAction}</div>
+        ))}
+      </div>{" "}
       <button
         onClick={() => {
           client.addCustomTool({
             label: tool.label.value,
             inputs: tool.inputs.value,
             command: tool.command.value,
+            output_actions: tool.output_actions.value,
           });
           setOpen(false);
         }}

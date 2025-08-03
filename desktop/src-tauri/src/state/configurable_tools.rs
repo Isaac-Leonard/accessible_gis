@@ -1,4 +1,8 @@
-use std::{mem::transmute, process::Command};
+use std::{
+    mem::transmute,
+    path::PathBuf,
+    process::{Command, Output},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -22,7 +26,10 @@ use super::{
 
 pub trait Tool: Send + Sync {
     fn get_label(&self) -> String;
+
     fn get_expected_input_parameters(&self) -> Vec<Input>;
+
+    fn get_output_actions(&self) -> Vec<ToolOutputActionDiscriptor>;
 
     fn parse_input_parameters<'a>(
         &self,
@@ -58,19 +65,77 @@ pub trait Tool: Send + Sync {
     }
 
     fn run(&self, params: Vec<ParameterValue>, project: &mut Project) -> Result<(), ErrorDetails> {
-        let params = self.parse_input_parameters(params, project)?;
-        let action = SavedToolOutputAction {
-            tool: self.get_label(),
-            action: self.execute(params)?,
-            read: false,
-            id: uuid::Uuid::new_v4(),
+        let mut saved_actions = Vec::new();
+        let mut requires_project_actions = Vec::new();
+        let data = {
+            let params = self.parse_input_parameters(params, project)?;
+            let actions = self.get_output_actions();
+            for action in actions {
+                match action {
+                    ToolOutputActionDiscriptor::Alert(msg) => {
+                        saved_actions.push(SavedToolOutputAction {
+                            tool: self.get_label(),
+                            message: msg,
+                            read: false,
+                            id: uuid::Uuid::new_v4(),
+                        })
+                    }
+                    ToolOutputActionDiscriptor::LoadAsDataset(index) => {
+                        let file = params
+                            .get(index)
+                            .unwrap()
+                            .try_as_raw_ref()
+                            .unwrap_or(params[index].try_as_named_ref().unwrap().1)
+                            .try_as_file_ref()
+                            .unwrap()
+                            .clone();
+                        requires_project_actions
+                            .push(ToolOutputActionDiscriptorRequiresProject::File(file))
+                    }
+                    ToolOutputActionDiscriptor::RequiresProject(action) => {
+                        requires_project_actions.push(action)
+                    }
+                };
+            }
+            self.execute(&params)?
         };
-        project.tool_outputs.push(action);
+
+        for action in requires_project_actions {
+            match action {
+                ToolOutputActionDiscriptorRequiresProject::AlertOutput => {
+                    let output = data.as_ref().ok_or_else(|| {
+                        ErrorDetails::Other("This tool should return data but doesn't".to_string())
+                    })?;
+                    let output = match output {
+                        ToolOutput::Command(output) => {
+                            "Stdout:\n".to_string()
+                                + &String::from_utf8_lossy(&output.stdout)
+                                + "\nStderr:\n"
+                                + &String::from_utf8_lossy(&output.stderr)
+                        }
+                        ToolOutput::String(string) => string.clone(),
+                    };
+                    saved_actions.push(SavedToolOutputAction {
+                        tool: self.get_label(),
+                        message: output,
+                        read: false,
+                        id: uuid::Uuid::new_v4(),
+                    })
+                }
+                ToolOutputActionDiscriptorRequiresProject::File(path) => {
+                    project
+                        .datasets
+                        .open(path, &project.settings)
+                        .map_err(|err| ErrorDetails::OpenDatasetError(err))?;
+                }
+            }
+        }
+        project.tool_outputs.extend(saved_actions);
         Ok(())
     }
 
-    fn execute(&self, params: Vec<NamedParsedParamValue>)
-    -> Result<ToolOutputAction, ErrorDetails>;
+    fn execute(&self, params: &[NamedParsedParamValue])
+    -> Result<Option<ToolOutput>, ErrorDetails>;
 
     fn for_ui(&self) -> ToolDescriptor {
         ToolDescriptor {
@@ -93,19 +158,42 @@ impl Clone for Box<dyn Tool> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+pub enum ToolOutput {
+    Command(Output),
+    String(String),
+}
+
+#[derive(
+    Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type, strum::EnumDiscriminants,
+)]
 #[serde(tag = "type", content = "data")]
+#[strum_discriminants(derive(Serialize, Deserialize, specta::Type))]
 pub enum ToolOutputAction {
     Alert(String),
+    LoadAsDataset(usize),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct SavedToolOutputAction {
     // The label of the tool that generated this output
     pub tool: String,
-    pub action: ToolOutputAction,
+    pub message: String,
     pub read: bool,
     pub id: uuid::Uuid,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+// This flattens the nested enum in but won't work if we expand this one to have multiple varients with the same type of data
+pub enum ToolOutputActionDiscriptor {
+    Alert(String),
+    LoadAsDataset(usize),
+    RequiresProject(ToolOutputActionDiscriptorRequiresProject),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+pub enum ToolOutputActionDiscriptorRequiresProject {
+    AlertOutput,
+    File(PathBuf),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
@@ -113,6 +201,7 @@ pub struct UserDefinedTool {
     label: String,
     inputs: Vec<Input>,
     command: String,
+    output_actions: Vec<ToolOutputActionDiscriptor>,
 }
 
 impl Tool for UserDefinedTool {
@@ -124,10 +213,14 @@ impl Tool for UserDefinedTool {
         self.inputs.clone()
     }
 
+    fn get_output_actions(&self) -> Vec<ToolOutputActionDiscriptor> {
+        self.output_actions.clone()
+    }
+
     fn execute(
         &self,
-        params: Vec<NamedParsedParamValue>,
-    ) -> Result<ToolOutputAction, ErrorDetails> {
+        params: &[NamedParsedParamValue],
+    ) -> Result<Option<ToolOutput>, ErrorDetails> {
         let mut command = Command::new(&self.command);
         for param in params {
             match param {
@@ -140,8 +233,8 @@ impl Tool for UserDefinedTool {
         }
         command
             .output()
-            .map_err(|err| ErrorDetails::IoError(err.to_string()));
-        Ok(ToolOutputAction::Alert("Done".to_string()))
+            .map_err(|err| ErrorDetails::IoError(err.to_string()))
+            .map(|output| Some(ToolOutput::Command(output)))
     }
 
     fn dyn_clone(&self) -> Box<dyn Tool> {
@@ -170,6 +263,7 @@ pub enum InputType {
     Dataset,
     Option(Vec<String>),
     Flag,
+    File,
 }
 
 #[derive(Clone, Debug, Deserialize, specta::Type, strum::EnumTryAs)]
@@ -181,6 +275,7 @@ pub enum ParameterValue {
     Dataset(usize),
     Option(String),
     Flag(bool),
+    File(PathBuf),
 }
 
 #[derive(Debug, strum::EnumTryAs)]
@@ -192,6 +287,7 @@ pub enum ParsedParamValue<'a> {
     Raster(StatefulRasterBand<'a>),
     Dataset(&'a StatefulDataset),
     Option(String),
+    File(PathBuf),
 }
 
 impl ParsedParamValue<'_> {
@@ -208,6 +304,7 @@ impl ParsedParamValue<'_> {
                 dataset.dataset.file_name.to_string_lossy().to_string()
             }
             ParsedParamValue::Option(string) => string.clone(),
+            ParsedParamValue::File(path) => path.to_string_lossy().to_string(),
         }
     }
 }
@@ -278,6 +375,7 @@ impl<'a> NamedParsedParamValue<'a> {
                         .ok_or_else(|| ErrorDetails::Other("Missing name for flag".to_string()))?,
                 )));
             }
+            (ParameterValue::File(file), InputType::File) => ParsedParamValue::File(file),
             _ => Err(ErrorDetails::Other("Mismatched command types".to_string()))?,
         };
 
