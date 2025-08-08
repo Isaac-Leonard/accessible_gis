@@ -12,7 +12,6 @@ use crate::{
     gdal_if::LayerIndexDiscriminants,
     state::configurable_tools::{
         Input, InputType, NamedParsedParamValue, Tool, ToolOutput, ToolOutputActionDiscriptor,
-        ToolOutputActionDiscriptorRequiresProject,
     },
 };
 
@@ -243,8 +242,6 @@ impl Tool for DescribeLandformsTool {
     fn get_output_actions(
         &self,
     ) -> Vec<crate::state::configurable_tools::ToolOutputActionDiscriptor> {
-        vec![ToolOutputActionDiscriptor::RequiresProject(
-            ToolOutputActionDiscriptorRequiresProject::AlertOutput,
-        )]
+        vec![ToolOutputActionDiscriptor::AlertOutput]
     }
 }

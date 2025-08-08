@@ -13,6 +13,7 @@ import {
   ParameterValue,
   SavedToolOutputAction,
   ToolDescriptor,
+  ToolOutputActionDiscriptor,
   ToolsScreenInfo,
   UserDefinedTool,
 } from "./bindings";
@@ -368,6 +369,27 @@ const inputTypeFromDiscriminant = (
   }
 };
 
+type OutputAction = ToolOutputActionDiscriptor["type"];
+
+const OutputActionDiscriminants: OutputAction[] = [
+  "Alert",
+  "AlertOutput",
+  "LoadAsDataset",
+];
+
+const outputActionFromDiscriminant = (
+  discriminant: OutputAction
+): ToolOutputActionDiscriptor => {
+  switch (discriminant) {
+    case "Alert":
+      return { type: discriminant, value: "" };
+    case "AlertOutput":
+      return { type: discriminant };
+    case "LoadAsDataset":
+      return { type: discriminant, value: null };
+  }
+};
+
 const ToolCreationDialog = () => {
   const tool = useBindedObjectProperties(
     ...useState<UserDefinedTool>({
@@ -377,13 +399,21 @@ const ToolCreationDialog = () => {
       output_actions: [],
     })
   );
-  const setInputAt = (index: number, input: Input) => {
-    const newInputs = tool.inputs.value.slice();
-    newInputs.splice(index, 1, input);
-    tool.inputs.setValue(newInputs);
-  };
 
-  const { open, setOpen, innerRef } = useDialog();
+  const setArrayAt =
+    <K extends "output_actions" | "inputs", Arr extends UserDefinedTool[K]>(
+      key: K
+    ) =>
+    (index: number, element: Arr[number]) => {
+      const newArray: Arr = tool[key].value.slice();
+      newArray.splice(index, 1, element);
+      tool[key].setValue(newArray);
+    };
+
+  const setInputAt = setArrayAt("inputs");
+  const setOutputActionAt = setArrayAt("output_actions");
+
+  const { open, setOpen } = useDialog();
   return (
     <Dialog
       openText="Create custom tool"
@@ -509,10 +539,50 @@ const ToolCreationDialog = () => {
         </button>
       </div>
       <div>
-        {tool.output_actions.value.map((outputAction, index) => (
-          <div>{outputAction}</div>
+        {tool.output_actions.value.map((action, index) => (
+          <div>
+            <OptionPicker
+              options={OutputActionDiscriminants}
+              selectedOption={action.type}
+              setOption={(option) =>
+                setOutputActionAt(index, outputActionFromDiscriminant(option))
+              }
+              emptyText="This should not be empty"
+            />
+            {action.type === "Alert" ? (
+              <TextInput
+                label={"Output action " + (index + 1)}
+                binding={{
+                  value: action.value,
+                  setValue: (value) =>
+                    setOutputActionAt(index, { type: action.type, value }),
+                }}
+              />
+            ) : action.type === "LoadAsDataset" ? (
+              <NumberInput
+                label="0 based index of input to load"
+                binding={{
+                  value: action.value,
+                  setValue: (value) =>
+                    setOutputActionAt(index, { type: "LoadAsDataset", value }),
+                }}
+              />
+            ) : (
+              <></>
+            )}
+          </div>
         ))}
-      </div>{" "}
+        <button
+          onClick={() =>
+            tool.output_actions.setValue([
+              ...tool.output_actions.value,
+              { type: "AlertOutput" },
+            ])
+          }
+        >
+          Add output action
+        </button>
+      </div>
       <button
         onClick={() => {
           client.addCustomTool({

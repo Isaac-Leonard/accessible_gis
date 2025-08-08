@@ -735,12 +735,9 @@ export type ThiessenPolygonRecord = {
 };
 export type ToolDescriptor = { label: string; inputs: Input[] };
 export type ToolOutputActionDiscriptor =
-  | { Alert: string }
-  | { LoadAsDataset: number }
-  | { RequiresProject: ToolOutputActionDiscriptorRequiresProject };
-export type ToolOutputActionDiscriptorRequiresProject =
-  | "AlertOutput"
-  | { File: string };
+  | { type: "Alert"; value: string }
+  | { type: "LoadAsDataset"; value: number }
+  | { type: "AlertOutput" };
 export type ToolsScreenInfo = {
   tools: ToolDescriptor[];
   layers: LayerDescriptor[];

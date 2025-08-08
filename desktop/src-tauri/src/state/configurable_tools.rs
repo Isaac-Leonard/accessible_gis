@@ -65,6 +65,11 @@ pub trait Tool: Send + Sync {
     }
 
     fn run(&self, params: Vec<ParameterValue>, project: &mut Project) -> Result<(), ErrorDetails> {
+        #[derive(Debug)]
+        pub enum ToolOutputActionDiscriptorRequiresProject {
+            AlertOutput,
+            File(PathBuf),
+        }
         let mut saved_actions = Vec::new();
         let mut requires_project_actions = Vec::new();
         let data = {
@@ -81,20 +86,18 @@ pub trait Tool: Send + Sync {
                         })
                     }
                     ToolOutputActionDiscriptor::LoadAsDataset(index) => {
-                        let file = params
-                            .get(index)
-                            .unwrap()
+                        println!["{index}: {params:?}"];
+                        let file = params[index]
                             .try_as_raw_ref()
-                            .unwrap_or(params[index].try_as_named_ref().unwrap().1)
+                            .unwrap_or_else(|| params[index].try_as_named_ref().unwrap().1)
                             .try_as_file_ref()
                             .unwrap()
                             .clone();
                         requires_project_actions
                             .push(ToolOutputActionDiscriptorRequiresProject::File(file))
                     }
-                    ToolOutputActionDiscriptor::RequiresProject(action) => {
-                        requires_project_actions.push(action)
-                    }
+                    ToolOutputActionDiscriptor::AlertOutput => requires_project_actions
+                        .push(ToolOutputActionDiscriptorRequiresProject::AlertOutput),
                 };
             }
             self.execute(&params)?
@@ -183,17 +186,11 @@ pub struct SavedToolOutputAction {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
-// This flattens the nested enum in but won't work if we expand this one to have multiple varients with the same type of data
+#[serde(tag = "type", content = "value")]
 pub enum ToolOutputActionDiscriptor {
     Alert(String),
     LoadAsDataset(usize),
-    RequiresProject(ToolOutputActionDiscriptorRequiresProject),
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
-pub enum ToolOutputActionDiscriptorRequiresProject {
     AlertOutput,
-    File(PathBuf),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
