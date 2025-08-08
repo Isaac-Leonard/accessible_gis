@@ -437,108 +437,10 @@ const ToolCreationDialog = () => {
       <TextInput label="Command to run" binding={tool.command} />
       <div>
         {tool.inputs.value.map((input, index) => (
-          <div>
-            <TextInput
-              label="label for input when running tool"
-              binding={{
-                value: input.label,
-                setValue: (value) =>
-                  setInputAt(index, { ...input, label: value }),
-              }}
-            />
-            <button
-              role="switch"
-              aria-checked={input.name !== null}
-              onClick={() =>
-                setInputAt(index, {
-                  ...input,
-                  name: input.name === null ? "" : null,
-                })
-              }
-            >
-              Named
-            </button>
-            {input.name === null ? (
-              <></>
-            ) : (
-              <TextInput
-                label="Name to pass to command"
-                binding={{
-                  value: input.name,
-                  setValue: (value) =>
-                    setInputAt(index, { ...input, name: value }),
-                }}
-              />
-            )}
-            <InputTypeDiscriminantSelector
-              prompt="Type of input"
-              binding={{
-                value: input.param_type.type,
-                setValue: (option) =>
-                  setInputAt(index, {
-                    ...input,
-                    param_type: inputTypeFromDiscriminant(option),
-                  }),
-              }}
-            />
-            {input.param_type.type === "Layer" ? (
-              <OptionPicker
-                options={["Vector", "Raster"] as const}
-                selectedOption={input.param_type.options}
-                prompt="Layer type"
-                emptyText="This should not be empty"
-                setOption={(option) =>
-                  setInputAt(index, {
-                    ...input,
-                    param_type: { type: "Layer", options: option },
-                  })
-                }
-              />
-            ) : input.param_type.type === "Option" ? (
-              <div>
-                {input.param_type.options.map(
-                  (option, option_index, options) => (
-                    <TextInput
-                      label={"Option " + (option_index + 1)}
-                      binding={{
-                        value: option,
-                        setValue: (option) =>
-                          setInputAt(index, {
-                            ...input,
-                            param_type: {
-                              type: "Option",
-                              options: (() => {
-                                const newOptions = options.slice();
-                                newOptions[option_index] = option;
-                                return newOptions;
-                              })(),
-                            },
-                          }),
-                      }}
-                    />
-                  )
-                )}
-                <button
-                  onClick={() => {
-                    // Not really needed but there is the odd edge case and makes ts happy
-                    if (input.param_type.type === "Option")
-                      setInputAt(index, {
-                        ...input,
-                        param_type: {
-                          type: "Option",
-                          options: [...input.param_type.options, ""],
-                        },
-                      });
-                  }}
-                  autofocus={true}
-                >
-                  Add Option
-                </button>
-              </div>
-            ) : (
-              <></>
-            )}
-          </div>
+          <ToolInputCreator
+            input={input}
+            setInput={(input) => setInputAt(index, input)}
+          />
         ))}
         <button
           onClick={() =>
@@ -615,3 +517,110 @@ const ToolCreationDialog = () => {
     </Dialog>
   );
 };
+
+const ToolInputCreator = ({
+  input,
+  setInput,
+}: {
+  input: Input;
+  setInput: (element: Input) => void;
+}) => (
+  <div>
+    <TextInput
+      label="label for input when running tool"
+      binding={{
+        value: input.label,
+        setValue: (value) => setInput({ ...input, label: value }),
+      }}
+    />
+    <button
+      role="switch"
+      aria-checked={input.name !== null}
+      onClick={() =>
+        setInput({
+          ...input,
+          name: input.name === null ? "" : null,
+        })
+      }
+    >
+      Named
+    </button>
+    {input.name === null ? (
+      <></>
+    ) : (
+      <TextInput
+        label="Name to pass to command"
+        binding={{
+          value: input.name,
+          setValue: (value) => setInput({ ...input, name: value }),
+        }}
+      />
+    )}
+    <InputTypeDiscriminantSelector
+      prompt="Type of input"
+      binding={{
+        value: input.param_type.type,
+        setValue: (option) =>
+          setInput({
+            ...input,
+            param_type: inputTypeFromDiscriminant(option),
+          }),
+      }}
+    />
+    {input.param_type.type === "Layer" ? (
+      <OptionPicker
+        options={["Vector", "Raster"] as const}
+        selectedOption={input.param_type.options}
+        prompt="Layer type"
+        emptyText="This should not be empty"
+        setOption={(option) =>
+          setInput({
+            ...input,
+            param_type: { type: "Layer", options: option },
+          })
+        }
+      />
+    ) : input.param_type.type === "Option" ? (
+      <div>
+        {input.param_type.options.map((option, option_index, options) => (
+          <TextInput
+            label={"Option " + (option_index + 1)}
+            binding={{
+              value: option,
+              setValue: (option) =>
+                setInput({
+                  ...input,
+                  param_type: {
+                    type: "Option",
+                    options: (() => {
+                      const newOptions = options.slice();
+                      newOptions[option_index] = option;
+                      return newOptions;
+                    })(),
+                  },
+                }),
+            }}
+          />
+        ))}
+        <button
+          onClick={() => {
+            // Not really needed but there is the odd edge case and makes ts happy
+            if (input.param_type.type === "Option")
+              setInput({
+                ...input,
+                param_type: {
+                  type: "Option",
+                  options: [...input.param_type.options, ""],
+                },
+              });
+          }}
+          autofocus={true}
+        >
+          Add Option
+        </button>
+      </div>
+    ) : (
+      <></>
+    )}
+  </div>
+);
