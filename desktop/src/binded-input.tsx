@@ -231,15 +231,17 @@ export const useComputedObjectPropertySignals = <
   ) as any;
 };
 
-export const useBindedObjectProperties = <T extends Record<string, unknown>>(
-  obj: T,
-  setObj: (obj: T) => void
-): {
+export type BindedObjectProperties<T extends Record<string, unknown>> = {
   [K in keyof T]: {
     value: T[K];
     setValue: (value: T[K]) => void;
   };
-} => {
+};
+
+export const useBindedObjectProperties = <T extends Record<string, unknown>>(
+  obj: T,
+  setObj: (obj: T) => void
+): BindedObjectProperties<T> => {
   return Object.keys(obj).reduce(
     (prev, key) => ({
       ...prev,

@@ -260,6 +260,7 @@ pub enum InputType {
 }
 
 #[derive(Clone, Debug, Deserialize, specta::Type, strum::EnumTryAs)]
+#[serde(tag = "type", content = "value")]
 pub enum ParameterValue {
     Float(f64),
     Int(i64),

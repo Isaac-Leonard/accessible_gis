@@ -8,10 +8,10 @@ import {
 } from "./binded-input";
 import {
   DatasetLayerIndex,
+  Input,
   InputType,
   InputTypeDiscriminants,
   LayerDescriptor,
-  ParameterValue,
   SavedToolOutputAction,
   ToolDescriptor,
   ToolOutputActionDiscriptor,
@@ -146,14 +146,7 @@ const ToolDialog = ({ tool, index, layers }: ToolDialogProps) => {
       ))}
       <button
         onClick={() => {
-          client.runTool(
-            index,
-            params.map(
-              (param): ParameterValue => ({
-                [param.type]: param.value,
-              })
-            )
-          );
+          client.runTool(index, params);
           setOpen(false);
         }}
       >
@@ -417,20 +410,19 @@ const ToolCreationDialog = () => {
     })
   );
 
-  type ElementOf<K extends keyof UserDefinedTool> =
-    UserDefinedTool[K] extends (infer E)[] ? E : never;
-
-  const setArrayAt =
-    <K extends "output_actions" | "inputs">(key: K) =>
-    (index: number, element: ElementOf<K>) => {
-      // Keep array type tied to K so it doesn't collapse into a union
-      const newArray = tool[key].value.slice() as UserDefinedTool[K];
-      newArray.splice(index, 1, element);
-      tool[key].setValue(newArray);
-    };
-
-  const setInputAt = setArrayAt("inputs");
-  const setOutputActionAt = setArrayAt("output_actions");
+  const setInputAt = (index: number, element: Input) => {
+    const newArray = tool.inputs.value.slice();
+    newArray.splice(index, 1, element);
+    tool.inputs.setValue(newArray);
+  };
+  const setOutputActionAt = (
+    index: number,
+    element: ToolOutputActionDiscriptor
+  ) => {
+    const newArray = tool.output_actions.value.slice();
+    newArray.splice(index, 1, element);
+    tool.output_actions.setValue(newArray);
+  };
 
   const { open, setOpen } = useDialog();
   return (
@@ -527,15 +519,17 @@ const ToolCreationDialog = () => {
                   )
                 )}
                 <button
-                  onClick={() =>
-                    setInputAt(index, {
-                      ...input,
-                      param_type: {
-                        type: "Option",
-                        options: [...input.param_type.options, ""],
-                      },
-                    })
-                  }
+                  onClick={() => {
+                    // Not really needed but there is the odd edge case and makes ts happy
+                    if (input.param_type.type === "Option")
+                      setInputAt(index, {
+                        ...input,
+                        param_type: {
+                          type: "Option",
+                          options: [...input.param_type.options, ""],
+                        },
+                      });
+                  }}
                   autofocus={true}
                 >
                   Add Option

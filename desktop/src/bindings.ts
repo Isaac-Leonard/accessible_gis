@@ -669,14 +669,14 @@ export type OpenLineDescription = {
   number_of_points: number;
 };
 export type ParameterValue =
-  | { Float: number }
-  | { Int: number }
-  | { String: string }
-  | { Layer: DatasetLayerIndex }
-  | { Dataset: number }
-  | { Option: string }
-  | { Flag: boolean }
-  | { File: string };
+  | { type: "Float"; value: number }
+  | { type: "Int"; value: number }
+  | { type: "String"; value: string }
+  | { type: "Layer"; value: DatasetLayerIndex }
+  | { type: "Dataset"; value: number }
+  | { type: "Option"; value: string }
+  | { type: "Flag"; value: boolean }
+  | { type: "File"; value: string };
 export type Point = { x: number; y: number };
 export type Polygon = { exterior: LineString; interior: LineString[] };
 export type PolygonInfo = { area: number; fields: Field[] };
