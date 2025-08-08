@@ -344,15 +344,13 @@ export const ToolOutputsPopup = () => {
   }, [unreadOutputs.length]);
   return (
     <dialog ref={ref}>
-      {[
-        unreadOutputs.map((output) => (
-          <ToolActionDialog
-            key={output.id}
-            action={output}
-            onClose={() => client.markToolOutputRead(output.id)}
-          />
-        )),
-      ]}
+      {unreadOutputs.map((output) => (
+        <ToolActionDialog
+          key={output.id}
+          action={output}
+          onClose={() => client.markToolOutputRead(output.id)}
+        />
+      ))}
     </dialog>
   );
 };
@@ -485,9 +483,7 @@ const ToolCreationDialog = () => {
                     setOutputActionAt(index, { type: "LoadAsDataset", value }),
                 }}
               />
-            ) : (
-              <></>
-            )}
+            ) : null}
           </div>
         ))}
         <button
@@ -545,9 +541,7 @@ const ToolInputCreator = ({
     >
       Named
     </button>
-    {input.name === null ? (
-      <></>
-    ) : (
+    {input.name === null ? null : (
       <TextInput
         label="Name to pass to command"
         binding={{
@@ -619,8 +613,6 @@ const ToolInputCreator = ({
           Add Option
         </button>
       </div>
-    ) : (
-      <></>
-    )}
+    ) : null}
   </div>
 );
