@@ -4,21 +4,27 @@ import {
   Input as TextInput,
   NumberInput,
   useBindedObjectProperties,
+  GetSet,
 } from "./binded-input";
 import {
   DatasetLayerIndex,
-  Input,
   InputType,
+  InputTypeDiscriminants,
   LayerDescriptor,
   ParameterValue,
   SavedToolOutputAction,
   ToolDescriptor,
   ToolOutputActionDiscriptor,
+  ToolOutputActionDiscriptorDiscriminants,
   ToolsScreenInfo,
   UserDefinedTool,
 } from "./bindings";
 import { Dialog, useDialog } from "./dialog";
-import { IndexedOptionPicker, OptionPicker } from "./option-picker";
+import {
+  bindedSelectorFactory,
+  IndexedOptionPicker,
+  OptionPicker,
+} from "./option-picker";
 import { client, state } from "./api";
 import { SaveButton } from "./save-button";
 
@@ -60,20 +66,16 @@ const ToolDialog = ({ tool, index, layers }: ToolDialogProps) => {
     tool.inputs.map((input): Param => {
       switch (input.param_type.type) {
         case "Float":
-          return {
-            type: "Float",
-            value: 0,
-            label: input.label,
-          };
+          return { type: input.param_type.type, value: 0, label: input.label };
         case "Int":
-          return { type: "Int", value: 0, label: input.label };
+          return { type: input.param_type.type, value: 0, label: input.label };
         case "String":
-          return { type: "String", value: "", label: input.label };
+          return { type: input.param_type.type, value: "", label: input.label };
         case "Dataset":
-          return { type: "Dataset", value: 0, label: input.label };
+          return { type: input.param_type.type, value: 0, label: input.label };
         case "Layer":
           return {
-            type: "Layer",
+            type: input.param_type.type,
             value: {
               dataset: 0,
               layer: { type: input.param_type.options, index: 0 },
@@ -83,26 +85,23 @@ const ToolDialog = ({ tool, index, layers }: ToolDialogProps) => {
           };
         case "Option":
           return {
-            type: "Option",
+            type: input.param_type.type,
             value: input.param_type.options[0] ?? null,
             label: input.label,
             options: input.param_type.options,
           };
         case "Flag":
           return {
-            type: "Flag",
+            type: input.param_type.type,
             value: false,
             label: input.label,
           };
         case "File":
-          return {
-            type: "File",
-            value: "",
-            label: input.label,
-          };
+          return { type: input.param_type.type, value: "", label: input.label };
       }
     })
   );
+
   const setValueAt =
     <T,>(index: number) =>
     (value: T) => {
@@ -134,117 +133,17 @@ const ToolDialog = ({ tool, index, layers }: ToolDialogProps) => {
   return (
     <Dialog openText={tool.label} modal={true} open={open} setOpen={setOpen}>
       <h3>{tool.label}</h3>
-      {params.map((param, index) => {
-        switch (param.type) {
-          case "Float":
-            return (
-              <NumberInput
-                label={param.label}
-                binding={makeParamBinding(param, index)}
-              />
-            );
-          case "Int":
-            return (
-              <NumberInput
-                label={param.label}
-                binding={makeParamBinding(param, index)}
-              />
-            );
-          case "String":
-            return (
-              <TextInput
-                label={tool.label}
-                binding={makeParamBinding(param, index)}
-              />
-            );
-          case "Dataset":
-            return (
-              <IndexedOptionPicker
-                prompt={param.label}
-                emptyText="No datasets to select"
-                index={param.value}
-                options={datasets}
-                setIndex={setValueAt(index)}
-              />
-            );
-          case "Layer":
-            switch (param.options) {
-              case "Vector":
-                return (
-                  <IndexedOptionPicker
-                    prompt={param.label}
-                    emptyText="There are no vector layers to select"
-                    index={vectorLayers.findIndex(
-                      (layer) =>
-                        layer.dataset === param.value.dataset &&
-                        layer.type === "Vector" &&
-                        layer.index === param.value.layer.index
-                    )}
-                    options={vectorLayers.map((layer) => layer.dataset_file)}
-                    setIndex={(layer_index) =>
-                      setValueAt<DatasetLayerIndex>(index)({
-                        dataset: vectorLayers[layer_index].dataset,
-                        layer: {
-                          type: "Vector",
-                          index: vectorLayers[layer_index].index,
-                        },
-                      })
-                    }
-                  />
-                );
-              case "Raster":
-                return (
-                  <IndexedOptionPicker
-                    prompt={param.label}
-                    emptyText="There are no raster layers to select"
-                    index={rasterLayers.findIndex(
-                      (layer) =>
-                        layer.dataset === param.value.dataset &&
-                        layer.type === "Raster" &&
-                        layer.index === param.value.layer.index
-                    )}
-                    options={rasterLayers.map((layer) => layer.dataset_file)}
-                    setIndex={(index) =>
-                      setValueAt<DatasetLayerIndex>(index)({
-                        dataset: rasterLayers[index].dataset,
-                        layer: {
-                          type: "Raster",
-                          index: rasterLayers[index].index,
-                        },
-                      })
-                    }
-                  />
-                );
-            }
-          case "Option":
-            return (
-              <OptionPicker
-                prompt={param.label}
-                emptyText="No options are available to pick"
-                selectedOption={param.value}
-                setOption={setValueAt(index)}
-                options={param.options}
-              />
-            );
-          case "Flag":
-            return (
-              <Checkbox
-                label={param.label}
-                binding={makeParamBinding(param, index)}
-              />
-            );
-          case "File":
-            return (
-              <SaveButton
-                text={param.label + ": " + param.value}
-                prompt={param.label}
-                onSave={makeParamBinding(param, index).setValue}
-              />
-            );
-          default:
-            return <div>Got unknown type {JSON.stringify(param)}</div>;
-        }
-      })}
+      {params.map((param, index) => (
+        <ToolInput
+          param={param}
+          index={index}
+          makeParamBinding={makeParamBinding}
+          vectorLayers={vectorLayers}
+          rasterLayers={rasterLayers}
+          datasets={datasets}
+          setValueAt={setValueAt}
+        />
+      ))}
       <button
         onClick={() => {
           client.runTool(
@@ -262,6 +161,137 @@ const ToolDialog = ({ tool, index, layers }: ToolDialogProps) => {
       </button>
     </Dialog>
   );
+};
+
+const ToolInput = ({
+  param,
+  index,
+  makeParamBinding,
+  datasets,
+  setValueAt,
+  vectorLayers,
+  rasterLayers,
+}: {
+  param: Param;
+  index: number;
+  makeParamBinding: <T extends Param>(
+    param: T,
+    index: number
+  ) => GetSet<T["value"]>;
+  datasets: string[];
+  vectorLayers: LayerDescriptor[];
+  rasterLayers: LayerDescriptor[];
+  setValueAt: <T>(index: number) => (value: T) => void;
+}) => {
+  switch (param.type) {
+    case "Float":
+      return (
+        <NumberInput
+          label={param.label}
+          binding={makeParamBinding(param, index)}
+        />
+      );
+    case "Int":
+      return (
+        <NumberInput
+          label={param.label}
+          binding={makeParamBinding(param, index)}
+        />
+      );
+    case "String":
+      return (
+        <TextInput
+          label={param.label}
+          binding={makeParamBinding(param, index)}
+        />
+      );
+    case "Dataset":
+      return (
+        <IndexedOptionPicker
+          prompt={param.label}
+          emptyText="No datasets to select"
+          index={param.value}
+          options={datasets}
+          setIndex={setValueAt(index)}
+        />
+      );
+    case "Layer":
+      switch (param.options) {
+        case "Vector":
+          return (
+            <IndexedOptionPicker
+              prompt={param.label}
+              emptyText="There are no vector layers to select"
+              index={vectorLayers.findIndex(
+                (layer) =>
+                  layer.dataset === param.value.dataset &&
+                  layer.type === "Vector" &&
+                  layer.index === param.value.layer.index
+              )}
+              options={vectorLayers.map((layer) => layer.dataset_file)}
+              setIndex={(layer_index) =>
+                setValueAt<DatasetLayerIndex>(index)({
+                  dataset: vectorLayers[layer_index].dataset,
+                  layer: {
+                    type: "Vector",
+                    index: vectorLayers[layer_index].index,
+                  },
+                })
+              }
+            />
+          );
+        case "Raster":
+          return (
+            <IndexedOptionPicker
+              prompt={param.label}
+              emptyText="There are no raster layers to select"
+              index={rasterLayers.findIndex(
+                (layer) =>
+                  layer.dataset === param.value.dataset &&
+                  layer.type === "Raster" &&
+                  layer.index === param.value.layer.index
+              )}
+              options={rasterLayers.map((layer) => layer.dataset_file)}
+              setIndex={(index) =>
+                setValueAt<DatasetLayerIndex>(index)({
+                  dataset: rasterLayers[index].dataset,
+                  layer: {
+                    type: "Raster",
+                    index: rasterLayers[index].index,
+                  },
+                })
+              }
+            />
+          );
+      }
+    case "Option":
+      return (
+        <OptionPicker
+          prompt={param.label}
+          emptyText="No options are available to pick"
+          selectedOption={param.value}
+          setOption={setValueAt(index)}
+          options={param.options}
+        />
+      );
+    case "Flag":
+      return (
+        <Checkbox
+          label={param.label}
+          binding={makeParamBinding(param, index)}
+        />
+      );
+    case "File":
+      return (
+        <SaveButton
+          text={param.label + ": " + param.value}
+          prompt={param.label}
+          onSave={makeParamBinding(param, index).setValue}
+        />
+      );
+    default:
+      return <div>Got unknown type {JSON.stringify(param)}</div>;
+  }
 };
 
 const ToolActionDialog = ({
@@ -334,21 +364,12 @@ export const ToolOutputsPopup = () => {
   );
 };
 
-type InputTypeDiscriminant = InputType["type"];
-
-const inputTypeDiscriminants: InputTypeDiscriminant[] = [
-  "Float",
-  "Int",
-  "String",
-  "Dataset",
-  "Layer",
-  "Option",
-  "Flag",
-  "File",
-];
+const InputTypeDiscriminantSelector = bindedSelectorFactory(
+  await client.getToolInputTypes()
+);
 
 const inputTypeFromDiscriminant = (
-  discriminant: InputTypeDiscriminant
+  discriminant: InputTypeDiscriminants
 ): InputType => {
   switch (discriminant) {
     case "Int":
@@ -369,16 +390,12 @@ const inputTypeFromDiscriminant = (
   }
 };
 
-type OutputAction = ToolOutputActionDiscriptor["type"];
-
-const OutputActionDiscriminants: OutputAction[] = [
-  "Alert",
-  "AlertOutput",
-  "LoadAsDataset",
-];
+const OutputActionSelector = bindedSelectorFactory(
+  await client.getToolOutputActions()
+);
 
 const outputActionFromDiscriminant = (
-  discriminant: OutputAction
+  discriminant: ToolOutputActionDiscriptorDiscriminants
 ): ToolOutputActionDiscriptor => {
   switch (discriminant) {
     case "Alert":
@@ -400,12 +417,14 @@ const ToolCreationDialog = () => {
     })
   );
 
+  type ElementOf<K extends keyof UserDefinedTool> =
+    UserDefinedTool[K] extends (infer E)[] ? E : never;
+
   const setArrayAt =
-    <K extends "output_actions" | "inputs", Arr extends UserDefinedTool[K]>(
-      key: K
-    ) =>
-    (index: number, element: Arr[number]) => {
-      const newArray: Arr = tool[key].value.slice();
+    <K extends "output_actions" | "inputs">(key: K) =>
+    (index: number, element: ElementOf<K>) => {
+      // Keep array type tied to K so it doesn't collapse into a union
+      const newArray = tool[key].value.slice() as UserDefinedTool[K];
       newArray.splice(index, 1, element);
       tool[key].setValue(newArray);
     };
@@ -459,16 +478,16 @@ const ToolCreationDialog = () => {
                 }}
               />
             )}
-            <OptionPicker
-              options={inputTypeDiscriminants}
-              selectedOption={input.param_type.type}
-              setOption={(option) =>
-                setInputAt(index, {
-                  ...input,
-                  param_type: inputTypeFromDiscriminant(option),
-                })
-              }
-              emptyText="This should not be empty"
+            <InputTypeDiscriminantSelector
+              prompt="Type of input"
+              binding={{
+                value: input.param_type.type,
+                setValue: (option) =>
+                  setInputAt(index, {
+                    ...input,
+                    param_type: inputTypeFromDiscriminant(option),
+                  }),
+              }}
             />
             {input.param_type.type === "Layer" ? (
               <OptionPicker
@@ -541,13 +560,16 @@ const ToolCreationDialog = () => {
       <div>
         {tool.output_actions.value.map((action, index) => (
           <div>
-            <OptionPicker
-              options={OutputActionDiscriminants}
-              selectedOption={action.type}
-              setOption={(option) =>
-                setOutputActionAt(index, outputActionFromDiscriminant(option))
-              }
-              emptyText="This should not be empty"
+            <OutputActionSelector
+              prompt=" Output action type"
+              binding={{
+                value: action.type,
+                setValue: (option) =>
+                  setOutputActionAt(
+                    index,
+                    outputActionFromDiscriminant(option)
+                  ),
+              }}
             />
             {action.type === "Alert" ? (
               <TextInput

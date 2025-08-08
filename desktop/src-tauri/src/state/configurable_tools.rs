@@ -166,16 +166,6 @@ pub enum ToolOutput {
     String(String),
 }
 
-#[derive(
-    Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type, strum::EnumDiscriminants,
-)]
-#[serde(tag = "type", content = "data")]
-#[strum_discriminants(derive(Serialize, Deserialize, specta::Type))]
-pub enum ToolOutputAction {
-    Alert(String),
-    LoadAsDataset(usize),
-}
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct SavedToolOutputAction {
     // The label of the tool that generated this output
@@ -185,8 +175,11 @@ pub struct SavedToolOutputAction {
     pub id: uuid::Uuid,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+#[derive(
+    Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type, strum::EnumDiscriminants,
+)]
 #[serde(tag = "type", content = "value")]
+#[strum_discriminants(derive(Serialize, Deserialize, specta::Type, strum::EnumIter))]
 pub enum ToolOutputActionDiscriptor {
     Alert(String),
     LoadAsDataset(usize),
@@ -250,8 +243,11 @@ pub struct Input {
     pub param_type: InputType,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+#[derive(
+    Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type, strum::EnumDiscriminants,
+)]
 #[serde(tag = "type", content = "options")]
+#[strum_discriminants(derive(Serialize, Deserialize, specta::Type, strum::EnumIter))]
 pub enum InputType {
     Float,
     Int,

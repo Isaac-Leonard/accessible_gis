@@ -5,7 +5,7 @@ import { useState } from "preact/hooks";
 
 export type Binding<T> = Signal<T> | GetSet<T> | ComputedSetter<T>;
 
-type GetSet<T> = { value: T; setValue: (value: T) => void };
+export type GetSet<T> = { value: T; setValue: (value: T) => void };
 
 type ComputedSetter<T> = {
   value: ReadonlySignal<T>;

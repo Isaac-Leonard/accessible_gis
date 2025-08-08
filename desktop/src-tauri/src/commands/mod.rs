@@ -105,6 +105,8 @@ pub fn generate_handlers(
             run_tool,
             mark_tool_output_read,
             add_custom_tool,
+            get_tool_input_types,
+            get_tool_output_actions,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds

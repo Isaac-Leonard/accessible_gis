@@ -260,6 +260,14 @@ export const commands = {
   async addCustomTool(tool: UserDefinedTool): Promise<void> {
     await TAURI_INVOKE("add_custom_tool", { tool });
   },
+  async getToolInputTypes(): Promise<InputTypeDiscriminants[]> {
+    return await TAURI_INVOKE("get_tool_input_types");
+  },
+  async getToolOutputActions(): Promise<
+    ToolOutputActionDiscriptorDiscriminants[]
+  > {
+    return await TAURI_INVOKE("get_tool_output_actions");
+  },
 };
 
 /** user-defined events **/
@@ -460,6 +468,18 @@ export type InputType =
   | { type: "Option"; options: string[] }
   | { type: "Flag" }
   | { type: "File" };
+/**
+ * Auto-generated discriminant enum variants
+ */
+export type InputTypeDiscriminants =
+  | "Float"
+  | "Int"
+  | "String"
+  | "Layer"
+  | "Dataset"
+  | "Option"
+  | "Flag"
+  | "File";
 export type LayerDescriptor = (
   | { type: "Vector"; index: number }
   | { type: "Raster"; index: number }
@@ -738,6 +758,13 @@ export type ToolOutputActionDiscriptor =
   | { type: "Alert"; value: string }
   | { type: "LoadAsDataset"; value: number }
   | { type: "AlertOutput" };
+/**
+ * Auto-generated discriminant enum variants
+ */
+export type ToolOutputActionDiscriptorDiscriminants =
+  | "Alert"
+  | "LoadAsDataset"
+  | "AlertOutput";
 export type ToolsScreenInfo = {
   tools: ToolDescriptor[];
   layers: LayerDescriptor[];
