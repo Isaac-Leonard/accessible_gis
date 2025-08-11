@@ -107,6 +107,7 @@ pub fn generate_handlers(
             add_custom_tool,
             get_tool_input_types,
             get_tool_output_actions,
+            get_tool_preset_input_types,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds

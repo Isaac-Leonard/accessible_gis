@@ -268,6 +268,11 @@ export const commands = {
   > {
     return await TAURI_INVOKE("get_tool_output_actions");
   },
+  async getToolPresetInputTypes(): Promise<
+    PresetParameterValueDiscriminants[]
+  > {
+    return await TAURI_INVOKE("get_tool_preset_input_types");
+  },
 };
 
 /** user-defined events **/
@@ -467,7 +472,8 @@ export type InputType =
   | { type: "Dataset" }
   | { type: "Option"; options: string[] }
   | { type: "Flag" }
-  | { type: "File" };
+  | { type: "File" }
+  | { type: "Preset"; options: PresetParameterValue };
 /**
  * Auto-generated discriminant enum variants
  */
@@ -479,7 +485,8 @@ export type InputTypeDiscriminants =
   | "Dataset"
   | "Option"
   | "Flag"
-  | "File";
+  | "File"
+  | "Preset";
 export type LayerDescriptor = (
   | { type: "Vector"; index: number }
   | { type: "Raster"; index: number }
@@ -680,6 +687,19 @@ export type ParameterValue =
 export type Point = { x: number; y: number };
 export type Polygon = { exterior: LineString; interior: LineString[] };
 export type PolygonInfo = { area: number; fields: Field[] };
+export type PresetParameterValue =
+  | { type: "Float"; value: number }
+  | { type: "Int"; value: number }
+  | { type: "String"; value: string }
+  | { type: "File"; value: string };
+/**
+ * Auto-generated discriminant enum variants
+ */
+export type PresetParameterValueDiscriminants =
+  | "Float"
+  | "Int"
+  | "String"
+  | "File";
 export type ProjectScreen =
   | ({ type: "Project" } & ProjectScreenInfo)
   | { type: "NotLoaded" };

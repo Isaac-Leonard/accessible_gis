@@ -36,18 +36,10 @@ pub trait Tool: Send + Sync {
         params: Vec<ParameterValue>,
         project: &'a mut Project,
     ) -> Result<Vec<NamedParsedParamValue<'a>>, ErrorDetails> {
-        let expected_inputs = self.get_expected_input_parameters();
-        if expected_inputs.len() != params.len() {
-            return Err(ErrorDetails::Other(format!(
-                "Mismatched parameters, got unexpected number of parameters for tool {}",
-                self.get_label()
-            )));
-        }
-
         let mut parsed = Vec::new();
-
-        for (expected, got) in expected_inputs.into_iter().zip(params) {
-            let parsed_val = NamedParsedParamValue::parse_from(got, expected, project)?;
+        let mut params = params.into_iter();
+        for expected in self.get_expected_input_parameters() {
+            let parsed_val = NamedParsedParamValue::parse_from(&mut params, expected, project)?;
             // TODO: This is really bad
             // This needs to be refactored properly however I suspect that cannot be done without rewriting large parts of the gdal-rs library.
             // This shouldn't currently cause any issues as all of this code is currently affectively single threaded for now.
@@ -57,11 +49,16 @@ pub trait Tool: Send + Sync {
             };
             match parsed_val {
                 Some(val) => parsed.push(val),
-                _ => {}
+                _ => eprintln!("Got none when parsing params"),
             }
         }
-
-        Ok(parsed)
+        if params.count() != 0 {
+            Err(ErrorDetails::Other(
+                "Not all params used for tool call".to_string(),
+            ))
+        } else {
+            Ok(parsed)
+        }
     }
 
     fn run(&self, params: Vec<ParameterValue>, project: &mut Project) -> Result<(), ErrorDetails> {
@@ -129,7 +126,7 @@ pub trait Tool: Send + Sync {
                     project
                         .datasets
                         .open(path, &project.settings)
-                        .map_err(|err| ErrorDetails::OpenDatasetError(err))?;
+                        .map_err(ErrorDetails::OpenDatasetError)?;
                 }
             }
         }
@@ -257,6 +254,7 @@ pub enum InputType {
     Option(Vec<String>),
     Flag,
     File,
+    Preset(PresetParameterValue),
 }
 
 #[derive(Clone, Debug, Deserialize, specta::Type, strum::EnumTryAs)]
@@ -269,6 +267,25 @@ pub enum ParameterValue {
     Dataset(usize),
     Option(String),
     Flag(bool),
+    File(PathBuf),
+}
+
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    specta::Type,
+    strum::EnumTryAs,
+    strum::EnumDiscriminants,
+)]
+#[serde(tag = "type", content = "value")]
+#[strum_discriminants(derive(Serialize, Deserialize, specta::Type, strum::EnumIter))]
+pub enum PresetParameterValue {
+    Float(f64),
+    Int(i64),
+    String(String),
     File(PathBuf),
 }
 
@@ -312,65 +329,84 @@ pub enum NamedParsedParamValue<'a> {
 
 impl<'a> NamedParsedParamValue<'a> {
     pub fn parse_from(
-        value: ParameterValue,
+        params: &mut impl Iterator<Item = ParameterValue>,
         expected: Input,
         project: &'a mut Project,
     ) -> Result<Option<Self>, ErrorDetails> {
-        let val: ParsedParamValue = match (value, expected.param_type) {
-            (ParameterValue::Float(num), InputType::Float) => ParsedParamValue::Float(num),
-            (ParameterValue::Int(num), InputType::Int) => ParsedParamValue::Int(num),
-            (ParameterValue::String(str), InputType::String) => ParsedParamValue::String(str),
-            (ParameterValue::Dataset(index), InputType::Dataset) => ParsedParamValue::Dataset(
-                project
-                    .datasets
-                    .get_dataset(index)
-                    .ok_or_else(|| ErrorDetails::Other("Missing dataset".to_string()))?,
-            ),
-            (ParameterValue::Layer(index), InputType::Layer(kind)) => match (index.layer, kind) {
-                (LayerIndex::Vector(layer_index), LayerIndexDiscriminants::Vector) => {
-                    ParsedParamValue::Vector(
-                        project
-                            .get_vector(VectorIndex {
-                                dataset: index.dataset,
-                                layer: layer_index,
-                            })
-                            .ok_or_else(|| {
-                                ErrorDetails::Other("Missing vector layer".to_string())
-                            })?,
-                    )
-                }
-                (LayerIndex::Raster(band_index), LayerIndexDiscriminants::Raster) => {
-                    ParsedParamValue::Raster(
-                        project
-                            .get_raster(RasterIndex {
-                                dataset: index.dataset,
-                                band: band_index,
-                            })
-                            .ok_or_else(|| {
-                                ErrorDetails::Other("Missing raster layer".to_string())
-                            })?,
-                    )
-                }
-                _ => Err(ErrorDetails::Other("Mismatched layer types".to_string()))?,
+        let val: ParsedParamValue = match expected.param_type {
+            InputType::Preset(value) => match value {
+                PresetParameterValue::Float(num) => ParsedParamValue::Float(num),
+                PresetParameterValue::Int(num) => ParsedParamValue::Int(num),
+                PresetParameterValue::String(string) => ParsedParamValue::String(string),
+                PresetParameterValue::File(path) => ParsedParamValue::File(path),
             },
-            (ParameterValue::Option(option), InputType::Option(options)) => {
-                if !options.contains(&option) {
+            expected_type => {
+                let Some(value) = params.next() else {
                     return Err(ErrorDetails::Other(
-                        "Somehow got unallowed option".to_string(),
+                        "Not enough params passed for tool".to_string(),
                     ));
-                } else {
-                    ParsedParamValue::Option(option)
+                };
+
+                match (value, expected_type) {
+                    (ParameterValue::Float(num), InputType::Float) => ParsedParamValue::Float(num),
+                    (ParameterValue::Int(num), InputType::Int) => ParsedParamValue::Int(num),
+                    (ParameterValue::String(str), InputType::String) => {
+                        ParsedParamValue::String(str)
+                    }
+                    (ParameterValue::Dataset(index), InputType::Dataset) => {
+                        ParsedParamValue::Dataset(
+                            project.datasets.get_dataset(index).ok_or_else(|| {
+                                ErrorDetails::Other("Missing dataset".to_string())
+                            })?,
+                        )
+                    }
+                    (ParameterValue::Layer(index), InputType::Layer(kind)) => {
+                        match (index.layer, kind) {
+                            (LayerIndex::Vector(layer_index), LayerIndexDiscriminants::Vector) => {
+                                ParsedParamValue::Vector(
+                                    project
+                                        .get_vector(VectorIndex {
+                                            dataset: index.dataset,
+                                            layer: layer_index,
+                                        })
+                                        .ok_or_else(|| {
+                                            ErrorDetails::Other("Missing vector layer".to_string())
+                                        })?,
+                                )
+                            }
+                            (LayerIndex::Raster(band_index), LayerIndexDiscriminants::Raster) => {
+                                ParsedParamValue::Raster(
+                                    project
+                                        .get_raster(RasterIndex {
+                                            dataset: index.dataset,
+                                            band: band_index,
+                                        })
+                                        .ok_or_else(|| {
+                                            ErrorDetails::Other("Missing raster layer".to_string())
+                                        })?,
+                                )
+                            }
+                            _ => Err(ErrorDetails::Other("Mismatched layer types".to_string()))?,
+                        }
+                    }
+                    (ParameterValue::Option(option), InputType::Option(options)) => {
+                        if !options.contains(&option) {
+                            return Err(ErrorDetails::Other(
+                                "Somehow got unallowed option".to_string(),
+                            ));
+                        } else {
+                            ParsedParamValue::Option(option)
+                        }
+                    }
+                    (ParameterValue::Flag(include), InputType::Flag) => {
+                        return Ok(include.then_some(Self::Flag(expected.name.ok_or_else(
+                            || ErrorDetails::Other("Missing name for flag".to_string()),
+                        )?)));
+                    }
+                    (ParameterValue::File(file), InputType::File) => ParsedParamValue::File(file),
+                    _ => Err(ErrorDetails::Other("Mismatched command types".to_string()))?,
                 }
             }
-            (ParameterValue::Flag(include), InputType::Flag) => {
-                return Ok(include.then_some(Self::Flag(
-                    expected
-                        .name
-                        .ok_or_else(|| ErrorDetails::Other("Missing name for flag".to_string()))?,
-                )));
-            }
-            (ParameterValue::File(file), InputType::File) => ParsedParamValue::File(file),
-            _ => Err(ErrorDetails::Other("Mismatched command types".to_string()))?,
         };
 
         Ok(Some(match expected.name {

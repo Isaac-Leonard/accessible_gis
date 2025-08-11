@@ -5,7 +5,8 @@ use crate::{
     audio::Waveform,
     state::{
         configurable_tools::{
-            InputType, InputTypeDiscriminants, ToolOutputActionDiscriptorDiscriminants,
+            InputTypeDiscriminants, PresetParameterValueDiscriminants,
+            ToolOutputActionDiscriptorDiscriminants,
         },
         gis::raster::RenderMethod,
         settings::AudioIndicator,
@@ -36,6 +37,12 @@ pub fn get_wave_forms() -> Vec<Waveform> {
 #[specta::specta]
 pub fn get_tool_input_types() -> Vec<InputTypeDiscriminants> {
     InputTypeDiscriminants::iter().collect_vec()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_tool_preset_input_types() -> Vec<PresetParameterValueDiscriminants> {
+    PresetParameterValueDiscriminants::iter().collect_vec()
 }
 
 #[tauri::command]

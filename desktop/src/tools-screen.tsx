@@ -12,6 +12,8 @@ import {
   InputType,
   InputTypeDiscriminants,
   LayerDescriptor,
+  PresetParameterValue,
+  PresetParameterValueDiscriminants,
   SavedToolOutputAction,
   ToolDescriptor,
   ToolOutputActionDiscriptor,
@@ -26,7 +28,8 @@ import {
   OptionPicker,
 } from "./option-picker";
 import { client, state } from "./api";
-import { SaveButton } from "./save-button";
+import { LoadButton, SaveButton } from "./save-button";
+import { FunctionComponent } from "preact";
 
 export const ToolsScreen = ({ tools, layers }: ToolsScreenInfo) => {
   return (
@@ -51,7 +54,52 @@ type Param = { label: string } & (
   | { type: "Option"; value: string; options: string[] }
   | { type: "Flag"; value: boolean }
   | { type: "File"; value: string }
+  | { type: "Preset"; value: PresetParameterValue }
 );
+
+const paramFromInput = (input: Input): Param => {
+  switch (input.param_type.type) {
+    case "Float":
+      return { type: input.param_type.type, value: 0, label: input.label };
+    case "Int":
+      return { type: input.param_type.type, value: 0, label: input.label };
+    case "String":
+      return { type: input.param_type.type, value: "", label: input.label };
+    case "Dataset":
+      return { type: input.param_type.type, value: 0, label: input.label };
+    case "Layer":
+      return {
+        type: input.param_type.type,
+        value: {
+          dataset: 0,
+          layer: { type: input.param_type.options, index: 0 },
+        },
+        label: input.label,
+        options: input.param_type.options,
+      };
+    case "Option":
+      return {
+        type: input.param_type.type,
+        value: input.param_type.options[0] ?? null,
+        label: input.label,
+        options: input.param_type.options,
+      };
+    case "Flag":
+      return {
+        type: input.param_type.type,
+        value: false,
+        label: input.label,
+      };
+    case "File":
+      return { type: input.param_type.type, value: "", label: input.label };
+    case "Preset":
+      return {
+        type: input.param_type.type,
+        value: input.param_type.options,
+        label: input.label,
+      };
+  }
+};
 
 type ToolDialogProps = {
   tool: ToolDescriptor;
@@ -62,45 +110,7 @@ type ToolDialogProps = {
 const ToolDialog = ({ tool, index, layers }: ToolDialogProps) => {
   const { open, setOpen } = useDialog();
 
-  const [params, setParams] = useState(() =>
-    tool.inputs.map((input): Param => {
-      switch (input.param_type.type) {
-        case "Float":
-          return { type: input.param_type.type, value: 0, label: input.label };
-        case "Int":
-          return { type: input.param_type.type, value: 0, label: input.label };
-        case "String":
-          return { type: input.param_type.type, value: "", label: input.label };
-        case "Dataset":
-          return { type: input.param_type.type, value: 0, label: input.label };
-        case "Layer":
-          return {
-            type: input.param_type.type,
-            value: {
-              dataset: 0,
-              layer: { type: input.param_type.options, index: 0 },
-            },
-            label: input.label,
-            options: input.param_type.options,
-          };
-        case "Option":
-          return {
-            type: input.param_type.type,
-            value: input.param_type.options[0] ?? null,
-            label: input.label,
-            options: input.param_type.options,
-          };
-        case "Flag":
-          return {
-            type: input.param_type.type,
-            value: false,
-            label: input.label,
-          };
-        case "File":
-          return { type: input.param_type.type, value: "", label: input.label };
-      }
-    })
-  );
+  const [params, setParams] = useState(() => tool.inputs.map(paramFromInput));
 
   const setValueAt =
     <T,>(index: number) =>
@@ -146,7 +156,10 @@ const ToolDialog = ({ tool, index, layers }: ToolDialogProps) => {
       ))}
       <button
         onClick={() => {
-          client.runTool(index, params);
+          client.runTool(
+            index,
+            params.filter((param) => param.type !== "Preset")
+          );
           setOpen(false);
         }}
       >
@@ -282,6 +295,12 @@ const ToolInput = ({
           onSave={makeParamBinding(param, index).setValue}
         />
       );
+    case "Preset":
+      return (
+        <div>
+          {param.label}: {param.value.value}
+        </div>
+      );
     default:
       return <div>Got unknown type {JSON.stringify(param)}</div>;
   }
@@ -376,8 +395,10 @@ const inputTypeFromDiscriminant = (
       return { type: discriminant };
     case "File":
       return {
-        type: "File",
+        type: discriminant,
       };
+    case "Preset":
+      return { type: discriminant, options: { type: "File", value: "" } };
   }
 };
 
@@ -395,6 +416,23 @@ const outputActionFromDiscriminant = (
       return { type: discriminant };
     case "LoadAsDataset":
       return { type: discriminant, value: null };
+  }
+};
+
+const PresetInputTypeSelector = bindedSelectorFactory(
+  await client.getToolPresetInputTypes()
+);
+
+const presetInputFromDiscriminant = (
+  discriminant: PresetParameterValueDiscriminants
+): PresetParameterValue => {
+  switch (discriminant) {
+    case "Float":
+    case "Int":
+      return { type: discriminant, value: 0 };
+    case "String":
+    case "File":
+      return { type: discriminant, value: "" };
   }
 };
 
@@ -613,6 +651,70 @@ const ToolInputCreator = ({
           Add Option
         </button>
       </div>
+    ) : input.param_type.type === "Preset" ? (
+      <>
+        <PresetInputTypeSelector
+          prompt="Type of preset input"
+          binding={{
+            value: input.param_type.options.type,
+            setValue: (option) =>
+              setInput({
+                ...input,
+                param_type: presetInputFromDiscriminant(option),
+              }),
+          }}
+        />
+        <PresetInputValueEditor
+          input={input.param_type.options}
+          setInput={(value) =>
+            setInput({
+              ...input,
+              param_type: { type: "Preset", options: value },
+            })
+          }
+        />
+      </>
     ) : null}
   </div>
 );
+
+type PresetInputValueEditorProps = {
+  input: PresetParameterValue;
+  setInput: (input: PresetParameterValue) => void;
+};
+
+const PresetInputValueEditor = ({
+  input,
+  setInput,
+}: PresetInputValueEditorProps) => {
+  switch (input.type) {
+    case "Float":
+    case "Int":
+      return (
+        <NumberInput
+          label="Preset value"
+          binding={{
+            value: input.value,
+            setValue: (value) => setInput({ type: input.type, value }),
+          }}
+        />
+      );
+    case "String":
+      return (
+        <TextInput
+          label="Preset value"
+          binding={{
+            value: input.value,
+            setValue: (value) => setInput({ type: input.type, value }),
+          }}
+        />
+      );
+    case "File":
+      return (
+        <LoadButton
+          text={"Preset input: " + input.value}
+          onLoad={(value) => setInput({ type: input.type, value })}
+        />
+      );
+  }
+};

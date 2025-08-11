@@ -1,4 +1,5 @@
 import { DialogFilter, save } from "@tauri-apps/plugin-dialog";
+import { openFile } from "./files";
 
 type SaveButtonProps = {
   text?: string;
@@ -20,6 +21,32 @@ export const SaveButton = ({
     const name = await save({ title: prompt, filters });
     if (name !== null) {
       onSave(name);
+    }
+  };
+
+  return <button onClick={clickHandler}>{text}</button>;
+};
+
+type LoadButtonProps = {
+  text?: string;
+  onLoad: (name: string) => void;
+  prompt?: string;
+  filters?: DialogFilter[];
+};
+
+export const LoadButton = ({
+  onLoad,
+  text,
+  prompt,
+  filters,
+}: LoadButtonProps) => {
+  if (typeof text !== "string") {
+    text = "Load";
+  }
+  const clickHandler = async () => {
+    const name = await openFile(prompt, filters);
+    if (name !== null) {
+      onLoad(name);
     }
   };
 

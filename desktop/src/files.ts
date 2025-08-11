@@ -1,11 +1,14 @@
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { DialogFilter, open, save } from "@tauri-apps/plugin-dialog";
 import { client } from "./api";
 
-export const openFile = async (prompt?: string): Promise<null | string> => {
+export const openFile = async (
+  prompt?: string,
+  filters?: DialogFilter[]
+): Promise<null | string> => {
   const selected = await open({
     title: prompt,
     multiple: false,
-    filters: [],
+    filters: filters,
     directory: true,
   });
   if (Array.isArray(selected)) {
