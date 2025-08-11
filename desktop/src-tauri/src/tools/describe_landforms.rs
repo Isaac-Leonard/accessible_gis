@@ -11,7 +11,7 @@ use crate::{
     errors::ErrorDetails,
     gdal_if::LayerIndexDiscriminants,
     state::configurable_tools::{
-        Input, InputType, NamedParsedParamValue, Tool, ToolOutput, ToolOutputActionDiscriptor,
+        Input, InputType, NamedParsedParamValue, ReturnedToolOutput, Tool, ToolOutputAction,
     },
 };
 
@@ -224,7 +224,7 @@ impl Tool for DescribeLandformsTool {
     fn execute(
         &self,
         params: &[NamedParsedParamValue],
-    ) -> Result<Option<ToolOutput>, ErrorDetails> {
+    ) -> Result<Option<ReturnedToolOutput>, ErrorDetails> {
         let layer = params[0]
             .try_as_raw_ref()
             .unwrap()
@@ -232,16 +232,17 @@ impl Tool for DescribeLandformsTool {
             .unwrap();
         let result =
             describe_landforms(&layer.info.shared.name).map_err(|err| ErrorDetails::Other(err))?;
-        Ok(Some(ToolOutput::String(result)))
+        Ok(Some(ReturnedToolOutput::String(result)))
     }
 
     fn dyn_clone(&self) -> Box<dyn Tool> {
         Box::new(Self)
     }
 
-    fn get_output_actions(
-        &self,
-    ) -> Vec<crate::state::configurable_tools::ToolOutputActionDiscriptor> {
-        vec![ToolOutputActionDiscriptor::AlertOutput]
+    fn get_output_actions(&self) -> ToolOutputAction {
+        ToolOutputAction {
+            alert_output: true,
+            load_layers: Vec::new(),
+        }
     }
 }

@@ -16,8 +16,6 @@ import {
   PresetParameterValueDiscriminants,
   SavedToolOutputAction,
   ToolDescriptor,
-  ToolOutputActionDiscriptor,
-  ToolOutputActionDiscriptorDiscriminants,
   ToolsScreenInfo,
   UserDefinedTool,
 } from "./bindings";
@@ -29,7 +27,6 @@ import {
 } from "./option-picker";
 import { client, state } from "./api";
 import { LoadButton, SaveButton } from "./save-button";
-import { FunctionComponent } from "preact";
 
 export const ToolsScreen = ({ tools, layers }: ToolsScreenInfo) => {
   return (
@@ -289,11 +286,13 @@ const ToolInput = ({
       );
     case "File":
       return (
-        <SaveButton
-          text={param.label + ": " + param.value}
-          prompt={param.label}
-          onSave={makeParamBinding(param, index).setValue}
-        />
+        <div>
+          <SaveButton
+            text={param.label + ": " + param.value}
+            prompt={param.label}
+            onSave={makeParamBinding(param, index).setValue}
+          />
+        </div>
       );
     case "Preset":
       return (
@@ -323,7 +322,7 @@ const ToolActionDialog = ({
       onClose={onClose}
     >
       <h3 ref={innerRef}>{action.tool}</h3>
-      <div>{action.message}</div>
+      <div>{action.output}</div>
       {onClose && <button onClick={onClose}>Close</button>}
     </Dialog>
   );
@@ -394,28 +393,9 @@ const inputTypeFromDiscriminant = (
     case "Flag":
       return { type: discriminant };
     case "File":
-      return {
-        type: discriminant,
-      };
+      return { type: discriminant, options: false };
     case "Preset":
       return { type: discriminant, options: { type: "File", value: "" } };
-  }
-};
-
-const OutputActionSelector = bindedSelectorFactory(
-  await client.getToolOutputActions()
-);
-
-const outputActionFromDiscriminant = (
-  discriminant: ToolOutputActionDiscriptorDiscriminants
-): ToolOutputActionDiscriptor => {
-  switch (discriminant) {
-    case "Alert":
-      return { type: discriminant, value: "" };
-    case "AlertOutput":
-      return { type: discriminant };
-    case "LoadAsDataset":
-      return { type: discriminant, value: null };
   }
 };
 
@@ -442,7 +422,7 @@ const ToolCreationDialog = () => {
       label: "",
       inputs: [],
       command: "",
-      output_actions: [],
+      output_actions: { alert_output: true, load_layers: [] },
     })
   );
 
@@ -451,16 +431,13 @@ const ToolCreationDialog = () => {
     newArray.splice(index, 1, element);
     tool.inputs.setValue(newArray);
   };
-  const setOutputActionAt = (
-    index: number,
-    element: ToolOutputActionDiscriptor
-  ) => {
-    const newArray = tool.output_actions.value.slice();
-    newArray.splice(index, 1, element);
-    tool.output_actions.setValue(newArray);
-  };
 
   const { open, setOpen } = useDialog();
+
+  const output_files = tool.inputs.value
+    .filter((input) => input.param_type.type === "File")
+    .map((input) => input.label);
+
   return (
     <Dialog
       openText="Create custom tool"
@@ -490,50 +467,49 @@ const ToolCreationDialog = () => {
         </button>
       </div>
       <div>
-        {tool.output_actions.value.map((action, index) => (
-          <div>
-            <OutputActionSelector
-              prompt=" Output action type"
-              binding={{
-                value: action.type,
-                setValue: (option) =>
-                  setOutputActionAt(
-                    index,
-                    outputActionFromDiscriminant(option)
-                  ),
-              }}
-            />
-            {action.type === "Alert" ? (
-              <TextInput
-                label={"Output action " + (index + 1)}
-                binding={{
-                  value: action.value,
-                  setValue: (value) =>
-                    setOutputActionAt(index, { type: action.type, value }),
-                }}
-              />
-            ) : action.type === "LoadAsDataset" ? (
-              <NumberInput
-                label="0 based index of input to load"
-                binding={{
-                  value: action.value,
-                  setValue: (value) =>
-                    setOutputActionAt(index, { type: "LoadAsDataset", value }),
-                }}
-              />
-            ) : null}
-          </div>
-        ))}
         <button
+          role="switch"
+          aria-checked={tool.output_actions.value.alert_output}
           onClick={() =>
-            tool.output_actions.setValue([
-              ...tool.output_actions.value,
-              { type: "AlertOutput" },
-            ])
+            tool.output_actions.setValue({
+              alert_output: !tool.output_actions.value.alert_output,
+              load_layers: tool.output_actions.value.load_layers,
+            })
           }
         >
-          Add output action
+          Alert output when ran?
         </button>
+        <div>
+          {tool.output_actions.value.load_layers.map((layer, index) => (
+            <IndexedOptionPicker
+              prompt="File to load"
+              index={layer}
+              options={output_files}
+              setIndex={(layer) => {
+                let newArray = tool.output_actions.value.load_layers.slice();
+                newArray[index] = layer;
+                tool.output_actions.setValue({
+                  alert_output: tool.output_actions.value.alert_output,
+                  load_layers: newArray,
+                });
+              }}
+              emptyText="There are no files marked as use as output"
+            />
+          ))}
+          <button
+            onClick={() =>
+              tool.output_actions.setValue({
+                alert_output: tool.output_actions.value.alert_output,
+                load_layers: [
+                  ...tool.output_actions.value.load_layers,
+                  output_files.length - 1,
+                ],
+              })
+            }
+          >
+            Add layer to load
+          </button>{" "}
+        </div>
       </div>
       <button
         onClick={() => {
@@ -660,7 +636,10 @@ const ToolInputCreator = ({
             setValue: (option) =>
               setInput({
                 ...input,
-                param_type: presetInputFromDiscriminant(option),
+                param_type: {
+                  type: "Preset",
+                  options: presetInputFromDiscriminant(option),
+                },
               }),
           }}
         />
@@ -674,6 +653,22 @@ const ToolInputCreator = ({
           }
         />
       </>
+    ) : input.param_type.type === "File" ? (
+      <button
+        role="switch"
+        aria-checked={input.param_type.options}
+        onClick={() => {
+          // Here to make TS happy and just in case of the rare edge case
+          if (input.param_type.type === "File") {
+            setInput({
+              ...input,
+              param_type: { type: "File", options: !input.param_type.options },
+            });
+          }
+        }}
+      >
+        Use as output
+      </button>
     ) : null}
   </div>
 );

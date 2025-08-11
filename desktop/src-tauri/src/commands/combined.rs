@@ -6,7 +6,7 @@ use crate::{
     gdal_if::Srs,
     state::{
         AppState,
-        configurable_tools::{ParameterValue, UserDefinedTool},
+        configurable_tools::{ParameterValue, SavedToolOutputAction, UserDefinedTool},
         gis::combined::StatefulLayerEnum,
     },
 };
@@ -62,7 +62,26 @@ pub fn run_tool(tool_index: usize, parameters: Vec<ParameterValue>, state: AppSt
         let tool = tools
             .get(tool_index)
             .ok_or_else(|| ErrorDetails::Other("Could not get tool".to_string()))?;
-        tool.run(parameters, project)
+        let output = tool.run(parameters, &mut project.datasets)?;
+        let action = tool.get_output_actions();
+        for file in &action.load_layers {
+            let Some(path) = output.files.get(*file) else {
+                return Err(ErrorDetails::Other(
+                    "Could not get file from output of tool".to_string(),
+                ));
+            };
+            project
+                .datasets
+                .open(path, &project.settings)
+                .map_err(ErrorDetails::OpenDatasetError)?;
+        }
+        project.tool_outputs.push(SavedToolOutputAction {
+            read: action.alert_output,
+            tool: tool.get_label(),
+            output,
+            id: Uuid::new_v4(),
+        });
+        Ok(())
     });
 }
 

@@ -106,7 +106,6 @@ pub fn generate_handlers(
             mark_tool_output_read,
             add_custom_tool,
             get_tool_input_types,
-            get_tool_output_actions,
             get_tool_preset_input_types,
         ])
         .events(collect_events![MessageEvent]);

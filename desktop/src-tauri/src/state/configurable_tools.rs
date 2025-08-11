@@ -1,7 +1,7 @@
 use std::{
     mem::transmute,
     path::PathBuf,
-    process::{Command, Output},
+    process::{Command, Output as CommandOutput},
 };
 
 use serde::{Deserialize, Serialize};
@@ -14,27 +14,32 @@ use crate::{
 };
 
 use super::{
-    dataset_collection::NonEmptyDelegatorImpl,
+    dataset_collection::{DatasetCollection, NonEmptyDelegatorImpl},
     gis::{
         combined::{DatasetLayerIndex, RasterIndex, VectorIndex},
         dataset::StatefulDataset,
         raster::StatefulRasterBand,
         vector::StatefulVectorLayer,
     },
-    projects::Project,
 };
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+pub struct ToolOutput {
+    pub returned_output: Option<ReturnedToolOutput>,
+    pub files: Vec<PathBuf>,
+}
 
 pub trait Tool: Send + Sync {
     fn get_label(&self) -> String;
 
     fn get_expected_input_parameters(&self) -> Vec<Input>;
 
-    fn get_output_actions(&self) -> Vec<ToolOutputActionDiscriptor>;
+    fn get_output_actions(&self) -> ToolOutputAction;
 
     fn parse_input_parameters<'a>(
         &self,
         params: Vec<ParameterValue>,
-        project: &'a mut Project,
+        project: &'a mut DatasetCollection,
     ) -> Result<Vec<NamedParsedParamValue<'a>>, ErrorDetails> {
         let mut parsed = Vec::new();
         let mut params = params.into_iter();
@@ -61,81 +66,35 @@ pub trait Tool: Send + Sync {
         }
     }
 
-    fn run(&self, params: Vec<ParameterValue>, project: &mut Project) -> Result<(), ErrorDetails> {
-        #[derive(Debug)]
-        pub enum ToolOutputActionDiscriptorRequiresProject {
-            AlertOutput,
-            File(PathBuf),
-        }
-        let mut saved_actions = Vec::new();
-        let mut requires_project_actions = Vec::new();
-        let data = {
-            let params = self.parse_input_parameters(params, project)?;
-            let actions = self.get_output_actions();
-            for action in actions {
-                match action {
-                    ToolOutputActionDiscriptor::Alert(msg) => {
-                        saved_actions.push(SavedToolOutputAction {
-                            tool: self.get_label(),
-                            message: msg,
-                            read: false,
-                            id: uuid::Uuid::new_v4(),
-                        })
-                    }
-                    ToolOutputActionDiscriptor::LoadAsDataset(index) => {
-                        println!["{index}: {params:?}"];
-                        let file = params[index]
-                            .try_as_raw_ref()
-                            .unwrap_or_else(|| params[index].try_as_named_ref().unwrap().1)
-                            .try_as_file_ref()
-                            .unwrap()
-                            .clone();
-                        requires_project_actions
-                            .push(ToolOutputActionDiscriptorRequiresProject::File(file))
-                    }
-                    ToolOutputActionDiscriptor::AlertOutput => requires_project_actions
-                        .push(ToolOutputActionDiscriptorRequiresProject::AlertOutput),
-                };
-            }
-            self.execute(&params)?
-        };
+    fn run(
+        &self,
+        params: Vec<ParameterValue>,
+        project: &mut DatasetCollection,
+    ) -> Result<ToolOutput, ErrorDetails> {
+        let mut output_files = Vec::new();
+        let params = self.parse_input_parameters(params, project)?;
 
-        for action in requires_project_actions {
-            match action {
-                ToolOutputActionDiscriptorRequiresProject::AlertOutput => {
-                    let output = data.as_ref().ok_or_else(|| {
-                        ErrorDetails::Other("This tool should return data but doesn't".to_string())
-                    })?;
-                    let output = match output {
-                        ToolOutput::Command(output) => {
-                            "Stdout:\n".to_string()
-                                + &String::from_utf8_lossy(&output.stdout)
-                                + "\nStderr:\n"
-                                + &String::from_utf8_lossy(&output.stderr)
-                        }
-                        ToolOutput::String(string) => string.clone(),
-                    };
-                    saved_actions.push(SavedToolOutputAction {
-                        tool: self.get_label(),
-                        message: output,
-                        read: false,
-                        id: uuid::Uuid::new_v4(),
-                    })
-                }
-                ToolOutputActionDiscriptorRequiresProject::File(path) => {
-                    project
-                        .datasets
-                        .open(path, &project.settings)
-                        .map_err(ErrorDetails::OpenDatasetError)?;
-                }
-            }
+        for param in &params {
+            let param_val = param
+                .try_as_raw_ref()
+                .unwrap_or_else(|| param.try_as_named_ref().unwrap().1);
+            if let Some(file) = param_val.try_as_file_ref()
+                && file.use_as_output
+            {
+                output_files.push(file.path.clone())
+            };
         }
-        project.tool_outputs.extend(saved_actions);
-        Ok(())
+
+        Ok(ToolOutput {
+            returned_output: self.execute(&params)?,
+            files: output_files,
+        })
     }
 
-    fn execute(&self, params: &[NamedParsedParamValue])
-    -> Result<Option<ToolOutput>, ErrorDetails>;
+    fn execute(
+        &self,
+        params: &[NamedParsedParamValue],
+    ) -> Result<Option<ReturnedToolOutput>, ErrorDetails>;
 
     fn for_ui(&self) -> ToolDescriptor {
         ToolDescriptor {
@@ -158,29 +117,44 @@ impl Clone for Box<dyn Tool> {
     }
 }
 
-pub enum ToolOutput {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(tag = "type", content = "value")]
+pub enum ReturnedToolOutput {
     Command(Output),
     String(String),
+    File(PathBuf),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+pub struct Output {
+    pub stdout: String,
+    pub stderr: String,
+    pub status: Option<i32>,
+}
+
+impl From<CommandOutput> for Output {
+    fn from(value: CommandOutput) -> Self {
+        Self {
+            status: value.status.code(),
+            stdout: String::from_utf8_lossy(&value.stdout).to_string(),
+            stderr: String::from_utf8_lossy(&value.stderr).to_string(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct SavedToolOutputAction {
     // The label of the tool that generated this output
     pub tool: String,
-    pub message: String,
+    pub output: ToolOutput,
     pub read: bool,
     pub id: uuid::Uuid,
 }
 
-#[derive(
-    Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type, strum::EnumDiscriminants,
-)]
-#[serde(tag = "type", content = "value")]
-#[strum_discriminants(derive(Serialize, Deserialize, specta::Type, strum::EnumIter))]
-pub enum ToolOutputActionDiscriptor {
-    Alert(String),
-    LoadAsDataset(usize),
-    AlertOutput,
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+pub struct ToolOutputAction {
+    pub alert_output: bool,
+    pub load_layers: Vec<usize>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
@@ -188,7 +162,7 @@ pub struct UserDefinedTool {
     label: String,
     inputs: Vec<Input>,
     command: String,
-    output_actions: Vec<ToolOutputActionDiscriptor>,
+    output_actions: ToolOutputAction,
 }
 
 impl Tool for UserDefinedTool {
@@ -200,14 +174,14 @@ impl Tool for UserDefinedTool {
         self.inputs.clone()
     }
 
-    fn get_output_actions(&self) -> Vec<ToolOutputActionDiscriptor> {
+    fn get_output_actions(&self) -> ToolOutputAction {
         self.output_actions.clone()
     }
 
     fn execute(
         &self,
         params: &[NamedParsedParamValue],
-    ) -> Result<Option<ToolOutput>, ErrorDetails> {
+    ) -> Result<Option<ReturnedToolOutput>, ErrorDetails> {
         let mut command = Command::new(&self.command);
         for param in params {
             match param {
@@ -221,7 +195,7 @@ impl Tool for UserDefinedTool {
         command
             .output()
             .map_err(|err| ErrorDetails::IoError(err.to_string()))
-            .map(|output| Some(ToolOutput::Command(output)))
+            .map(|output| Some(ReturnedToolOutput::Command(output.into())))
     }
 
     fn dyn_clone(&self) -> Box<dyn Tool> {
@@ -253,7 +227,7 @@ pub enum InputType {
     Dataset,
     Option(Vec<String>),
     Flag,
-    File,
+    File(bool),
     Preset(PresetParameterValue),
 }
 
@@ -298,7 +272,7 @@ pub enum ParsedParamValue<'a> {
     Raster(StatefulRasterBand<'a>),
     Dataset(&'a StatefulDataset),
     Option(String),
-    File(PathBuf),
+    File(ParsedFileParameter),
 }
 
 impl ParsedParamValue<'_> {
@@ -315,9 +289,15 @@ impl ParsedParamValue<'_> {
                 dataset.dataset.file_name.to_string_lossy().to_string()
             }
             ParsedParamValue::Option(string) => string.clone(),
-            ParsedParamValue::File(path) => path.to_string_lossy().to_string(),
+            ParsedParamValue::File(file) => file.path.to_string_lossy().to_string(),
         }
     }
+}
+
+#[derive(Debug)]
+pub struct ParsedFileParameter {
+    path: PathBuf,
+    use_as_output: bool,
 }
 
 #[derive(Debug, strum::EnumTryAs)]
@@ -331,14 +311,17 @@ impl<'a> NamedParsedParamValue<'a> {
     pub fn parse_from(
         params: &mut impl Iterator<Item = ParameterValue>,
         expected: Input,
-        project: &'a mut Project,
+        datasets: &'a mut DatasetCollection,
     ) -> Result<Option<Self>, ErrorDetails> {
         let val: ParsedParamValue = match expected.param_type {
             InputType::Preset(value) => match value {
                 PresetParameterValue::Float(num) => ParsedParamValue::Float(num),
                 PresetParameterValue::Int(num) => ParsedParamValue::Int(num),
                 PresetParameterValue::String(string) => ParsedParamValue::String(string),
-                PresetParameterValue::File(path) => ParsedParamValue::File(path),
+                PresetParameterValue::File(path) => ParsedParamValue::File(ParsedFileParameter {
+                    path,
+                    use_as_output: false,
+                }),
             },
             expected_type => {
                 let Some(value) = params.next() else {
@@ -355,7 +338,7 @@ impl<'a> NamedParsedParamValue<'a> {
                     }
                     (ParameterValue::Dataset(index), InputType::Dataset) => {
                         ParsedParamValue::Dataset(
-                            project.datasets.get_dataset(index).ok_or_else(|| {
+                            datasets.get_dataset(index).ok_or_else(|| {
                                 ErrorDetails::Other("Missing dataset".to_string())
                             })?,
                         )
@@ -364,7 +347,7 @@ impl<'a> NamedParsedParamValue<'a> {
                         match (index.layer, kind) {
                             (LayerIndex::Vector(layer_index), LayerIndexDiscriminants::Vector) => {
                                 ParsedParamValue::Vector(
-                                    project
+                                    datasets
                                         .get_vector(VectorIndex {
                                             dataset: index.dataset,
                                             layer: layer_index,
@@ -376,7 +359,7 @@ impl<'a> NamedParsedParamValue<'a> {
                             }
                             (LayerIndex::Raster(band_index), LayerIndexDiscriminants::Raster) => {
                                 ParsedParamValue::Raster(
-                                    project
+                                    datasets
                                         .get_raster(RasterIndex {
                                             dataset: index.dataset,
                                             band: band_index,
@@ -403,7 +386,12 @@ impl<'a> NamedParsedParamValue<'a> {
                             || ErrorDetails::Other("Missing name for flag".to_string()),
                         )?)));
                     }
-                    (ParameterValue::File(file), InputType::File) => ParsedParamValue::File(file),
+                    (ParameterValue::File(path), InputType::File(use_as_output)) => {
+                        ParsedParamValue::File(ParsedFileParameter {
+                            path,
+                            use_as_output,
+                        })
+                    }
                     _ => Err(ErrorDetails::Other("Mismatched command types".to_string()))?,
                 }
             }

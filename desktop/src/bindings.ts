@@ -263,11 +263,6 @@ export const commands = {
   async getToolInputTypes(): Promise<InputTypeDiscriminants[]> {
     return await TAURI_INVOKE("get_tool_input_types");
   },
-  async getToolOutputActions(): Promise<
-    ToolOutputActionDiscriptorDiscriminants[]
-  > {
-    return await TAURI_INVOKE("get_tool_output_actions");
-  },
   async getToolPresetInputTypes(): Promise<
     PresetParameterValueDiscriminants[]
   > {
@@ -472,7 +467,7 @@ export type InputType =
   | { type: "Dataset" }
   | { type: "Option"; options: string[] }
   | { type: "Flag" }
-  | { type: "File" }
+  | { type: "File"; options: boolean }
   | { type: "Preset"; options: PresetParameterValue };
 /**
  * Auto-generated discriminant enum variants
@@ -675,6 +670,7 @@ export type OpenLineDescription = {
   distances: number;
   number_of_points: number;
 };
+export type Output = { stdout: string; stderr: string; status: number | null };
 export type ParameterValue =
   | { type: "Float"; value: number }
   | { type: "Int"; value: number }
@@ -745,9 +741,13 @@ export type RenderMethod =
    * Render pure raster values mapped to 256 grey scale
    */
   | "GDAL";
+export type ReturnedToolOutput =
+  | { type: "Command"; value: Output }
+  | { type: "String"; value: string }
+  | { type: "File"; value: string };
 export type SavedToolOutputAction = {
   tool: string;
-  message: string;
+  output: ToolOutput;
   read: boolean;
   id: string;
 };
@@ -774,17 +774,11 @@ export type ThiessenPolygonRecord = {
   column: number;
 };
 export type ToolDescriptor = { label: string; inputs: Input[] };
-export type ToolOutputActionDiscriptor =
-  | { type: "Alert"; value: string }
-  | { type: "LoadAsDataset"; value: number }
-  | { type: "AlertOutput" };
-/**
- * Auto-generated discriminant enum variants
- */
-export type ToolOutputActionDiscriptorDiscriminants =
-  | "Alert"
-  | "LoadAsDataset"
-  | "AlertOutput";
+export type ToolOutput = {
+  returned_output: ReturnedToolOutput | null;
+  files: string[];
+};
+export type ToolOutputAction = { alert_output: boolean; load_layers: number[] };
 export type ToolsScreenInfo = {
   tools: ToolDescriptor[];
   layers: LayerDescriptor[];
@@ -811,7 +805,7 @@ export type UserDefinedTool = {
   label: string;
   inputs: Input[];
   command: string;
-  output_actions: ToolOutputActionDiscriptor[];
+  output_actions: ToolOutputAction;
 };
 export type VectorScreenData = {
   field_schema: FieldSchema[];

@@ -4,10 +4,7 @@ use strum::IntoEnumIterator;
 use crate::{
     audio::Waveform,
     state::{
-        configurable_tools::{
-            InputTypeDiscriminants, PresetParameterValueDiscriminants,
-            ToolOutputActionDiscriptorDiscriminants,
-        },
+        configurable_tools::{InputTypeDiscriminants, PresetParameterValueDiscriminants},
         gis::raster::RenderMethod,
         settings::AudioIndicator,
     },
@@ -43,10 +40,4 @@ pub fn get_tool_input_types() -> Vec<InputTypeDiscriminants> {
 #[specta::specta]
 pub fn get_tool_preset_input_types() -> Vec<PresetParameterValueDiscriminants> {
     PresetParameterValueDiscriminants::iter().collect_vec()
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn get_tool_output_actions() -> Vec<ToolOutputActionDiscriptorDiscriminants> {
-    ToolOutputActionDiscriptorDiscriminants::iter().collect_vec()
 }
