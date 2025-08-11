@@ -7,18 +7,14 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    errors::ErrorDetails,
-    gdal_if::{LayerIndex, LayerIndexDiscriminants},
-    tools::describe_landforms::DescribeLandformsTool,
-    ui::ToolDescriptor,
+    errors::ErrorDetails, gdal_if::LayerIndexDiscriminants,
+    tools::describe_landforms::DescribeLandformsTool, ui::ToolDescriptor,
 };
 
 use super::{
     dataset_collection::{DatasetCollection, NonEmptyDelegatorImpl},
     gis::{
-        combined::{DatasetLayerIndex, RasterIndex, VectorIndex},
-        dataset::StatefulDataset,
-        raster::StatefulRasterBand,
+        combined::DatasetLayerIndex, dataset::StatefulDataset, raster::StatefulRasterBand,
         vector::StatefulVectorLayer,
     },
 };
@@ -263,6 +259,20 @@ pub enum PresetParameterValue {
     File(PathBuf),
 }
 
+impl From<PresetParameterValue> for ParsedParamValue<'_> {
+    fn from(value: PresetParameterValue) -> Self {
+        match value {
+            PresetParameterValue::Float(num) => ParsedParamValue::Float(num),
+            PresetParameterValue::Int(num) => ParsedParamValue::Int(num),
+            PresetParameterValue::String(string) => ParsedParamValue::String(string),
+            PresetParameterValue::File(path) => ParsedParamValue::File(ParsedFileParameter {
+                path,
+                use_as_output: false,
+            }),
+        }
+    }
+}
+
 #[derive(Debug, strum::EnumTryAs)]
 pub enum ParsedParamValue<'a> {
     Float(f64),
@@ -314,15 +324,7 @@ impl<'a> NamedParsedParamValue<'a> {
         datasets: &'a mut DatasetCollection,
     ) -> Result<Option<Self>, ErrorDetails> {
         let val: ParsedParamValue = match expected.param_type {
-            InputType::Preset(value) => match value {
-                PresetParameterValue::Float(num) => ParsedParamValue::Float(num),
-                PresetParameterValue::Int(num) => ParsedParamValue::Int(num),
-                PresetParameterValue::String(string) => ParsedParamValue::String(string),
-                PresetParameterValue::File(path) => ParsedParamValue::File(ParsedFileParameter {
-                    path,
-                    use_as_output: false,
-                }),
-            },
+            InputType::Preset(value) => ParsedParamValue::from(value),
             expected_type => {
                 let Some(value) = params.next() else {
                     return Err(ErrorDetails::Other(
@@ -343,43 +345,26 @@ impl<'a> NamedParsedParamValue<'a> {
                             })?,
                         )
                     }
-                    (ParameterValue::Layer(index), InputType::Layer(kind)) => {
-                        match (index.layer, kind) {
-                            (LayerIndex::Vector(layer_index), LayerIndexDiscriminants::Vector) => {
-                                ParsedParamValue::Vector(
-                                    datasets
-                                        .get_vector(VectorIndex {
-                                            dataset: index.dataset,
-                                            layer: layer_index,
-                                        })
-                                        .ok_or_else(|| {
-                                            ErrorDetails::Other("Missing vector layer".to_string())
-                                        })?,
-                                )
-                            }
-                            (LayerIndex::Raster(band_index), LayerIndexDiscriminants::Raster) => {
-                                ParsedParamValue::Raster(
-                                    datasets
-                                        .get_raster(RasterIndex {
-                                            dataset: index.dataset,
-                                            band: band_index,
-                                        })
-                                        .ok_or_else(|| {
-                                            ErrorDetails::Other("Missing raster layer".to_string())
-                                        })?,
-                                )
-                            }
-                            _ => Err(ErrorDetails::Other("Mismatched layer types".to_string()))?,
-                        }
-                    }
+                    (ParameterValue::Layer(index), InputType::Layer(kind)) => match kind {
+                        LayerIndexDiscriminants::Vector => ParsedParamValue::Vector(
+                            datasets
+                                .get(index)
+                                .and_then(|layer| layer.try_as_vector())
+                                .ok_or_else(|| {
+                                    ErrorDetails::Other("Missing vector layer".to_string())
+                                })?,
+                        ),
+                        LayerIndexDiscriminants::Raster => ParsedParamValue::Raster(
+                            datasets
+                                .get(index)
+                                .and_then(|layer| layer.try_as_raster())
+                                .ok_or_else(|| {
+                                    ErrorDetails::Other("Missing raster layer".to_string())
+                                })?,
+                        ),
+                    },
                     (ParameterValue::Option(option), InputType::Option(options)) => {
-                        if !options.contains(&option) {
-                            return Err(ErrorDetails::Other(
-                                "Somehow got unallowed option".to_string(),
-                            ));
-                        } else {
-                            ParsedParamValue::Option(option)
-                        }
+                        parse_option(option, options)?
                     }
                     (ParameterValue::Flag(include), InputType::Flag) => {
                         return Ok(include.then_some(Self::Flag(expected.name.ok_or_else(
@@ -406,4 +391,17 @@ impl<'a> NamedParsedParamValue<'a> {
 
 pub fn get_built_in_tools() -> Vec<Box<dyn Tool>> {
     vec![Box::new(DescribeLandformsTool)]
+}
+
+pub fn parse_option(
+    option: String,
+    options: Vec<String>,
+) -> Result<ParsedParamValue<'static>, ErrorDetails> {
+    if !options.contains(&option) {
+        return Err(ErrorDetails::Other(
+            "Somehow got unallowed option".to_string(),
+        ));
+    } else {
+        Ok(ParsedParamValue::Option(option))
+    }
 }
