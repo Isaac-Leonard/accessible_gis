@@ -77,7 +77,7 @@ pub fn run_tool(tool_index: usize, parameters: Vec<ParameterValue>, state: AppSt
                 .map_err(ErrorDetails::OpenDatasetError)?;
         }
         project.tool_outputs.push(SavedToolOutputAction {
-            read: action.alert_output,
+            read: !action.alert_output,
             tool: tool.get_label(),
             output,
             id: Uuid::new_v4(),

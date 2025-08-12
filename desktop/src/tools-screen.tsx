@@ -16,6 +16,7 @@ import {
   PresetParameterValueDiscriminants,
   SavedToolOutputAction,
   ToolDescriptor,
+  ToolOutput,
   ToolsScreenInfo,
   UserDefinedTool,
 } from "./bindings";
@@ -322,10 +323,31 @@ const ToolActionDialog = ({
       onClose={onClose}
     >
       <h3 ref={innerRef}>{action.tool}</h3>
-      <div>{action.output}</div>
+      <ToolOutputViewer output={action.output} />
       {onClose && <button onClick={onClose}>Close</button>}
     </Dialog>
   );
+};
+
+const ToolOutputViewer = ({ output }: { output: ToolOutput }) => {
+  switch (output.returned_output?.type) {
+    case null:
+      return <div>No output</div>;
+    case "Command":
+      return (
+        <div>
+          Status: {output.returned_output.value.status}
+          <h4>Stderr:</h4>
+          {output.returned_output.value.stderr}
+          <h4>Stdout</h4>
+          {output.returned_output.value.stdout}{" "}
+        </div>
+      );
+    case "String":
+      return <div>{output.returned_output.value}</div>;
+    default:
+      return <div>Unknown output type {output.returned_output?.type}</div>;
+  }
 };
 
 export const ToolActionsScreen = ({
