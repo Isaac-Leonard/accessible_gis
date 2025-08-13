@@ -27,6 +27,13 @@ export async function load() {
   }
 }
 
+export async function loadMulti() {
+  const file = await openFile();
+  if (file !== null) {
+    await client.loadDatasetMulti(file);
+  }
+}
+
 export const newProject = () =>
   save({
     title: "Project location",

@@ -68,6 +68,14 @@ pub fn load_file(name: PathBuf, state: AppState) {
     });
 }
 
+#[tauri::command]
+#[specta::specta]
+pub fn load_dataset_multi(name: PathBuf, state: AppState) {
+    state.with_lock(|state| {
+        state.open_dataset_multi(name);
+    });
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
 pub enum EditDatasetError {
     OpenError(OpenDatasetError),

@@ -254,6 +254,18 @@ impl DatasetCollection {
         Ok(self.add(StatefulDataset::new(dataset, settings)))
     }
 
+    pub fn open_multi(
+        &mut self,
+        name: impl AsRef<Path>,
+        settings: &GlobalSettings,
+    ) -> Result<(), OpenDatasetError> {
+        let datasets = WrappedDataset::open_multi(name)?;
+        for dataset in datasets {
+            self.add(StatefulDataset::new(dataset, settings));
+        }
+        Ok(())
+    }
+
     pub fn set_index(&mut self, index: usize) -> Result<(), ()> {
         match self {
             Self::NonEmpty(datasets) => {

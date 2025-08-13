@@ -268,6 +268,9 @@ export const commands = {
   > {
     return await TAURI_INVOKE("get_tool_preset_input_types");
   },
+  async loadDatasetMulti(name: string): Promise<void> {
+    await TAURI_INVOKE("load_dataset_multi", { name });
+  },
 };
 
 /** user-defined events **/

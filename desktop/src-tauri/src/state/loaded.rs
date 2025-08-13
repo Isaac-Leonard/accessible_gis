@@ -44,6 +44,15 @@ impl AppData {
         })
     }
 
+    pub fn open_dataset_multi(&mut self, name: impl AsRef<Path>) -> Option<()> {
+        self.with_project_fallible(|project| {
+            project
+                .datasets
+                .open_multi(name, &project.settings)
+                .map_err(|err| ErrorDetails::OpenDatasetError(err.clone()))
+        })
+    }
+
     pub fn new<R: Runtime>(resolver: &PathResolver<R>) -> Self {
         let mut errors = ErrorList::new();
         Self {

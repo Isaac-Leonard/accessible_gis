@@ -1,20 +1,28 @@
 import { useState } from "preact/hooks";
 import { Drawer, useDrawer } from "./drawer";
-import { load } from "./files";
+import { load, loadMulti } from "./files";
 import { client } from "./api";
 
 export const OpenDatasetDialog = () => {
   const { open, setOpen, innerRef } = useDrawer<HTMLButtonElement>();
 
-  const fileHandler = () => {
+  const datasetHandler = () => {
     load();
+    setOpen(false);
+  };
+
+  const multiDatasetHandler = () => {
+    loadMulti();
     setOpen(false);
   };
 
   return (
     <Drawer open={open} setOpen={setOpen} openText="Open dataset">
-      <button ref={innerRef} onClick={fileHandler}>
-        Open file
+      <button ref={innerRef} onClick={datasetHandler}>
+        Open dataset
+      </button>
+      <button ref={innerRef} onClick={multiDatasetHandler}>
+        Open multi dataset
       </button>
       <OpenLink />
     </Drawer>

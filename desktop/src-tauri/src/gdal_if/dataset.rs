@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use gdal::{Dataset, DriverManager, errors::GdalError, spatial_ref::SpatialRef, vector::Layer};
+use gdal::{
+    Dataset, DriverManager, Metadata, errors::GdalError, spatial_ref::SpatialRef, vector::Layer,
+};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::{EnumDiscriminants, EnumIter};
@@ -85,6 +87,14 @@ impl WrappedDataset {
             })?,
             editable: false,
         })
+    }
+
+    pub fn open_multi(name: impl AsRef<Path>) -> Result<Vec<Self>, OpenDatasetError> {
+        let base_dataset = Dataset::open(&name).map_err(|err| OpenDatasetError {
+            name: name.as_ref().to_path_buf(),
+            gdal_error: err.into(),
+        })?;
+        get_all_subdatasets(&base_dataset)
     }
 
     /// Sometimes we need to manually open or create a dataset and need a way to wrap it
@@ -231,4 +241,26 @@ impl FlushCacheError {
 pub struct OpenDatasetError {
     pub name: PathBuf,
     pub gdal_error: MyGdalError,
+}
+
+fn get_all_subdatasets(ds: &Dataset) -> Result<Vec<WrappedDataset>, OpenDatasetError> {
+    // Fetch all metadata items in the SUBDATASETS domain
+    let Some(subdatasets_metadata) = ds.metadata_domain("SUBDATASETS") else {
+        return Ok(Vec::new());
+    };
+
+    subdatasets_metadata
+        .iter()
+        .filter_map(|metadata| {
+            let (key, value) = metadata.split_once("=")?;
+            let key = key.trim();
+            let value = value.trim();
+            if key.contains("_NAME") {
+                Some(value)
+            } else {
+                None
+            }
+        })
+        .map(WrappedDataset::open)
+        .try_collect()
 }
