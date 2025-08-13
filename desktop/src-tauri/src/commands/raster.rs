@@ -286,13 +286,16 @@ pub fn focus_dataset(state: AppState, device: State<TouchDevice>) {
         };
 
         // Unwrap is ssafe here as we have hard coded the epsg code which we know is valid.
-        // let transform = CoordTransform::new(&srs, &SpatialRef::from_epsg(4326).unwrap())
-        // .map_err(|err| ErrorDetails::Other(err.to_string()))?;
+        let transform = CoordTransform::new(&srs, &SpatialRef::from_epsg(4326).unwrap())
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?;
 
-        // let bounds = transform
-        // .transform_bounds(&bounds, 21)
-        // .map_err(|err| ErrorDetails::Other(err.to_string()))?;
-        // eprintln!("{bounds:?}");
+        let bounds = transform
+            .transform_bounds(&bounds, 21)
+            .map_err(|err| ErrorDetails::Other(err.to_string()))?;
+        eprintln!("{bounds:?}");
+        // TODO: Not sure if this is correct however I think it is fine for epsg 4326
+        // The order of coordinates seems to be getting switched around in the transformations
+        let bounds = [bounds[1], bounds[0], bounds[3], bounds[2]];
         device.send(AppMessage::FocusBox(bounds));
         Ok(())
     });
