@@ -36,10 +36,12 @@ async fn get_raster(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Resp
                 .map(|raster| raster.reproject(&raster_name, Srs::Epsg(4326)))
         })??;
         eprintln!("{:?}", output);
-        let wgs84_raster = state
-            .open_dataset(raster_name.to_str().unwrap().to_string())
-            .unwrap();
+        let wgs84_raster = state.open_dataset(raster_name).unwrap();
         let band = wgs84_raster.get_raster(1).unwrap();
+        eprintln!(
+            "Reprojected display band to bounds: {:?}",
+            band.band.get_bounds()
+        );
         let data = read_raster_data_enum(&band.band.band)?;
         let metadata = band.get_info_for_display();
         Some((metadata, data))
