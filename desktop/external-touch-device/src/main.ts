@@ -257,7 +257,10 @@ class GisManager {
       pauseAudio();
     } else {
       const index = y * this.raster.width + x;
-      const value = this.raster.data.data[index];
+      let value = this.raster.data.data[index];
+      if (value === this.raster.noDataValue) {
+        value = this.raster.min;
+      }
       const frequency =
         ((value - this.raster.min) / (this.raster.max - this.raster.min)) *
           (this.settings.raster.maxFreq - this.settings.raster.minFreq) +
@@ -288,16 +291,21 @@ class GisManager {
           dataView.getFloat64(24, true),
           dataView.getFloat64(32, true),
         ] as [number, number],
+        noDataValue:
+          dataView.getFloat64(40, true) > 0
+            ? dataView.getFloat64(48, true)
+            : null,
       };
       console.log(metadata);
-      const data = new Float32Array(rasterData, 40);
+      const data = new Float32Array(rasterData, 56);
       console.log("Parsed data");
       this.raster = new Raster(
         { type: "Float32", data },
         metadata.origin,
         metadata.width,
         metadata.height,
-        metadata.resolution
+        metadata.resolution,
+        metadata.noDataValue
       );
 
       this.renderRaster();

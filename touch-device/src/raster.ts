@@ -23,9 +23,18 @@ export class Raster {
     public topLeft: [number, number],
     public width: number,
     public height: number,
-    public resolution: number
+    public resolution: number,
+    public noDataValue: number | null
   ) {
-    const { min, max } = getMinMax(data.data);
+    const { min, max } = getMinMax(data.data, noDataValue);
+    // Types here are fine, typescript just can't narrow over the call to .map
+    // @ts-ignore
+    this.data = {
+      type: data.type,
+      data: data.data.map((v) =>
+        v === noDataValue || Number.isNaN(v) ? min : v
+      ),
+    };
     this.min = min;
     this.max = max;
     this.xResolution = resolution;
@@ -49,11 +58,16 @@ export class Raster {
   }
 }
 
-const getMinMax = (arr: ArrayLike<number>): { min: number; max: number } => {
-  let min = arr[0],
-    max = arr[0];
+const getMinMax = (
+  arr: ArrayLike<number>,
+  noDataValue: number | null
+): { min: number; max: number } => {
+  let min = Number.MAX_VALUE,
+    max = Number.MIN_VALUE;
   for (let i = 0; i < arr.length; i++) {
-    if (arr[i] < min) {
+    if (arr[i] === noDataValue) {
+      continue;
+    } else if (arr[i] < min) {
       min = arr[i];
     } else if (arr[i] > max) {
       max = arr[i];

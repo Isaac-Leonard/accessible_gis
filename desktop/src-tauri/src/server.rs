@@ -66,6 +66,17 @@ async fn get_raster(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Resp
     bytes
         .write_all(metadata.origin.1.to_le_bytes().as_slice())
         .unwrap();
+    match metadata.no_data_value {
+        Some(ndv) => {
+            // We need to indicate that the following value is defined
+            bytes.write_all(1_f64.to_le_bytes().as_slice()).unwrap();
+            bytes.write_all(ndv.to_le_bytes().as_slice()).unwrap();
+        }
+        None => {
+            bytes.write_all(0_f64.to_le_bytes().as_slice()).unwrap();
+            bytes.write_all(0_f64.to_le_bytes().as_slice()).unwrap();
+        }
+    }
     data.into_f64_vec().into_iter().for_each(|x| {
         bytes
             .write_all((x as f32).to_le_bytes().as_slice())

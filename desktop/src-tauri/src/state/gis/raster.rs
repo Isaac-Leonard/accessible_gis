@@ -64,6 +64,7 @@ impl<'a> StatefulRasterBand<'a> {
             height,
             // TODO: Should probably replace with x and y resolutions or even better just the full geotransform
             resolution: geo_transform[1],
+            no_data_value: self.band.no_data_value(),
         }
     }
 
@@ -83,4 +84,5 @@ pub struct RasterMetadata {
     pub width: usize,
     pub height: usize,
     pub origin: (f64, f64),
+    pub no_data_value: Option<f64>,
 }
