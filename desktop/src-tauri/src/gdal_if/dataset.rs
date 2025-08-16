@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
 
 use gdal::{
     Dataset, DriverManager, Metadata, errors::GdalError, spatial_ref::SpatialRef, vector::Layer,
@@ -19,6 +22,27 @@ pub struct WrappedDataset {
 }
 
 impl WrappedDataset {
+    /// Gets all the metadata for the dataset and returns it indexed by domain and subindexed by metadata key
+    pub fn get_metadata(&self) -> DatasetMetadata {
+        let metadata = self
+            .dataset
+            .metadata_domains()
+            .into_iter()
+            .filter_map(|domain| {
+                Some((
+                    domain.clone(),
+                    self.dataset
+                        .metadata_domain(&domain)?
+                        .iter()
+                        .filter_map(|metadata| metadata.split_once("="))
+                        .map(|(a, b)| (a.to_string(), b.to_string()))
+                        .collect::<BTreeMap<String, String>>(),
+                ))
+            })
+            .collect();
+        DatasetMetadata(metadata)
+    }
+
     pub fn get_all_layers(&self) -> Result<Vec<IndexedLayer>, ErrorDetails> {
         let mut layers = Vec::new();
         for (index, layer) in self.dataset.layers().enumerate() {
@@ -264,3 +288,6 @@ fn get_all_subdatasets(ds: &Dataset) -> Result<Vec<WrappedDataset>, OpenDatasetE
         .map(WrappedDataset::open)
         .try_collect()
 }
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+pub struct DatasetMetadata(pub BTreeMap<String, BTreeMap<String, String>>);

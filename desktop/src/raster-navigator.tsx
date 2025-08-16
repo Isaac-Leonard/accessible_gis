@@ -3,6 +3,7 @@ import {
   Point,
   RasterScreenData,
   RasterScreenMetadata,
+  DatasetMetadata,
 } from "./bindings";
 import { useEffect, useState } from "preact/hooks";
 import { client } from "./api";
@@ -254,16 +255,26 @@ const RasterMetadataDialog = ({
         Size: {metadata.cols} by {metadata.rows}
       </div>
       <div>srs: {metadata.srs}</div>
-      {Object.entries(metadata.other).map(([domain, items]) => (
-        <div>
-          <h3>{domain === "" ? "Route metadata" : domain}</h3>
-          {Object.entries(items).map(([name, value]) => (
-            <div>
-              {name} = {value}
-            </div>
-          ))}
-        </div>
-      ))}
+      <GdalMetadataViewer metadata={metadata.other} />
     </Dialog>
   );
 };
+
+export const GdalMetadataViewer = ({
+  metadata,
+}: {
+  metadata: DatasetMetadata;
+}) => (
+  <div>
+    {Object.entries(metadata).map(([domain, items]) => (
+      <div>
+        <h3>{domain === "" ? "Route metadata" : domain}</h3>
+        {Object.entries(items).map(([name, value]) => (
+          <div>
+            {name} = {value}
+          </div>
+        ))}
+      </div>
+    ))}
+  </div>
+);

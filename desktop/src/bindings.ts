@@ -337,6 +337,7 @@ export type DatasetCreationError =
  * Layer in this case refering to either a raster band or vector layer
  */
 export type DatasetLayerIndex = { dataset: number; layer: LayerIndex };
+export type DatasetMetadata = { [key in string]: { [key in string]: string } };
 export type DemClassificationError =
   | { type: "Geomorphons"; error: string }
   | { type: "Polygonise"; error: string }
@@ -736,7 +737,7 @@ export type RasterScreenMetadata = {
   cols: number;
   rows: number;
   srs: string | null;
-  other: { [key in string]: { [key in string]: string } };
+  other: DatasetMetadata;
 };
 export type RasterSize = { width: number; length: number; bands: number };
 export type RenderMethod =
@@ -825,6 +826,11 @@ export type VectorScreenData = {
   display: boolean;
   name_field: string | null;
   sort_features_by: SortOption;
+  metadata: VectorScreenMetadata;
+};
+export type VectorScreenMetadata = {
+  srs: string | null;
+  other: DatasetMetadata;
 };
 export type Waveform = "Sine" | "Square" | "Triangle" | "Sawtooth";
 

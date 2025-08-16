@@ -1,4 +1,10 @@
-import { FeatureInfo, Field, FieldType, VectorScreenData } from "./bindings";
+import {
+  FeatureInfo,
+  Field,
+  FieldType,
+  VectorScreenData,
+  VectorScreenMetadata,
+} from "./bindings";
 import { GeometryViewer } from "./geometry";
 import { OptionPicker } from "./option-picker";
 import { FeatureCreator } from "./feature-creator";
@@ -10,6 +16,7 @@ import { FeaturePicker } from "./feature-picker";
 import { FeatureCoppierDialog } from "./feature-copier";
 import { LayerSimplifierDialog } from "./layer_simplifier";
 import { LayerScreenContext } from "./context";
+import { GdalMetadataViewer } from "./raster-navigator";
 
 type VectorLayerProp = {
   layer: VectorScreenData;
@@ -18,6 +25,7 @@ type VectorLayerProp = {
 export const VectorNavigator = ({ layer }: VectorLayerProp) => {
   return (
     <div>
+      <VectorMetadataDialog metadata={layer.metadata} />
       <ReprojectionDialog />
       <FeatureCoppierDialog layer={layer} />
       <LayerSimplifierDialog />
@@ -357,5 +365,25 @@ const FeatureSorter = ({ layer }: NameFieldPickerProps) => {
         ""
       )}
     </div>
+  );
+};
+
+const VectorMetadataDialog = ({
+  metadata,
+}: {
+  metadata: VectorScreenMetadata;
+}) => {
+  const { open, setOpen } = useDialog();
+  return (
+    <Dialog
+      openText="Layer Metadata"
+      modal={true}
+      open={open}
+      setOpen={setOpen}
+    >
+      <h3>projection</h3>
+      <div>srs: {metadata.srs}</div>
+      <GdalMetadataViewer metadata={metadata.other} />
+    </Dialog>
   );
 };

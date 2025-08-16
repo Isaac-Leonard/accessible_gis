@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, path::PathBuf};
+use std::path::PathBuf;
 
 use gdal::{Metadata, vector::LayerAccess};
 use itertools::Itertools;
@@ -10,7 +10,7 @@ use crate::{
     commands::SortOption,
     dataset_collection::NonEmptyDelegatorImplExt,
     errors::ApplicationError,
-    gdal_if::{FieldSchema, FieldValue, LayerExt, LayerIndex},
+    gdal_if::{DatasetMetadata, FieldSchema, FieldValue, LayerExt, LayerIndex},
     state::{
         AppData,
         configurable_tools::{Input, SavedToolOutputAction},
@@ -79,6 +79,13 @@ pub struct VectorScreenData {
     pub display: bool,
     pub name_field: Option<String>,
     pub sort_features_by: SortOption,
+    pub metadata: VectorScreenMetadata,
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+pub struct VectorScreenMetadata {
+    srs: Option<String>,
+    other: DatasetMetadata,
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -103,7 +110,7 @@ pub struct RasterScreenMetadata {
     pub cols: usize,
     pub rows: usize,
     pub srs: Option<String>,
-    pub other: BTreeMap<String, BTreeMap<String, String>>,
+    pub other: DatasetMetadata,
 }
 
 impl AppData {
@@ -156,21 +163,26 @@ impl AppData {
                                 fid: feature.fid().unwrap(),
                             })
                             .collect_vec();
+                        let srs = layer
+                            .layer
+                            .layer
+                            .spatial_ref()
+                            .and_then(|x| x.to_wkt().ok());
                         Ok(Some(LayerScreenInfo::Vector(VectorScreenData {
                             name_field: primary_field_name.cloned(),
                             display: layer.info.display,
                             dataset_index: ds_index,
-                            srs: layer
-                                .layer
-                                .layer
-                                .spatial_ref()
-                                .and_then(|x| x.to_wkt().ok()),
+                            srs: srs.clone(),
                             field_schema: layer.layer.get_field_schema(),
                             features,
                             feature: feature.transpose()?,
                             layer_index: index,
                             sort_features_by: layer.info.sort_features_by.clone(),
                             editable: ds.dataset.editable,
+                            metadata: VectorScreenMetadata {
+                                srs,
+                                other: ds.dataset.get_metadata(),
+                            },
                         })))
                     }
                     Some(LayerIndex::Raster(index)) => {
@@ -195,24 +207,7 @@ impl AppData {
                                     .srs
                                     .clone()
                                     .map(|srs| srs.to_pretty_wkt().unwrap()),
-                                other: ds
-                                    .dataset
-                                    .dataset
-                                    .metadata_domains()
-                                    .into_iter()
-                                    .filter_map(|domain| {
-                                        Some((
-                                            domain.clone(),
-                                            ds.dataset
-                                                .dataset
-                                                .metadata_domain(&domain)?
-                                                .iter()
-                                                .filter_map(|metadata| metadata.split_once("="))
-                                                .map(|(a, b)| (a.to_string(), b.to_string()))
-                                                .collect::<BTreeMap<String, String>>(),
-                                        ))
-                                    })
-                                    .collect(),
+                                other: ds.dataset.get_metadata(),
                             },
                         })))
                     }
