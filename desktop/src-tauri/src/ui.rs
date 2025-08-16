@@ -1,6 +1,6 @@
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
-use gdal::vector::LayerAccess;
+use gdal::{Metadata, vector::LayerAccess};
 use itertools::Itertools;
 use local_ip_address::local_ip;
 use serde::{Deserialize, Serialize};
@@ -91,13 +91,19 @@ pub struct FeatureIdentifier {
 pub struct RasterScreenData {
     pub layer_index: usize,
     pub dataset_index: usize,
-    pub cols: usize,
-    pub rows: usize,
-    pub srs: Option<String>,
     pub display: bool,
     pub render_method: RenderMethod,
     pub ocr: bool,
     pub audio_settings: AudioSettings,
+    pub metadata: RasterScreenMetadata,
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+pub struct RasterScreenMetadata {
+    pub cols: usize,
+    pub rows: usize,
+    pub srs: Option<String>,
+    pub other: BTreeMap<String, BTreeMap<String, String>>,
 }
 
 impl AppData {
@@ -173,13 +179,6 @@ impl AppData {
                         Ok(Some(LayerScreenInfo::Raster(RasterScreenData {
                             dataset_index: ds_index,
                             layer_index: index,
-                            cols,
-                            rows,
-                            srs: band
-                                .band
-                                .srs
-                                .clone()
-                                .map(|srs| srs.to_pretty_wkt().unwrap()),
                             display: visible_raster_index
                                 == Some(RasterIndex {
                                     dataset: ds_index,
@@ -188,6 +187,33 @@ impl AppData {
                             render_method: band.info.render,
                             ocr: band.info.ocr,
                             audio_settings: band.info.audio_settings.clone(),
+                            metadata: RasterScreenMetadata {
+                                cols,
+                                rows,
+                                srs: band
+                                    .band
+                                    .srs
+                                    .clone()
+                                    .map(|srs| srs.to_pretty_wkt().unwrap()),
+                                other: ds
+                                    .dataset
+                                    .dataset
+                                    .metadata_domains()
+                                    .into_iter()
+                                    .filter_map(|domain| {
+                                        Some((
+                                            domain.clone(),
+                                            ds.dataset
+                                                .dataset
+                                                .metadata_domain(&domain)?
+                                                .iter()
+                                                .filter_map(|metadata| metadata.split_once("="))
+                                                .map(|(a, b)| (a.to_string(), b.to_string()))
+                                                .collect::<BTreeMap<String, String>>(),
+                                        ))
+                                    })
+                                    .collect(),
+                            },
                         })))
                     }
                     None => Ok(None),

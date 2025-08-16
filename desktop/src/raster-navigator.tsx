@@ -1,4 +1,9 @@
-import { AudioSettings, Point, RasterScreenData } from "./bindings";
+import {
+  AudioSettings,
+  Point,
+  RasterScreenData,
+  RasterScreenMetadata,
+} from "./bindings";
 import { useEffect, useState } from "preact/hooks";
 import { client } from "./api";
 import { ReprojectionDialog } from "./reprojection-dialog";
@@ -12,7 +17,7 @@ import { AudioSettingsScreen } from "./settings-screen";
 export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
   return (
     <div>
-      <RasterInfoDialog layer={layer} />
+      <RasterMetadataDialog metadata={layer.metadata} />
       <ReprojectionDialog />
       <DemMethodsDialog />
       <ClassificationDialog />
@@ -83,7 +88,7 @@ const PixelExplorer = ({ layer }: { layer: RasterScreenData }) => {
   const [{ x, y }, setCoords] = useState({ x: 0, y: 0 });
   const [radius, setRadius] = useState(1);
   const { open, setOpen } = useDialog();
-  let { cols, rows } = layer;
+  let { cols, rows } = layer.metadata;
   const [getCountry, setCountry] = useState(false);
   const [getTown, setTown] = useState(false);
   const [info, setInfo] = useState("");
@@ -236,14 +241,29 @@ const AudioSettingsDialog = ({ settings }: { settings: AudioSettings }) => {
   );
 };
 
-const RasterInfoDialog = ({ layer }: { layer: RasterScreenData }) => {
+const RasterMetadataDialog = ({
+  metadata,
+}: {
+  metadata: RasterScreenMetadata;
+}) => {
   const { open, setOpen } = useDialog();
   return (
     <Dialog openText="Band Metadata" modal={true} open={open} setOpen={setOpen}>
+      <h3>Size and projection</h3>
       <div>
-        Size: {layer.cols} by {layer.rows}
+        Size: {metadata.cols} by {metadata.rows}
       </div>
-      <div>srs: {layer.srs}</div>
+      <div>srs: {metadata.srs}</div>
+      {Object.entries(metadata.other).map(([domain, items]) => (
+        <div>
+          <h3>{domain === "" ? "Route metadata" : domain}</h3>
+          {Object.entries(items).map(([name, value]) => (
+            <div>
+              {name} = {value}
+            </div>
+          ))}
+        </div>
+      ))}
     </Dialog>
   );
 };

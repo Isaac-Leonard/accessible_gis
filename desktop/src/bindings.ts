@@ -726,13 +726,17 @@ export type RasterIndex = { dataset: number; band: number };
 export type RasterScreenData = {
   layer_index: number;
   dataset_index: number;
-  cols: number;
-  rows: number;
-  srs: string | null;
   display: boolean;
   render_method: RenderMethod;
   ocr: boolean;
   audio_settings: AudioSettings;
+  metadata: RasterScreenMetadata;
+};
+export type RasterScreenMetadata = {
+  cols: number;
+  rows: number;
+  srs: string | null;
+  other: { [key in string]: { [key in string]: string } };
 };
 export type RasterSize = { width: number; length: number; bands: number };
 export type RenderMethod =
