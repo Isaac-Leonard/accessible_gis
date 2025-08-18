@@ -4,7 +4,9 @@ use std::{
     process::{Command, Output as CommandOutput},
 };
 
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::{
     errors::ErrorDetails, gdal_if::LayerIndexDiscriminants,
@@ -26,6 +28,7 @@ pub struct ToolOutput {
 }
 
 pub trait Tool: Send + Sync {
+    fn get_id(&self) -> Uuid;
     fn get_label(&self) -> String;
 
     fn get_expected_input_parameters(&self) -> Vec<Input>;
@@ -34,11 +37,11 @@ pub trait Tool: Send + Sync {
 
     fn parse_input_parameters<'a>(
         &self,
-        params: Vec<ParameterValue>,
+        params: Vec<ToolParameter>,
         project: &'a mut DatasetCollection,
     ) -> Result<Vec<NamedParsedParamValue<'a>>, ErrorDetails> {
         let mut parsed = Vec::new();
-        let mut params = params.into_iter();
+        let mut params = params.into_iter().map(|param| param.value);
         for expected in self.get_expected_input_parameters() {
             let parsed_val = NamedParsedParamValue::parse_from(&mut params, expected, project)?;
             // TODO: This is really bad
@@ -64,7 +67,7 @@ pub trait Tool: Send + Sync {
 
     fn run(
         &self,
-        params: Vec<ParameterValue>,
+        params: Vec<ToolParameter>,
         project: &mut DatasetCollection,
     ) -> Result<ToolOutput, ErrorDetails> {
         let mut output_files = Vec::new();
@@ -96,6 +99,7 @@ pub trait Tool: Send + Sync {
         ToolDescriptor {
             label: self.get_label(),
             inputs: self.get_expected_input_parameters(),
+            id: self.get_id(),
         }
     }
 
@@ -153,15 +157,40 @@ pub struct ToolOutputAction {
     pub load_layers: Vec<usize>,
 }
 
+#[derive(Clone, Debug, PartialEq, Deserialize, specta::Type)]
+pub struct NewUserDefinedTool {
+    label: String,
+    inputs: Vec<NewInput>,
+    command: String,
+    output_actions: ToolOutputAction,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct UserDefinedTool {
     label: String,
     inputs: Vec<Input>,
     command: String,
     output_actions: ToolOutputAction,
+    id: Uuid,
+}
+
+impl From<NewUserDefinedTool> for UserDefinedTool {
+    fn from(value: NewUserDefinedTool) -> Self {
+        Self {
+            label: value.label,
+            inputs: value.inputs.into_iter().map_into().collect(),
+            command: value.command,
+            output_actions: value.output_actions,
+            id: Uuid::new_v4(),
+        }
+    }
 }
 
 impl Tool for UserDefinedTool {
+    fn get_id(&self) -> Uuid {
+        self.id
+    }
+
     fn get_label(&self) -> String {
         self.label.clone()
     }
@@ -203,11 +232,30 @@ impl Tool for UserDefinedTool {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Deserialize, specta::Type)]
+pub struct NewInput {
+    pub label: String,
+    pub name: Option<String>,
+    pub param_type: InputType,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct Input {
     pub label: String,
     pub name: Option<String>,
     pub param_type: InputType,
+    pub id: Uuid,
+}
+
+impl From<NewInput> for Input {
+    fn from(value: NewInput) -> Self {
+        Self {
+            label: value.label,
+            name: value.name,
+            param_type: value.param_type,
+            id: Uuid::new_v4(),
+        }
+    }
 }
 
 #[derive(
@@ -227,7 +275,13 @@ pub enum InputType {
     Preset(PresetParameterValue),
 }
 
-#[derive(Clone, Debug, Deserialize, specta::Type, strum::EnumTryAs)]
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
+pub struct ToolParameter {
+    id: Uuid,
+    value: ParameterValue,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type, strum::EnumTryAs)]
 #[serde(tag = "type", content = "value")]
 pub enum ParameterValue {
     Float(f64),

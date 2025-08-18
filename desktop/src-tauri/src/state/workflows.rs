@@ -2,12 +2,14 @@ use std::path::PathBuf;
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::{errors::ErrorDetails, gdal_if::WrappedDataset};
 
 use super::{
     configurable_tools::{Input, ParameterValue, ToolOutput},
     dataset_collection::NonEmptyDelegatorImpl,
+    gis::combined::DatasetLayerIndex,
     projects::Project,
 };
 
@@ -38,10 +40,10 @@ pub struct Workflow {
 
 #[derive(Clone, Debug, Deserialize, specta::Type)]
 pub struct RuntimeInputs {
-    inputs: Vec<ParameterValue>,
+    inputs: Vec<WorkflowValue>,
 }
 
-pub enum WorkflowInput {
+pub enum WorkflowInputDescriptor {
     Input(Input),
     Tool(PathBuf),
 }
@@ -64,7 +66,7 @@ fn run_workflow(
         for index in call.inputs.iter() {
             let input = match index {
                 WorkflowInputIndex::Raw(index) => {
-                    WorkflowInput::Input(workflow.inputs.get(*index).unwrap().clone())
+                    WorkflowInputDescriptor::Input(workflow.inputs.get(*index).unwrap().clone())
                 }
                 WorkflowInputIndex::ToolResult(ToolResult { tool, output }) => {
                     let tool_output = tool_outputs.get(*tool).ok_or_else(|| {
@@ -78,7 +80,7 @@ fn run_workflow(
                     let dataset =
                         WrappedDataset::open(path).map_err(ErrorDetails::OpenDatasetError)?;
                     dataset_storage.push(dataset);
-                    WorkflowInput::Tool(path.clone())
+                    WorkflowInputDescriptor::Tool(path.clone())
                 }
             };
             inputs.push(input)
@@ -88,4 +90,30 @@ fn run_workflow(
         tool_outputs.push(output)
     }
     Ok(())
+}
+
+#[derive(Clone, Debug, Deserialize, specta::Type, strum::EnumTryAs)]
+#[serde(tag = "type", content = "value")]
+pub enum WorkflowValue {
+    Float(f64),
+    Int(i64),
+    String(String),
+    Layer(DatasetLayerIndex),
+    Dataset(usize),
+    Option(String),
+    Flag(bool),
+    File(FileValue),
+}
+
+#[derive(Clone, Debug, Deserialize, specta::Type, strum::EnumTryAs)]
+#[serde(tag = "type", content = "value")]
+pub enum FileValue {
+    Temp,
+    Custom(PathBuf),
+}
+
+#[derive(Clone, Debug, Deserialize, specta::Type)]
+pub struct WorkflowInput {
+    id: Uuid,
+    value: WorkflowValue,
 }

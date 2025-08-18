@@ -248,11 +248,8 @@ export const commands = {
   async toggleAnnounceGeometryTypes(): Promise<void> {
     await TAURI_INVOKE("toggle_announce_geometry_types");
   },
-  async runTool(
-    toolIndex: number,
-    parameters: ParameterValue[]
-  ): Promise<void> {
-    await TAURI_INVOKE("run_tool", { toolIndex, parameters });
+  async runTool(toolId: string, parameters: ToolParameter[]): Promise<void> {
+    await TAURI_INVOKE("run_tool", { toolId, parameters });
   },
   async markToolOutputRead(id: string): Promise<void> {
     await TAURI_INVOKE("mark_tool_output_read", { id });
@@ -270,6 +267,9 @@ export const commands = {
   },
   async loadDatasetMulti(name: string): Promise<void> {
     await TAURI_INVOKE("load_dataset_multi", { name });
+  },
+  async addWorkflow(workflow: Workflow): Promise<void> {
+    await TAURI_INVOKE("add_workflow", { workflow });
   },
 };
 
@@ -462,6 +462,7 @@ export type Input = {
   label: string;
   name: string | null;
   param_type: InputType;
+  id: string;
 };
 export type InputType =
   | { type: "Float" }
@@ -781,12 +782,15 @@ export type ThiessenPolygonRecord = {
   start_line: number;
   column: number;
 };
-export type ToolDescriptor = { label: string; inputs: Input[] };
+export type ToolDescriptor = { label: string; inputs: Input[]; id: string };
 export type ToolOutput = {
   returned_output: ReturnedToolOutput | null;
   files: string[];
 };
 export type ToolOutputAction = { alert_output: boolean; load_layers: number[] };
+export type ToolParameter = { id: string; value: ParameterValue };
+export type ToolResult = { tool: number; output: number };
+export type ToolWrapper = { tool: number; inputs: WorkflowInputIndex[] };
 export type ToolsScreenInfo = {
   tools: ToolDescriptor[];
   layers: LayerDescriptor[];
@@ -814,6 +818,7 @@ export type UserDefinedTool = {
   inputs: Input[];
   command: string;
   output_actions: ToolOutputAction;
+  id: string;
 };
 export type VectorScreenData = {
   field_schema: FieldSchema[];
@@ -833,6 +838,10 @@ export type VectorScreenMetadata = {
   other: DatasetMetadata;
 };
 export type Waveform = "Sine" | "Square" | "Triangle" | "Sawtooth";
+export type Workflow = { inputs: Input[]; tool_calls: ToolWrapper[] };
+export type WorkflowInputIndex =
+  | { type: "Raw"; value: number }
+  | { type: "ToolResult"; value: ToolResult };
 
 /** tauri-specta globals **/
 

@@ -12,11 +12,13 @@ import {
   InputType,
   InputTypeDiscriminants,
   LayerDescriptor,
+  ParameterValue,
   PresetParameterValue,
   PresetParameterValueDiscriminants,
   SavedToolOutputAction,
   ToolDescriptor,
   ToolOutput,
+  ToolParameter,
   ToolsScreenInfo,
   UserDefinedTool,
 } from "./bindings";
@@ -35,15 +37,15 @@ export const ToolsScreen = ({ tools, layers }: ToolsScreenInfo) => {
       <h2>Tools</h2>
       <ToolCreationDialog />
       <div>
-        {tools.map((tool, index) => (
-          <ToolDialog tool={tool} index={index} layers={layers} />
+        {tools.map((tool) => (
+          <ToolDialog key={tool.id} tool={tool} layers={layers} />
         ))}
       </div>
     </div>
   );
 };
 
-type Param = { label: string } & (
+type ParameterDescriptor = { label: string; id: string } & (
   | { type: "Float"; value: number }
   | { type: "Int"; value: number }
   | { type: "String"; value: string }
@@ -55,16 +57,36 @@ type Param = { label: string } & (
   | { type: "Preset"; value: PresetParameterValue }
 );
 
-const paramFromInput = (input: Input): Param => {
+const paramFromInput = (input: Input): ParameterDescriptor => {
   switch (input.param_type.type) {
     case "Float":
-      return { type: input.param_type.type, value: 0, label: input.label };
+      return {
+        type: input.param_type.type,
+        value: 0,
+        label: input.label,
+        id: input.id,
+      };
     case "Int":
-      return { type: input.param_type.type, value: 0, label: input.label };
+      return {
+        type: input.param_type.type,
+        value: 0,
+        label: input.label,
+        id: input.id,
+      };
     case "String":
-      return { type: input.param_type.type, value: "", label: input.label };
+      return {
+        type: input.param_type.type,
+        value: "",
+        label: input.label,
+        id: input.id,
+      };
     case "Dataset":
-      return { type: input.param_type.type, value: 0, label: input.label };
+      return {
+        type: input.param_type.type,
+        value: 0,
+        label: input.label,
+        id: input.id,
+      };
     case "Layer":
       return {
         type: input.param_type.type,
@@ -74,6 +96,7 @@ const paramFromInput = (input: Input): Param => {
         },
         label: input.label,
         options: input.param_type.options,
+        id: input.id,
       };
     case "Option":
       return {
@@ -81,31 +104,39 @@ const paramFromInput = (input: Input): Param => {
         value: input.param_type.options[0] ?? null,
         label: input.label,
         options: input.param_type.options,
+        id: input.id,
       };
     case "Flag":
       return {
         type: input.param_type.type,
         value: false,
         label: input.label,
+        id: input.id,
       };
     case "File":
-      return { type: input.param_type.type, value: "", label: input.label };
+      return {
+        type: input.param_type.type,
+        value: "",
+        label: input.label,
+        id: input.id,
+      };
     case "Preset":
       return {
         type: input.param_type.type,
         value: input.param_type.options,
         label: input.label,
+        id: input.id,
       };
   }
 };
 
 type ToolDialogProps = {
   tool: ToolDescriptor;
-  index: number;
+
   layers: LayerDescriptor[];
 };
 
-const ToolDialog = ({ tool, index, layers }: ToolDialogProps) => {
+const ToolDialog = ({ tool, layers }: ToolDialogProps) => {
   const { open, setOpen } = useDialog();
 
   const [params, setParams] = useState(() => tool.inputs.map(paramFromInput));
@@ -119,7 +150,7 @@ const ToolDialog = ({ tool, index, layers }: ToolDialogProps) => {
       setParams(newArray);
     };
 
-  const makeParamBinding = <T extends Param>(
+  const makeParamBinding = <T extends ParameterDescriptor>(
     param: T,
     index: number
   ): { value: T["value"]; setValue: (value: T["value"]) => void } => ({
@@ -154,10 +185,7 @@ const ToolDialog = ({ tool, index, layers }: ToolDialogProps) => {
       ))}
       <button
         onClick={() => {
-          client.runTool(
-            index,
-            params.filter((param) => param.type !== "Preset")
-          );
+          client.runTool(tool.id, parametersFromUi(params));
           setOpen(false);
         }}
       >
@@ -166,6 +194,24 @@ const ToolDialog = ({ tool, index, layers }: ToolDialogProps) => {
     </Dialog>
   );
 };
+
+const parametersFromUi = (params: ParameterDescriptor[]): ToolParameter[] => {
+  return params
+    .filter(
+      (param): param is Exclude<ParameterDescriptor, { type: "Preset" }> =>
+        param.type !== "Preset"
+    )
+    .map((param) => ({
+      id: param.id,
+      value: ParameterValueFromDescriptor(param),
+    }));
+};
+
+// TODO: Do proper checking for validity here
+const ParameterValueFromDescriptor = (
+  param: ParameterDescriptor
+): ParameterValue =>
+  ({ type: param.type, value: param.value } as ParameterValue);
 
 const ToolInput = ({
   param,
@@ -176,9 +222,9 @@ const ToolInput = ({
   vectorLayers,
   rasterLayers,
 }: {
-  param: Param;
+  param: ParameterDescriptor;
   index: number;
-  makeParamBinding: <T extends Param>(
+  makeParamBinding: <T extends ParameterDescriptor>(
     param: T,
     index: number
   ) => GetSet<T["value"]>;

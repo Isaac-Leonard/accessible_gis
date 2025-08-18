@@ -6,7 +6,9 @@ use crate::{
     gdal_if::Srs,
     state::{
         AppState,
-        configurable_tools::{ParameterValue, SavedToolOutputAction, UserDefinedTool},
+        configurable_tools::{
+            ParameterValue, SavedToolOutputAction, ToolParameter, UserDefinedTool,
+        },
         gis::combined::StatefulLayerEnum,
         workflows::Workflow,
     },
@@ -57,12 +59,13 @@ pub fn set_srs(srs: Srs, state: AppState) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn run_tool(tool_index: usize, parameters: Vec<ParameterValue>, state: AppState) {
+pub fn run_tool(tool_id: Uuid, parameters: Vec<ToolParameter>, state: AppState) {
     state.with_project_fallible(|project| {
         let tools = project.get_tools();
         let tool = tools
-            .get(tool_index)
-            .ok_or_else(|| ErrorDetails::Other("Could not get tool".to_string()))?;
+            .iter()
+            .find(|tool| tool.get_id() == tool_id)
+            .ok_or_else(|| ErrorDetails::Other(format!("Could not get tool with id {tool_id}")))?;
         let output = tool.run(parameters, &mut project.datasets)?;
         let action = tool.get_output_actions();
         for file in &action.load_layers {

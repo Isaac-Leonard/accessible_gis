@@ -3,9 +3,11 @@
 use core::f64;
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::LazyLock;
 
 use gdal::{Dataset, vector::LayerAccess};
 use geo::{BoundingRect, Centroid, ConvexHull, GeodesicArea, LinesIter, Rotate};
+use uuid::Uuid;
 
 use crate::{
     errors::ErrorDetails,
@@ -209,15 +211,22 @@ pub fn describe_landforms(path: impl AsRef<Path>) -> Result<String, String> {
 pub struct DescribeLandformsTool;
 
 impl Tool for DescribeLandformsTool {
+    fn get_id(&self) -> Uuid {
+        static id: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
+        *id
+    }
+
     fn get_label(&self) -> String {
         "Describe landforms".to_string()
     }
 
     fn get_expected_input_parameters(&self) -> Vec<Input> {
+        static id: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
         vec![Input {
             label: "Landforms layer".to_string(),
             name: None,
             param_type: InputType::Layer(LayerIndexDiscriminants::Vector),
+            id: *id,
         }]
     }
 
