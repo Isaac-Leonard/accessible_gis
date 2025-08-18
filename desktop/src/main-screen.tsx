@@ -145,15 +145,6 @@ function InnerLayerView({ layer }: { layer: LayerScreenInfo }) {
   );
 }
 
-const Metadata = ({ layer }: { layer: LayerScreenInfo }) => {
-  return (
-    <div>
-      {" "}
-      <div>SRS: {layer.srs}</div>
-    </div>
-  );
-};
-
 const IpDialog = ({ ip }: { ip: string }) => {
   const { open, setOpen, innerRef } = useDialog<HTMLParagraphElement>();
   return (
@@ -171,7 +162,6 @@ const IpDialog = ({ ip }: { ip: string }) => {
 const CurrentLayerView = ({ layer }: { layer: LayerScreenInfo }) => {
   return (
     <div>
-      <Metadata layer={layer} />
       <InnerLayerView layer={layer} />
     </div>
   );
