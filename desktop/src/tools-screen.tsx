@@ -31,6 +31,7 @@ import {
 } from "./option-picker";
 import { client, state } from "./api";
 import { LoadButton, SaveButton } from "./save-button";
+import { JSX } from "preact/jsx-runtime";
 
 export const ToolsScreen = ({ tools, layers }: ToolsScreenInfo) => {
   return (
@@ -233,7 +234,7 @@ const ToolInput = ({
   vectorLayers: LayerDescriptor[];
   rasterLayers: LayerDescriptor[];
   setValueAt: <T>(index: number) => (value: T) => void;
-}) => {
+}): JSX.Element => {
   switch (param.type) {
     case "Float":
       return (

@@ -268,11 +268,16 @@ export const commands = {
   async loadDatasetMulti(name: string): Promise<void> {
     await TAURI_INVOKE("load_dataset_multi", { name });
   },
-  async addWorkflow(workflow: Workflow): Promise<void> {
+  async addWorkflow(workflow: NewWorkflow): Promise<void> {
     await TAURI_INVOKE("add_workflow", { workflow });
   },
   async runWorkflow(workflow: RuntimeInputs): Promise<void> {
     await TAURI_INVOKE("run_workflow", { workflow });
+  },
+  async getWorkflowInputTypes(): Promise<
+    WorkflowInputValueDescriptorDiscriminants[]
+  > {
+    return await TAURI_INVOKE("get_workflow_input_types");
   },
 };
 
@@ -677,6 +682,16 @@ export type NewUserDefinedTool = {
   command: string;
   output_actions: ToolOutputAction;
 };
+export type NewWorkflow = {
+  label: string;
+  inputs: NewWorkflowInputDescriptor[];
+  tools: string[];
+};
+export type NewWorkflowInputDescriptor = {
+  label: string;
+  value: WorkflowInputValueDescriptor;
+  connections: WorkflowConnection[];
+};
 export type OpenDatasetError = { name: string; gdal_error: MyGdalError };
 export type OpenLineDescription = {
   x: number;
@@ -769,7 +784,7 @@ export type ReturnedToolOutput =
   | { type: "Command"; value: Output }
   | { type: "String"; value: string }
   | { type: "File"; value: string };
-export type RuntimeInputs = { inputs: WorkflowValue[] };
+export type RuntimeInputs = { inputs: WorkflowInput[] };
 export type SavedToolOutputAction = {
   tool: string;
   output: ToolOutput;
@@ -805,8 +820,6 @@ export type ToolOutput = {
 };
 export type ToolOutputAction = { alert_output: boolean; load_layers: number[] };
 export type ToolParameter = { id: string; value: ParameterValue };
-export type ToolResult = { tool: number; output: number };
-export type ToolWrapper = { tool: number; inputs: WorkflowInputIndex[] };
 export type ToolsScreenInfo = {
   tools: ToolDescriptor[];
   layers: LayerDescriptor[];
@@ -823,7 +836,8 @@ export type UiScreen =
   | ({ name: "Settings" } & GlobalSettings)
   | ({ name: "TouchDevice" } & TouchDeviceState)
   | { name: "Errors" }
-  | ({ name: "Tools" } & ToolsScreenInfo);
+  | ({ name: "Tools" } & ToolsScreenInfo)
+  | ({ name: "Workflows" } & WorkflowsScreenInfo);
 export type UiState = {
   screen: UiScreen;
   errors: ApplicationError[];
@@ -847,19 +861,50 @@ export type VectorScreenMetadata = {
   other: DatasetMetadata;
 };
 export type Waveform = "Sine" | "Square" | "Triangle" | "Sawtooth";
-export type Workflow = { inputs: Input[]; tool_calls: ToolWrapper[] };
-export type WorkflowInputIndex =
-  | { type: "Raw"; value: number }
-  | { type: "ToolResult"; value: ToolResult };
-export type WorkflowValue =
+export type Workflow = {
+  label: string;
+  inputs: WorkflowInputDescriptor[];
+  tools: string[];
+};
+export type WorkflowConnection = { tool: string; parameter: string };
+export type WorkflowInput = { id: string; value: WorkflowInputValue };
+export type WorkflowInputDescriptor = {
+  id: string;
+  label: string;
+  value: WorkflowInputValueDescriptor;
+  connections: WorkflowConnection[];
+};
+export type WorkflowInputValue =
   | { type: "Float"; value: number }
   | { type: "Int"; value: number }
   | { type: "String"; value: string }
-  | { type: "Layer"; value: DatasetLayerIndex }
-  | { type: "Dataset"; value: number }
   | { type: "Option"; value: string }
   | { type: "Flag"; value: boolean }
   | { type: "File"; value: FileValue };
+export type WorkflowInputValueDescriptor =
+  | { type: "Float" }
+  | { type: "Int" }
+  | { type: "String" }
+  | { type: "Layer"; value: LayerIndexDiscriminants }
+  | { type: "Option"; value: string[] }
+  | { type: "Flag" }
+  | { type: "File" };
+/**
+ * Auto-generated discriminant enum variants
+ */
+export type WorkflowInputValueDescriptorDiscriminants =
+  | "Float"
+  | "Int"
+  | "String"
+  | "Layer"
+  | "Option"
+  | "Flag"
+  | "File";
+export type WorkflowsScreenInfo = {
+  tools: ToolDescriptor[];
+  workflows: Workflow[];
+  layers: LayerDescriptor[];
+};
 
 /** tauri-specta globals **/
 

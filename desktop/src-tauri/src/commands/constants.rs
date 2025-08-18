@@ -7,6 +7,7 @@ use crate::{
         configurable_tools::{InputTypeDiscriminants, PresetParameterValueDiscriminants},
         gis::raster::RenderMethod,
         settings::AudioIndicator,
+        workflows::WorkflowInputValueDescriptorDiscriminants,
     },
 };
 
@@ -40,4 +41,10 @@ pub fn get_tool_input_types() -> Vec<InputTypeDiscriminants> {
 #[specta::specta]
 pub fn get_tool_preset_input_types() -> Vec<PresetParameterValueDiscriminants> {
     PresetParameterValueDiscriminants::iter().collect_vec()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_workflow_input_types() -> Vec<WorkflowInputValueDescriptorDiscriminants> {
+    WorkflowInputValueDescriptorDiscriminants::iter().collect_vec()
 }

@@ -110,6 +110,7 @@ pub fn generate_handlers(
             load_dataset_multi,
             add_workflow,
             run_workflow,
+            get_workflow_input_types,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds

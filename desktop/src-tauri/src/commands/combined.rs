@@ -7,11 +7,10 @@ use crate::{
     state::{
         AppState,
         configurable_tools::{
-            NewUserDefinedTool, ParameterValue, SavedToolOutputAction, ToolParameter,
-            UserDefinedTool,
+            NewUserDefinedTool, SavedToolOutputAction, ToolParameter, UserDefinedTool,
         },
         gis::combined::StatefulLayerEnum,
-        workflows::{RuntimeInputs, Workflow},
+        workflows::{NewWorkflow, RuntimeInputs},
     },
 };
 
@@ -114,7 +113,7 @@ pub fn add_custom_tool(tool: NewUserDefinedTool, state: AppState) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn add_workflow(workflow: Workflow, state: AppState) {}
+pub fn add_workflow(workflow: NewWorkflow, state: AppState) {}
 
 #[tauri::command]
 #[specta::specta]

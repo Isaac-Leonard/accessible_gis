@@ -4,7 +4,10 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{errors::ErrorDetails, gdal_if::WrappedDataset};
+use crate::{
+    errors::ErrorDetails,
+    gdal_if::{LayerIndexDiscriminants, WrappedDataset},
+};
 
 use super::{
     configurable_tools::{Input, ParameterValue, ToolOutput},
@@ -12,12 +15,6 @@ use super::{
     gis::combined::DatasetLayerIndex,
     projects::Project,
 };
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
-pub struct ToolWrapper {
-    tool: usize,
-    inputs: Vec<WorkflowInputIndex>,
-}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "type", content = "value")]
@@ -32,74 +29,86 @@ pub struct ToolResult {
     output: usize,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+#[derive(Clone, Debug, Deserialize, specta::Type)]
+pub struct NewWorkflow {
+    label: String,
+    pub inputs: Vec<NewWorkflowInputDescriptor>,
+    pub tools: Vec<Uuid>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
 pub struct Workflow {
-    inputs: Vec<Input>,
-    pub tool_calls: Vec<ToolWrapper>,
+    label: String,
+    inputs: Vec<WorkflowInputDescriptor>,
+    pub tools: Vec<Uuid>,
+}
+
+impl Workflow {
+    // TODO: add validation
+    pub fn create(workflow: NewWorkflow) -> Self {
+        let mut inputs = Vec::new();
+        for input in workflow.inputs {}
+        Self {
+            label: workflow.label,
+            inputs,
+            tools: workflow.tools,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, specta::Type)]
 pub struct RuntimeInputs {
-    inputs: Vec<WorkflowValue>,
+    inputs: Vec<WorkflowInput>,
 }
 
-pub enum WorkflowInputDescriptor {
-    Input(Input),
-    Tool(PathBuf),
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
+pub struct WorkflowConnection {
+    tool: Uuid,
+    parameter: Uuid,
 }
 
-fn run_workflow(
-    project: &mut Project,
-    workflow: Workflow,
-    inputs: RuntimeInputs,
-) -> Result<(), ErrorDetails> {
-    let mut tool_outputs: Vec<ToolOutput> = Vec::new();
-    let mut dataset_storage = Vec::new();
-    let mut datasets = project
-        .datasets
-        .iter_mut()
-        .map(|ds| &mut ds.dataset)
-        .collect_vec();
-    for call in workflow.tool_calls {
-        let tool = project.tools.get(call.tool).unwrap();
-        let mut inputs = Vec::new();
-        for index in call.inputs.iter() {
-            let input = match index {
-                WorkflowInputIndex::Raw(index) => {
-                    WorkflowInputDescriptor::Input(workflow.inputs.get(*index).unwrap().clone())
-                }
-                WorkflowInputIndex::ToolResult(ToolResult { tool, output }) => {
-                    let tool_output = tool_outputs.get(*tool).ok_or_else(|| {
-                        ErrorDetails::Other(
-                            "Tried to run tool before tool it requires for input ran".to_string(),
-                        )
-                    })?;
-                    let path = tool_output.files.get(*output).ok_or_else(|| {
-                        ErrorDetails::Other("Tried to get non existant output of tool".to_string())
-                    })?;
-                    let dataset =
-                        WrappedDataset::open(path).map_err(ErrorDetails::OpenDatasetError)?;
-                    dataset_storage.push(dataset);
-                    WorkflowInputDescriptor::Tool(path.clone())
-                }
-            };
-            inputs.push(input)
-        }
-        let expected_inputs = tool.get_expected_input_parameters();
-        let output = todo![];
-        tool_outputs.push(output)
-    }
-    Ok(())
+#[derive(Clone, Debug, Deserialize, specta::Type)]
+pub struct NewWorkflowInputDescriptor {
+    label: String,
+    value: WorkflowInputValueDescriptor,
+    connections: Vec<WorkflowConnection>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
+pub struct WorkflowInputDescriptor {
+    id: Uuid,
+    label: String,
+    value: WorkflowInputValueDescriptor,
+    connections: Vec<WorkflowConnection>,
+}
+
+#[derive(
+    Clone, Debug, Serialize, Deserialize, specta::Type, strum::EnumTryAs, strum::EnumDiscriminants,
+)]
+#[serde(tag = "type", content = "value")]
+#[strum_discriminants(derive(Serialize, Deserialize, specta::Type, strum::EnumIter))]
+pub enum WorkflowInputValueDescriptor {
+    Float,
+    Int,
+    String,
+    Layer(LayerIndexDiscriminants),
+    Option(Vec<String>),
+    Flag,
+    File,
+}
+
+#[derive(Clone, Debug, Deserialize, specta::Type)]
+pub struct WorkflowInput {
+    id: Uuid,
+    value: WorkflowInputValue,
 }
 
 #[derive(Clone, Debug, Deserialize, specta::Type, strum::EnumTryAs)]
 #[serde(tag = "type", content = "value")]
-pub enum WorkflowValue {
+pub enum WorkflowInputValue {
     Float(f64),
     Int(i64),
     String(String),
-    Layer(DatasetLayerIndex),
-    Dataset(usize),
     Option(String),
     Flag(bool),
     File(FileValue),
@@ -110,10 +119,4 @@ pub enum WorkflowValue {
 pub enum FileValue {
     Temp,
     Custom(PathBuf),
-}
-
-#[derive(Clone, Debug, Deserialize, specta::Type)]
-pub struct WorkflowInput {
-    id: Uuid,
-    value: WorkflowValue,
 }

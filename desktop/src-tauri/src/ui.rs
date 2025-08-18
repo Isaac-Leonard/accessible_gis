@@ -17,18 +17,19 @@ use crate::{
         configurable_tools::{Input, SavedToolOutputAction},
         gis::{combined::RasterIndex, raster::RenderMethod},
         settings::{AudioSettings, GlobalSettings},
+        workflows::Workflow,
     },
     tools::shape_analysis::FloatWrapper,
 };
 
-#[derive(Clone, Serialize, PartialEq, Debug, specta::Type)]
+#[derive(Clone, Serialize, Debug, specta::Type)]
 pub struct UiState {
     pub screen: UiScreen,
     pub errors: Vec<ApplicationError>,
     pub tool_outputs: Vec<SavedToolOutputAction>,
 }
 
-#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+#[derive(Clone, Deserialize, Serialize, Debug, specta::Type)]
 #[serde(tag = "name")]
 pub enum UiScreen {
     Project(ProjectScreen),
@@ -38,6 +39,7 @@ pub enum UiScreen {
     TouchDevice(TouchDeviceState),
     Errors,
     Tools(ToolsScreenInfo),
+    Workflows(WorkflowsScreenInfo),
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -257,4 +259,11 @@ pub struct ToolDescriptor {
     pub label: String,
     pub inputs: Vec<Input>,
     pub id: Uuid,
+}
+
+#[derive(Clone, Default, Debug, Serialize, Deserialize, specta::Type)]
+pub struct WorkflowsScreenInfo {
+    pub tools: Vec<ToolDescriptor>,
+    pub workflows: Vec<Workflow>,
+    pub layers: Vec<LayerDescriptor>,
 }
