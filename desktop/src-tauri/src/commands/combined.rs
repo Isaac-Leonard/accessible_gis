@@ -7,10 +7,11 @@ use crate::{
     state::{
         AppState,
         configurable_tools::{
-            ParameterValue, SavedToolOutputAction, ToolParameter, UserDefinedTool,
+            NewUserDefinedTool, ParameterValue, SavedToolOutputAction, ToolParameter,
+            UserDefinedTool,
         },
         gis::combined::StatefulLayerEnum,
-        workflows::Workflow,
+        workflows::{RuntimeInputs, Workflow},
     },
 };
 
@@ -107,10 +108,14 @@ pub fn mark_tool_output_read(id: Uuid, state: AppState) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn add_custom_tool(tool: UserDefinedTool, state: AppState) {
-    state.with_project(|project| project.tools.push(Box::new(tool)));
+pub fn add_custom_tool(tool: NewUserDefinedTool, state: AppState) {
+    state.with_project(|project| project.tools.push(Box::new(UserDefinedTool::from(tool))));
 }
 
 #[tauri::command]
 #[specta::specta]
 pub fn add_workflow(workflow: Workflow, state: AppState) {}
+
+#[tauri::command]
+#[specta::specta]
+pub fn run_workflow(workflow: RuntimeInputs, state: AppState) {}

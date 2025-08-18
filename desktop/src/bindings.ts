@@ -254,7 +254,7 @@ export const commands = {
   async markToolOutputRead(id: string): Promise<void> {
     await TAURI_INVOKE("mark_tool_output_read", { id });
   },
-  async addCustomTool(tool: UserDefinedTool): Promise<void> {
+  async addCustomTool(tool: NewUserDefinedTool): Promise<void> {
     await TAURI_INVOKE("add_custom_tool", { tool });
   },
   async getToolInputTypes(): Promise<InputTypeDiscriminants[]> {
@@ -270,6 +270,9 @@ export const commands = {
   },
   async addWorkflow(workflow: Workflow): Promise<void> {
     await TAURI_INVOKE("add_workflow", { workflow });
+  },
+  async runWorkflow(workflow: RuntimeInputs): Promise<void> {
+    await TAURI_INVOKE("run_workflow", { workflow });
   },
 };
 
@@ -426,6 +429,7 @@ export type FieldType =
    * List of 64 bit integers
    */
   | "OFTInteger64List";
+export type FileValue = { type: "Temp" } | { type: "Custom"; value: string };
 /**
  * Just used so we can use the sort_by_key method for an iterator of floats
  * Implements the Ord trait using the f64::total_cmp method
@@ -662,6 +666,17 @@ export type MyShapeError =
   | "Other";
 export type MyUtf8Error = { valid_up_to: number; error_len: number | null };
 export type NewDatasetScreenData = { drivers: string[] };
+export type NewInput = {
+  label: string;
+  name: string | null;
+  param_type: InputType;
+};
+export type NewUserDefinedTool = {
+  label: string;
+  inputs: NewInput[];
+  command: string;
+  output_actions: ToolOutputAction;
+};
 export type OpenDatasetError = { name: string; gdal_error: MyGdalError };
 export type OpenLineDescription = {
   x: number;
@@ -754,6 +769,7 @@ export type ReturnedToolOutput =
   | { type: "Command"; value: Output }
   | { type: "String"; value: string }
   | { type: "File"; value: string };
+export type RuntimeInputs = { inputs: WorkflowValue[] };
 export type SavedToolOutputAction = {
   tool: string;
   output: ToolOutput;
@@ -813,13 +829,6 @@ export type UiState = {
   errors: ApplicationError[];
   tool_outputs: SavedToolOutputAction[];
 };
-export type UserDefinedTool = {
-  label: string;
-  inputs: Input[];
-  command: string;
-  output_actions: ToolOutputAction;
-  id: string;
-};
 export type VectorScreenData = {
   field_schema: FieldSchema[];
   features: FeatureIdentifier[];
@@ -842,6 +851,15 @@ export type Workflow = { inputs: Input[]; tool_calls: ToolWrapper[] };
 export type WorkflowInputIndex =
   | { type: "Raw"; value: number }
   | { type: "ToolResult"; value: ToolResult };
+export type WorkflowValue =
+  | { type: "Float"; value: number }
+  | { type: "Int"; value: number }
+  | { type: "String"; value: string }
+  | { type: "Layer"; value: DatasetLayerIndex }
+  | { type: "Dataset"; value: number }
+  | { type: "Option"; value: string }
+  | { type: "Flag"; value: boolean }
+  | { type: "File"; value: FileValue };
 
 /** tauri-specta globals **/
 

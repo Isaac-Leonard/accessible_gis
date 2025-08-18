@@ -12,6 +12,8 @@ import {
   InputType,
   InputTypeDiscriminants,
   LayerDescriptor,
+  NewInput,
+  NewUserDefinedTool,
   ParameterValue,
   PresetParameterValue,
   PresetParameterValueDiscriminants,
@@ -20,7 +22,6 @@ import {
   ToolOutput,
   ToolParameter,
   ToolsScreenInfo,
-  UserDefinedTool,
 } from "./bindings";
 import { Dialog, useDialog } from "./dialog";
 import {
@@ -146,7 +147,7 @@ const ToolDialog = ({ tool, layers }: ToolDialogProps) => {
     (value: T) => {
       const replacement = { ...params[index], value };
       const newArray = params.slice();
-      newArray.splice(index, 1, replacement as any);
+      newArray[index] = replacement;
       setParams(newArray);
     };
 
@@ -302,12 +303,12 @@ const ToolInput = ({
                   layer.index === param.value.layer.index
               )}
               options={rasterLayers.map((layer) => layer.dataset_file)}
-              setIndex={(index) =>
+              setIndex={(layer_index) =>
                 setValueAt<DatasetLayerIndex>(index)({
-                  dataset: rasterLayers[index].dataset,
+                  dataset: rasterLayers[layer_index].dataset,
                   layer: {
                     type: "Raster",
-                    index: rasterLayers[index].index,
+                    index: rasterLayers[layer_index].index,
                   },
                 })
               }
@@ -486,7 +487,7 @@ const presetInputFromDiscriminant = (
 
 const ToolCreationDialog = () => {
   const tool = useBindedObjectProperties(
-    ...useState<UserDefinedTool>({
+    ...useState<NewUserDefinedTool>({
       label: "",
       inputs: [],
       command: "",
@@ -494,7 +495,7 @@ const ToolCreationDialog = () => {
     })
   );
 
-  const setInputAt = (index: number, element: Input) => {
+  const setInputAt = (index: number, element: NewInput) => {
     const newArray = tool.inputs.value.slice();
     newArray.splice(index, 1, element);
     tool.inputs.setValue(newArray);
@@ -600,8 +601,8 @@ const ToolInputCreator = ({
   input,
   setInput,
 }: {
-  input: Input;
-  setInput: (element: Input) => void;
+  input: NewInput;
+  setInput: (element: NewInput) => void;
 }) => (
   <div>
     <TextInput
