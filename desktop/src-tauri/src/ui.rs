@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use gdal::{Metadata, vector::LayerAccess};
+use gdal::vector::LayerAccess;
 use itertools::Itertools;
 use local_ip_address::local_ip;
 use serde::{Deserialize, Serialize};
@@ -14,9 +14,9 @@ use crate::{
     gdal_if::{DatasetMetadata, FieldSchema, FieldValue, LayerExt, LayerIndex},
     state::{
         AppData,
-        configurable_tools::{Input, SavedToolOutputAction},
         gis::{combined::RasterIndex, raster::RenderMethod},
         settings::{AudioSettings, GlobalSettings},
+        tools::{SavedToolOutputAction, ToolInputDescriptor},
         workflows::Workflow,
     },
     tools::shape_analysis::FloatWrapper,
@@ -248,16 +248,16 @@ pub struct TouchDeviceState {
     pub announce_geometry_type: bool,
 }
 
-#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, specta::Type)]
 pub struct ToolsScreenInfo {
     pub tools: Vec<ToolDescriptor>,
     pub layers: Vec<LayerDescriptor>,
 }
 
-#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, specta::Type)]
 pub struct ToolDescriptor {
     pub label: String,
-    pub inputs: Vec<Input>,
+    pub inputs: Vec<ToolInputDescriptor>,
     pub id: Uuid,
 }
 

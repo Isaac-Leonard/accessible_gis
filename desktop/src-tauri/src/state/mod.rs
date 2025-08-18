@@ -1,10 +1,10 @@
-pub mod configurable_tools;
 pub mod dataset_collection;
 pub mod gis;
 mod loaded;
 mod preloaded;
 pub mod projects;
 pub mod settings;
+pub mod tools;
 mod ui_state;
 pub mod workflows;
 

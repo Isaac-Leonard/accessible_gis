@@ -1,20 +1,9 @@
 use std::path::PathBuf;
 
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{
-    errors::ErrorDetails,
-    gdal_if::{LayerIndexDiscriminants, WrappedDataset},
-};
-
-use super::{
-    configurable_tools::{Input, ParameterValue, ToolOutput},
-    dataset_collection::NonEmptyDelegatorImpl,
-    gis::combined::DatasetLayerIndex,
-    projects::Project,
-};
+use crate::gdal_if::LayerIndexDiscriminants;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "type", content = "value")]

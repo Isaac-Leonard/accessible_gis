@@ -1,10 +1,8 @@
-use std::{
-    mem::transmute,
-    path::PathBuf,
-    process::{Command, Output as CommandOutput},
-};
+pub mod user_defined;
 
-use itertools::Itertools;
+use std::{mem::transmute, path::PathBuf, process::Output as CommandOutput};
+pub use user_defined::*;
+
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -21,17 +19,11 @@ use super::{
     },
 };
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
-pub struct ToolOutput {
-    pub returned_output: Option<ReturnedToolOutput>,
-    pub files: Vec<PathBuf>,
-}
-
 pub trait Tool: Send + Sync {
     fn get_id(&self) -> Uuid;
     fn get_label(&self) -> String;
 
-    fn get_expected_input_parameters(&self) -> Vec<Input>;
+    fn get_expected_input_parameters(&self) -> Vec<ToolInputDescriptor>;
 
     fn get_output_actions(&self) -> ToolOutputAction;
 
@@ -39,17 +31,18 @@ pub trait Tool: Send + Sync {
         &self,
         params: Vec<ToolParameter>,
         project: &'a mut DatasetCollection,
-    ) -> Result<Vec<NamedParsedParamValue<'a>>, ErrorDetails> {
+    ) -> Result<Vec<ToolNamedParsedParamValue<'a>>, ErrorDetails> {
         let mut parsed = Vec::new();
         let mut params = params.into_iter().map(|param| param.value);
         for expected in self.get_expected_input_parameters() {
-            let parsed_val = NamedParsedParamValue::parse_from(&mut params, expected, project)?;
+            let parsed_val = ToolNamedParsedParamValue::parse_from(&mut params, expected, project)?;
             // TODO: This is really bad
             // This needs to be refactored properly however I suspect that cannot be done without rewriting large parts of the gdal-rs library.
             // This shouldn't currently cause any issues as all of this code is currently affectively single threaded for now.
             let parsed_val = unsafe {
-                parsed_val
-                    .map(|v| transmute::<NamedParsedParamValue<'_>, NamedParsedParamValue<'a>>(v))
+                parsed_val.map(|v| {
+                    transmute::<ToolNamedParsedParamValue<'_>, ToolNamedParsedParamValue<'a>>(v)
+                })
             };
             match parsed_val {
                 Some(val) => parsed.push(val),
@@ -92,7 +85,7 @@ pub trait Tool: Send + Sync {
 
     fn execute(
         &self,
-        params: &[NamedParsedParamValue],
+        params: &[ToolNamedParsedParamValue],
     ) -> Result<Option<ReturnedToolOutput>, ErrorDetails>;
 
     fn for_ui(&self) -> ToolDescriptor {
@@ -115,6 +108,12 @@ impl Clone for Box<dyn Tool> {
     fn clone(&self) -> Self {
         self.dyn_clone()
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+pub struct ToolOutput {
+    pub returned_output: Option<ReturnedToolOutput>,
+    pub files: Vec<PathBuf>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
@@ -157,133 +156,23 @@ pub struct ToolOutputAction {
     pub load_layers: Vec<usize>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize, specta::Type)]
-pub struct NewUserDefinedTool {
-    label: String,
-    inputs: Vec<NewInput>,
-    command: String,
-    output_actions: ToolOutputAction,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
-pub struct UserDefinedTool {
-    label: String,
-    inputs: Vec<Input>,
-    command: String,
-    output_actions: ToolOutputAction,
-    id: Uuid,
-}
-
-impl From<NewUserDefinedTool> for UserDefinedTool {
-    fn from(value: NewUserDefinedTool) -> Self {
-        Self {
-            label: value.label,
-            inputs: value.inputs.into_iter().map_into().collect(),
-            command: value.command,
-            output_actions: value.output_actions,
-            id: Uuid::new_v4(),
-        }
-    }
-}
-
-impl Tool for UserDefinedTool {
-    fn get_id(&self) -> Uuid {
-        self.id
-    }
-
-    fn get_label(&self) -> String {
-        self.label.clone()
-    }
-
-    fn get_expected_input_parameters(&self) -> Vec<Input> {
-        self.inputs.clone()
-    }
-
-    fn get_output_actions(&self) -> ToolOutputAction {
-        self.output_actions.clone()
-    }
-
-    fn execute(
-        &self,
-        params: &[NamedParsedParamValue],
-    ) -> Result<Option<ReturnedToolOutput>, ErrorDetails> {
-        let mut command = Command::new(&self.command);
-        for param in params {
-            match param {
-                NamedParsedParamValue::Named(name, value) => {
-                    command.arg(name).arg(value.to_command_string())
-                }
-                NamedParsedParamValue::Raw(value) => command.arg(value.to_command_string()),
-                NamedParsedParamValue::Flag(flag) => command.arg(flag),
-            };
-        }
-        command
-            .output()
-            .map_err(|err| ErrorDetails::IoError(err.to_string()))
-            .map(|output| Some(ReturnedToolOutput::Command(output.into())))
-    }
-
-    fn dyn_clone(&self) -> Box<dyn Tool> {
-        Box::new(self.clone())
-    }
-
-    fn as_user_defined_tool(&self) -> Option<UserDefinedTool> {
-        Some(self.clone())
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Deserialize, specta::Type)]
-pub struct NewInput {
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
+pub struct ToolInputDescriptor {
     pub label: String,
     pub name: Option<String>,
-    pub param_type: InputType,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
-pub struct Input {
-    pub label: String,
-    pub name: Option<String>,
-    pub param_type: InputType,
+    pub param_type: ToolInputType,
     pub id: Uuid,
-}
-
-impl From<NewInput> for Input {
-    fn from(value: NewInput) -> Self {
-        Self {
-            label: value.label,
-            name: value.name,
-            param_type: value.param_type,
-            id: Uuid::new_v4(),
-        }
-    }
-}
-
-#[derive(
-    Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type, strum::EnumDiscriminants,
-)]
-#[serde(tag = "type", content = "options")]
-#[strum_discriminants(derive(Serialize, Deserialize, specta::Type, strum::EnumIter))]
-pub enum InputType {
-    Float,
-    Int,
-    String,
-    Layer(LayerIndexDiscriminants),
-    Dataset,
-    Option(Vec<String>),
-    Flag,
-    File(bool),
-    Preset(PresetParameterValue),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
 pub struct ToolParameter {
     id: Uuid,
-    value: ParameterValue,
+    value: ToolParameterValue,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type, strum::EnumTryAs)]
 #[serde(tag = "type", content = "value")]
-pub enum ParameterValue {
+pub enum ToolParameterValue {
     Float(f64),
     Int(i64),
     String(String),
@@ -306,29 +195,31 @@ pub enum ParameterValue {
 )]
 #[serde(tag = "type", content = "value")]
 #[strum_discriminants(derive(Serialize, Deserialize, specta::Type, strum::EnumIter))]
-pub enum PresetParameterValue {
+pub enum ToolPresetParameterValue {
     Float(f64),
     Int(i64),
     String(String),
     File(PathBuf),
 }
 
-impl From<PresetParameterValue> for ParsedParamValue<'_> {
-    fn from(value: PresetParameterValue) -> Self {
+impl From<ToolPresetParameterValue> for ToolParsedParamValue<'_> {
+    fn from(value: ToolPresetParameterValue) -> Self {
         match value {
-            PresetParameterValue::Float(num) => ParsedParamValue::Float(num),
-            PresetParameterValue::Int(num) => ParsedParamValue::Int(num),
-            PresetParameterValue::String(string) => ParsedParamValue::String(string),
-            PresetParameterValue::File(path) => ParsedParamValue::File(ParsedFileParameter {
-                path,
-                use_as_output: false,
-            }),
+            ToolPresetParameterValue::Float(num) => ToolParsedParamValue::Float(num),
+            ToolPresetParameterValue::Int(num) => ToolParsedParamValue::Int(num),
+            ToolPresetParameterValue::String(string) => ToolParsedParamValue::String(string),
+            ToolPresetParameterValue::File(path) => {
+                ToolParsedParamValue::File(ToolParsedFileParameter {
+                    path,
+                    use_as_output: false,
+                })
+            }
         }
     }
 }
 
 #[derive(Debug, strum::EnumTryAs)]
-pub enum ParsedParamValue<'a> {
+pub enum ToolParsedParamValue<'a> {
     Float(f64),
     Int(i64),
     String(String),
@@ -336,49 +227,53 @@ pub enum ParsedParamValue<'a> {
     Raster(StatefulRasterBand<'a>),
     Dataset(&'a StatefulDataset),
     Option(String),
-    File(ParsedFileParameter),
+    File(ToolParsedFileParameter),
 }
 
-impl ParsedParamValue<'_> {
+impl ToolParsedParamValue<'_> {
     pub fn to_command_string(&self) -> String {
         match self {
-            ParsedParamValue::Float(num) => num.to_string(),
-            ParsedParamValue::Int(num) => num.to_string(),
-            ParsedParamValue::String(str) => str.to_string(),
+            ToolParsedParamValue::Float(num) => num.to_string(),
+            ToolParsedParamValue::Int(num) => num.to_string(),
+            ToolParsedParamValue::String(str) => str.to_string(),
             // TODO: Try see if we can return the layer index too
-            ParsedParamValue::Vector(layer) => layer.info.shared.name.to_string_lossy().to_string(),
+            ToolParsedParamValue::Vector(layer) => {
+                layer.info.shared.name.to_string_lossy().to_string()
+            }
             // TODO: Try see if we can return the band index too
-            ParsedParamValue::Raster(band) => band.info.shared.name.to_string_lossy().to_string(),
-            ParsedParamValue::Dataset(dataset) => {
+            ToolParsedParamValue::Raster(band) => {
+                band.info.shared.name.to_string_lossy().to_string()
+            }
+            ToolParsedParamValue::Dataset(dataset) => {
                 dataset.dataset.file_name.to_string_lossy().to_string()
             }
-            ParsedParamValue::Option(string) => string.clone(),
-            ParsedParamValue::File(file) => file.path.to_string_lossy().to_string(),
+            ToolParsedParamValue::Option(string) => string.clone(),
+            ToolParsedParamValue::File(file) => file.path.to_string_lossy().to_string(),
         }
     }
 }
 
 #[derive(Debug)]
-pub struct ParsedFileParameter {
+pub struct ToolParsedFileParameter {
     path: PathBuf,
     use_as_output: bool,
 }
 
 #[derive(Debug, strum::EnumTryAs)]
-pub enum NamedParsedParamValue<'a> {
-    Named(String, ParsedParamValue<'a>),
-    Raw(ParsedParamValue<'a>),
+pub enum ToolNamedParsedParamValue<'a> {
+    Named(String, ToolParsedParamValue<'a>),
+    Raw(ToolParsedParamValue<'a>),
     Flag(String),
 }
 
-impl<'a> NamedParsedParamValue<'a> {
+impl<'a> ToolNamedParsedParamValue<'a> {
     pub fn parse_from(
-        params: &mut impl Iterator<Item = ParameterValue>,
-        expected: Input,
+        params: &mut impl Iterator<Item = ToolParameterValue>,
+        expected: ToolInputDescriptor,
         datasets: &'a mut DatasetCollection,
     ) -> Result<Option<Self>, ErrorDetails> {
-        let val: ParsedParamValue = match expected.param_type {
-            InputType::Preset(value) => ParsedParamValue::from(value),
+        let val: ToolParsedParamValue = match expected.param_type {
+            ToolInputType::Preset(value) => ToolParsedParamValue::from(value),
             expected_type => {
                 let Some(value) = params.next() else {
                     return Err(ErrorDetails::Other(
@@ -387,20 +282,24 @@ impl<'a> NamedParsedParamValue<'a> {
                 };
 
                 match (value, expected_type) {
-                    (ParameterValue::Float(num), InputType::Float) => ParsedParamValue::Float(num),
-                    (ParameterValue::Int(num), InputType::Int) => ParsedParamValue::Int(num),
-                    (ParameterValue::String(str), InputType::String) => {
-                        ParsedParamValue::String(str)
+                    (ToolParameterValue::Float(num), ToolInputType::Float) => {
+                        ToolParsedParamValue::Float(num)
                     }
-                    (ParameterValue::Dataset(index), InputType::Dataset) => {
-                        ParsedParamValue::Dataset(
+                    (ToolParameterValue::Int(num), ToolInputType::Int) => {
+                        ToolParsedParamValue::Int(num)
+                    }
+                    (ToolParameterValue::String(str), ToolInputType::String) => {
+                        ToolParsedParamValue::String(str)
+                    }
+                    (ToolParameterValue::Dataset(index), ToolInputType::Dataset) => {
+                        ToolParsedParamValue::Dataset(
                             datasets.get_dataset(index).ok_or_else(|| {
                                 ErrorDetails::Other("Missing dataset".to_string())
                             })?,
                         )
                     }
-                    (ParameterValue::Layer(index), InputType::Layer(kind)) => match kind {
-                        LayerIndexDiscriminants::Vector => ParsedParamValue::Vector(
+                    (ToolParameterValue::Layer(index), ToolInputType::Layer(kind)) => match kind {
+                        LayerIndexDiscriminants::Vector => ToolParsedParamValue::Vector(
                             datasets
                                 .get(index)
                                 .and_then(|layer| layer.try_as_vector())
@@ -408,7 +307,7 @@ impl<'a> NamedParsedParamValue<'a> {
                                     ErrorDetails::Other("Missing vector layer".to_string())
                                 })?,
                         ),
-                        LayerIndexDiscriminants::Raster => ParsedParamValue::Raster(
+                        LayerIndexDiscriminants::Raster => ToolParsedParamValue::Raster(
                             datasets
                                 .get(index)
                                 .and_then(|layer| layer.try_as_raster())
@@ -417,16 +316,16 @@ impl<'a> NamedParsedParamValue<'a> {
                                 })?,
                         ),
                     },
-                    (ParameterValue::Option(option), InputType::Option(options)) => {
+                    (ToolParameterValue::Option(option), ToolInputType::Option(options)) => {
                         parse_option(option, options)?
                     }
-                    (ParameterValue::Flag(include), InputType::Flag) => {
+                    (ToolParameterValue::Flag(include), ToolInputType::Flag) => {
                         return Ok(include.then_some(Self::Flag(expected.name.ok_or_else(
                             || ErrorDetails::Other("Missing name for flag".to_string()),
                         )?)));
                     }
-                    (ParameterValue::File(path), InputType::File(use_as_output)) => {
-                        ParsedParamValue::File(ParsedFileParameter {
+                    (ToolParameterValue::File(path), ToolInputType::File(use_as_output)) => {
+                        ToolParsedParamValue::File(ToolParsedFileParameter {
                             path,
                             use_as_output,
                         })
@@ -450,12 +349,12 @@ pub fn get_built_in_tools() -> Vec<Box<dyn Tool>> {
 pub fn parse_option(
     option: String,
     options: Vec<String>,
-) -> Result<ParsedParamValue<'static>, ErrorDetails> {
+) -> Result<ToolParsedParamValue<'static>, ErrorDetails> {
     if !options.contains(&option) {
         return Err(ErrorDetails::Other(
             "Somehow got unallowed option".to_string(),
         ));
     } else {
-        Ok(ParsedParamValue::Option(option))
+        Ok(ToolParsedParamValue::Option(option))
     }
 }

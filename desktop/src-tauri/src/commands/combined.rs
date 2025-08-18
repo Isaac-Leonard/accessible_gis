@@ -6,10 +6,8 @@ use crate::{
     gdal_if::Srs,
     state::{
         AppState,
-        configurable_tools::{
-            NewUserDefinedTool, SavedToolOutputAction, ToolParameter, UserDefinedTool,
-        },
         gis::combined::StatefulLayerEnum,
+        tools::{NewUserDefinedTool, SavedToolOutputAction, ToolParameter, UserDefinedTool},
         workflows::{NewWorkflow, RuntimeInputs},
     },
 };

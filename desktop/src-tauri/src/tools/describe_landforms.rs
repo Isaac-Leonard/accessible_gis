@@ -12,8 +12,9 @@ use uuid::Uuid;
 use crate::{
     errors::ErrorDetails,
     gdal_if::LayerIndexDiscriminants,
-    state::configurable_tools::{
-        Input, InputType, NamedParsedParamValue, ReturnedToolOutput, Tool, ToolOutputAction,
+    state::tools::{
+        ReturnedToolOutput, Tool, ToolInputDescriptor, ToolInputType, ToolNamedParsedParamValue,
+        ToolOutputAction,
     },
 };
 
@@ -220,19 +221,19 @@ impl Tool for DescribeLandformsTool {
         "Describe landforms".to_string()
     }
 
-    fn get_expected_input_parameters(&self) -> Vec<Input> {
+    fn get_expected_input_parameters(&self) -> Vec<ToolInputDescriptor> {
         static id: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
-        vec![Input {
+        vec![ToolInputDescriptor {
             label: "Landforms layer".to_string(),
             name: None,
-            param_type: InputType::Layer(LayerIndexDiscriminants::Vector),
+            param_type: ToolInputType::Layer(LayerIndexDiscriminants::Vector),
             id: *id,
         }]
     }
 
     fn execute(
         &self,
-        params: &[NamedParsedParamValue],
+        params: &[ToolNamedParsedParamValue],
     ) -> Result<Option<ReturnedToolOutput>, ErrorDetails> {
         let layer = params[0]
             .try_as_raw_ref()

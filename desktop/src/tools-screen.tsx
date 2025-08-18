@@ -8,15 +8,15 @@ import {
 } from "./binded-input";
 import {
   DatasetLayerIndex,
-  Input,
-  InputType,
-  InputTypeDiscriminants,
+  ToolInputDescriptor,
+  ToolInputType,
+  ToolInputTypeDiscriminants,
   LayerDescriptor,
-  NewInput,
+  NewToolInput,
   NewUserDefinedTool,
-  ParameterValue,
-  PresetParameterValue,
-  PresetParameterValueDiscriminants,
+  ToolParameterValue,
+  ToolPresetParameterValue,
+  ToolPresetParameterValueDiscriminants,
   SavedToolOutputAction,
   ToolDescriptor,
   ToolOutput,
@@ -56,10 +56,10 @@ type ParameterDescriptor = { label: string; id: string } & (
   | { type: "Option"; value: string; options: string[] }
   | { type: "Flag"; value: boolean }
   | { type: "File"; value: string }
-  | { type: "Preset"; value: PresetParameterValue }
+  | { type: "Preset"; value: ToolPresetParameterValue }
 );
 
-const paramFromInput = (input: Input): ParameterDescriptor => {
+const paramFromInput = (input: ToolInputDescriptor): ParameterDescriptor => {
   switch (input.param_type.type) {
     case "Float":
       return {
@@ -212,8 +212,8 @@ const parametersFromUi = (params: ParameterDescriptor[]): ToolParameter[] => {
 // TODO: Do proper checking for validity here
 const ParameterValueFromDescriptor = (
   param: ParameterDescriptor
-): ParameterValue =>
-  ({ type: param.type, value: param.value } as ParameterValue);
+): ToolParameterValue =>
+  ({ type: param.type, value: param.value } as ToolParameterValue);
 
 const ToolInput = ({
   param,
@@ -448,8 +448,8 @@ const InputTypeDiscriminantSelector = bindedSelectorFactory(
 );
 
 const inputTypeFromDiscriminant = (
-  discriminant: InputTypeDiscriminants
-): InputType => {
+  discriminant: ToolInputTypeDiscriminants
+): ToolInputType => {
   switch (discriminant) {
     case "Int":
     case "Float":
@@ -474,8 +474,8 @@ const PresetInputTypeSelector = bindedSelectorFactory(
 );
 
 const presetInputFromDiscriminant = (
-  discriminant: PresetParameterValueDiscriminants
-): PresetParameterValue => {
+  discriminant: ToolPresetParameterValueDiscriminants
+): ToolPresetParameterValue => {
   switch (discriminant) {
     case "Float":
     case "Int":
@@ -496,7 +496,7 @@ const ToolCreationDialog = () => {
     })
   );
 
-  const setInputAt = (index: number, element: NewInput) => {
+  const setInputAt = (index: number, element: NewToolInput) => {
     const newArray = tool.inputs.value.slice();
     newArray.splice(index, 1, element);
     tool.inputs.setValue(newArray);
@@ -602,8 +602,8 @@ const ToolInputCreator = ({
   input,
   setInput,
 }: {
-  input: NewInput;
-  setInput: (element: NewInput) => void;
+  input: NewToolInput;
+  setInput: (element: NewToolInput) => void;
 }) => (
   <div>
     <TextInput
@@ -744,8 +744,8 @@ const ToolInputCreator = ({
 );
 
 type PresetInputValueEditorProps = {
-  input: PresetParameterValue;
-  setInput: (input: PresetParameterValue) => void;
+  input: ToolPresetParameterValue;
+  setInput: (input: ToolPresetParameterValue) => void;
 };
 
 const PresetInputValueEditor = ({

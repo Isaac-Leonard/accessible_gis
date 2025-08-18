@@ -257,11 +257,11 @@ export const commands = {
   async addCustomTool(tool: NewUserDefinedTool): Promise<void> {
     await TAURI_INVOKE("add_custom_tool", { tool });
   },
-  async getToolInputTypes(): Promise<InputTypeDiscriminants[]> {
+  async getToolInputTypes(): Promise<ToolInputTypeDiscriminants[]> {
     return await TAURI_INVOKE("get_tool_input_types");
   },
   async getToolPresetInputTypes(): Promise<
-    PresetParameterValueDiscriminants[]
+    ToolPresetParameterValueDiscriminants[]
   > {
     return await TAURI_INVOKE("get_tool_preset_input_types");
   },
@@ -467,35 +467,6 @@ export type HistogramSettings = {
   min_freq: number;
   max_freq: number;
 };
-export type Input = {
-  label: string;
-  name: string | null;
-  param_type: InputType;
-  id: string;
-};
-export type InputType =
-  | { type: "Float" }
-  | { type: "Int" }
-  | { type: "String" }
-  | { type: "Layer"; options: LayerIndexDiscriminants }
-  | { type: "Dataset" }
-  | { type: "Option"; options: string[] }
-  | { type: "Flag" }
-  | { type: "File"; options: boolean }
-  | { type: "Preset"; options: PresetParameterValue };
-/**
- * Auto-generated discriminant enum variants
- */
-export type InputTypeDiscriminants =
-  | "Float"
-  | "Int"
-  | "String"
-  | "Layer"
-  | "Dataset"
-  | "Option"
-  | "Flag"
-  | "File"
-  | "Preset";
 export type LayerDescriptor = (
   | { type: "Vector"; index: number }
   | { type: "Raster"; index: number }
@@ -671,14 +642,14 @@ export type MyShapeError =
   | "Other";
 export type MyUtf8Error = { valid_up_to: number; error_len: number | null };
 export type NewDatasetScreenData = { drivers: string[] };
-export type NewInput = {
+export type NewToolInput = {
   label: string;
   name: string | null;
-  param_type: InputType;
+  param_type: ToolInputType;
 };
 export type NewUserDefinedTool = {
   label: string;
-  inputs: NewInput[];
+  inputs: NewToolInput[];
   command: string;
   output_actions: ToolOutputAction;
 };
@@ -706,31 +677,9 @@ export type OpenLineDescription = {
   number_of_points: number;
 };
 export type Output = { stdout: string; stderr: string; status: number | null };
-export type ParameterValue =
-  | { type: "Float"; value: number }
-  | { type: "Int"; value: number }
-  | { type: "String"; value: string }
-  | { type: "Layer"; value: DatasetLayerIndex }
-  | { type: "Dataset"; value: number }
-  | { type: "Option"; value: string }
-  | { type: "Flag"; value: boolean }
-  | { type: "File"; value: string };
 export type Point = { x: number; y: number };
 export type Polygon = { exterior: LineString; interior: LineString[] };
 export type PolygonInfo = { area: number; fields: Field[] };
-export type PresetParameterValue =
-  | { type: "Float"; value: number }
-  | { type: "Int"; value: number }
-  | { type: "String"; value: string }
-  | { type: "File"; value: string };
-/**
- * Auto-generated discriminant enum variants
- */
-export type PresetParameterValueDiscriminants =
-  | "Float"
-  | "Int"
-  | "String"
-  | "File";
 export type ProjectScreen =
   | ({ type: "Project" } & ProjectScreenInfo)
   | { type: "NotLoaded" };
@@ -813,13 +762,68 @@ export type ThiessenPolygonRecord = {
   start_line: number;
   column: number;
 };
-export type ToolDescriptor = { label: string; inputs: Input[]; id: string };
+export type ToolDescriptor = {
+  label: string;
+  inputs: ToolInputDescriptor[];
+  id: string;
+};
+export type ToolInputDescriptor = {
+  label: string;
+  name: string | null;
+  param_type: ToolInputType;
+  id: string;
+};
+export type ToolInputType =
+  | { type: "Float" }
+  | { type: "Int" }
+  | { type: "String" }
+  | { type: "Layer"; options: LayerIndexDiscriminants }
+  | { type: "Dataset" }
+  | { type: "Option"; options: string[] }
+  | { type: "Flag" }
+  | { type: "File"; options: boolean }
+  | { type: "Preset"; options: ToolPresetParameterValue };
+/**
+ * Auto-generated discriminant enum variants
+ */
+export type ToolInputTypeDiscriminants =
+  | "Float"
+  | "Int"
+  | "String"
+  | "Layer"
+  | "Dataset"
+  | "Option"
+  | "Flag"
+  | "File"
+  | "Preset";
 export type ToolOutput = {
   returned_output: ReturnedToolOutput | null;
   files: string[];
 };
 export type ToolOutputAction = { alert_output: boolean; load_layers: number[] };
-export type ToolParameter = { id: string; value: ParameterValue };
+export type ToolParameter = { id: string; value: ToolParameterValue };
+export type ToolParameterValue =
+  | { type: "Float"; value: number }
+  | { type: "Int"; value: number }
+  | { type: "String"; value: string }
+  | { type: "Layer"; value: DatasetLayerIndex }
+  | { type: "Dataset"; value: number }
+  | { type: "Option"; value: string }
+  | { type: "Flag"; value: boolean }
+  | { type: "File"; value: string };
+export type ToolPresetParameterValue =
+  | { type: "Float"; value: number }
+  | { type: "Int"; value: number }
+  | { type: "String"; value: string }
+  | { type: "File"; value: string };
+/**
+ * Auto-generated discriminant enum variants
+ */
+export type ToolPresetParameterValueDiscriminants =
+  | "Float"
+  | "Int"
+  | "String"
+  | "File";
 export type ToolsScreenInfo = {
   tools: ToolDescriptor[];
   layers: LayerDescriptor[];

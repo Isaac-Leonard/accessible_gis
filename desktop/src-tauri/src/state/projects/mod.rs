@@ -10,7 +10,6 @@ use crate::{
 };
 
 use super::{
-    configurable_tools::{SavedToolOutputAction, Tool, UserDefinedTool, get_built_in_tools},
     dataset_collection::{
         DatasetCollection, NonEmptyDelegator, NonEmptyDelegatorImpl, NonEmptyDelegatorImplExt,
     },
@@ -19,6 +18,7 @@ use super::{
         vector::StatefulVectorLayer,
     },
     settings::GlobalSettings,
+    tools::{SavedToolOutputAction, Tool, UserDefinedTool, get_built_in_tools},
 };
 
 pub struct Project {
@@ -211,7 +211,7 @@ impl NonEmptyDelegator for Project {
     }
 }
 
-#[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StoredProject {
     pub srs: Srs,
     pub datasets: Vec<PathBuf>,
