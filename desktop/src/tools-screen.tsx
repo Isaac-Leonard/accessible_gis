@@ -147,7 +147,7 @@ const ToolDialog = ({ tool, layers }: ToolDialogProps) => {
     (value: T) => {
       const replacement = { ...params[index], value };
       const newArray = params.slice();
-      newArray[index] = replacement;
+      newArray[index] = replacement as any;
       setParams(newArray);
     };
 
