@@ -70,6 +70,7 @@ pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
             .app_data(Data::new(app_handle.clone()))
             .app_data(Data::new(PayloadConfig::new(1024 * 1024 * 1024)))
             .service(get_raster)
+            .service(get_image)
             .service(get_info)
             .service(get_ocr)
             .service(get_vector)
@@ -161,4 +162,19 @@ async fn get_ocr(state: Data<AppDataSync>) -> impl Responder {
     Json(state.with_lock(|state| {
         state.with_project(|project| Some(project.get_raster_to_display()?.info.render))
     }))
+}
+
+#[get("/get_image")]
+async fn get_image(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Responder {
+    let raster_name = get_raster_path(&app);
+    std::fs::remove_file(&raster_name);
+    state.with_lock(|state| {
+        let output = state.with_project(|project| {
+            project
+                .get_raster_to_display()
+                .map(|raster| raster.reproject(&raster_name, Srs::Epsg(4326)))
+        });
+        eprintln!("{:?}", output);
+    });
+    fs::NamedFile::open_async(raster_name).await
 }

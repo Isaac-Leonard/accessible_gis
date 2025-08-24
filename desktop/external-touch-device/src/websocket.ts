@@ -1,7 +1,11 @@
 import type { BBox } from "geojson";
 import { geoJsonParsers } from "touch-device";
 import { VectorSettings } from "touch-device";
-import { RasterAudioSettings, RasterMetadata } from "touch-device/src/raster";
+import {
+  RasterAudioSettings,
+  RasterMetadata,
+  RasterOptions,
+} from "touch-device/src/raster";
 import { ZodType, z } from "zod";
 
 const host = window.location.host;
@@ -97,7 +101,7 @@ export class WsConnection {
 export type AppMessage =
   | { type: "Gis"; data: GisMessage }
   | { type: "FocusBox"; data: BBox }
-  | { type: "FetchRaster"; data: RasterMetadata }
+  | { type: "FetchRaster"; data: RasterOptions }
   | { type: "FetchVector" };
 
 export type ImageMessage = { ocr: boolean };
@@ -111,6 +115,12 @@ const RasterMetadataParser: ZodType<RasterMetadata> = z.object({
   noDataValue: z.number().nullable(),
   origin: z.tuple([z.number(), z.number()]),
 });
+
+const RasterOptionsParser: ZodType<RasterOptions> = z.union([
+  z.object({ type: z.literal("RawData"), metadata: RasterMetadataParser }),
+  z.object({ type: z.literal("Combined"), metadata: RasterMetadataParser }),
+  z.object({ type: z.literal("Image"), metadata: RasterMetadataParser }),
+]);
 
 const RasterAudioSettingsParser: ZodType<RasterAudioSettings> = z.object({
   minFreq: z.number(),
@@ -135,6 +145,6 @@ const messageParser: ZodType<AppMessage> = z.union([
     type: z.literal("FocusBox"),
     data: geoJsonParsers.bBox,
   }),
-  z.object({ type: z.literal("FetchRaster"), data: RasterMetadataParser }),
+  z.object({ type: z.literal("FetchRaster"), data: RasterOptionsParser }),
   z.object({ type: z.literal("FetchVector") }),
 ]);

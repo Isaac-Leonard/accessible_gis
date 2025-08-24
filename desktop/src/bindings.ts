@@ -722,13 +722,17 @@ export type RasterScreenMetadata = {
 export type RasterSize = { width: number; length: number; bands: number };
 export type RenderMethod =
   /**
-   * Try to use native browser image rendering or fall back to ImageJS
+   * Displays the raw values of each cell on the screen
    */
-  | "Image"
+  | "RawData"
   /**
-   * Render pure raster values mapped to 256 grey scale
+   * Displays the raster as an image using Image-js and uses the raw values for sonification
    */
-  | "GDAL";
+  | "Combined"
+  /**
+   * Displays the raster on the screen as an image using Image-js and uses the grey scale pixels of the image for sonification
+   */
+  | "Image";
 export type ReturnedToolOutput =
   | { type: "Command"; value: Output }
   | { type: "String"; value: string }

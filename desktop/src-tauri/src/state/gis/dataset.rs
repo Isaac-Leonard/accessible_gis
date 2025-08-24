@@ -53,7 +53,7 @@ impl StatefulDataset {
             .collect_vec();
 
         // TODO: Make this customisable in settings
-        let render_method = RenderMethod::Image;
+        let render_method = RenderMethod::RawData;
 
         let band_info = dataset
             .dataset
@@ -65,10 +65,7 @@ impl StatefulDataset {
                 },
                 image_type: ImageType::default(),
                 render: render_method,
-                ocr: match render_method {
-                    RenderMethod::GDAL => settings.default_ocr_for_gdal(),
-                    RenderMethod::Image => true,
-                },
+                ocr: false,
             })
             .collect_vec();
 

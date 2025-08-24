@@ -22,7 +22,7 @@ use crate::{
     errors::ErrorDetails,
     gdal_if::Srs,
     server::get_raster_path,
-    state::gis::raster::RasterMetadata,
+    state::gis::raster::{ImageType, RasterMetadata, RenderMethod},
 };
 
 /// How often heartbeat pings are sent
@@ -150,8 +150,15 @@ pub enum AppMessage {
     Gis(GisMessage),
     FocusRaster,
     FocusBox([f64; 4]),
-    FetchRaster(RasterMetadata),
+    FetchRaster(RasterDisplayInfo),
     FetchVector,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct RasterDisplayInfo {
+    #[serde(rename = "type")]
+    pub kind: RenderMethod,
+    pub metadata: RasterMetadata,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

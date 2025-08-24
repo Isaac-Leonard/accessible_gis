@@ -182,7 +182,7 @@ class GisManager {
         );
         this.render();
       } else if (msg.type === "FetchRaster") {
-        await this.raster.updateImage({ type: "RawData", metadata: msg.data });
+        await this.raster.updateImage(msg.data);
         this.render();
       } else if (msg.type === "FetchVector") {
         await this.getVectors();

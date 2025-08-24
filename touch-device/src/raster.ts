@@ -39,10 +39,9 @@ const getDefaultRasterAudioSettings = (): RasterAudioSettings => ({
 
 export type RasterOptions = { metadata: RasterMetadata } & (
   | { type: "RawData" }
-  | { type: "Image"; name: string }
-  | { type: "Combined"; name: string }
+  | { type: "Image" }
+  | { type: "Combined" }
 );
-
 export type Raster = { metadata: RasterMetadata; settings: RasterSettings } & (
   | { type: "RawData"; data: RasterData; image: Image }
   | { type: "Image"; image: Image; data: RasterData }
@@ -114,7 +113,7 @@ export class RasterManager {
       throw new Error("Expected to get raster data and couldn't");
     }
     const settings = getDefaultSettings(data, options.metadata.noDataValue);
-    const image = await Image.load(options.name);
+    const image = await Image.load("/get_image");
     this.raster = {
       type: options.type,
       settings,
@@ -126,7 +125,7 @@ export class RasterManager {
   }
 
   async getImageRaster(options: Extract<RasterOptions, { type: "Image" }>) {
-    const image = await Image.load(options.name);
+    const image = await Image.load("/get_image");
     const data = this.dataFromImage(image);
     const settings = getDefaultSettings(data, options.metadata.noDataValue);
     this.raster = {

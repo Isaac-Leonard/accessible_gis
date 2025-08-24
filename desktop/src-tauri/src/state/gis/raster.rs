@@ -10,6 +10,7 @@ use strum::{EnumIter, IntoEnumIterator};
 use crate::{
     gdal_if::{Srs, WrappedRasterBand},
     state::settings::AudioSettings,
+    web_socket::RasterDisplayInfo,
 };
 
 use super::shared::SharedInfo;
@@ -36,16 +37,12 @@ pub struct StatefulRasterInfo {
 
 #[derive(Clone, Copy, Debug, EnumIter, specta::Type, Serialize, Deserialize, PartialEq)]
 pub enum RenderMethod {
-    /// Try to use native browser image rendering or fall back to ImageJS
+    /// Displays the raw values of each cell on the screen
+    RawData,
+    /// Displays the raster as an image using Image-js and uses the raw values for sonification
+    Combined,
+    /// Displays the raster on the screen as an image using Image-js and uses the grey scale pixels of the image for sonification
     Image,
-    /// Render pure raster values mapped to 256 grey scale
-    GDAL,
-}
-
-impl RenderMethod {
-    pub fn get_variants() -> Vec<Self> {
-        Self::iter().collect_vec()
-    }
 }
 
 #[derive(Debug)]
@@ -55,16 +52,20 @@ pub struct StatefulRasterBand<'a> {
 }
 
 impl<'a> StatefulRasterBand<'a> {
-    pub fn get_info_for_display(&self) -> RasterMetadata {
+    pub fn get_info_for_display(&self) -> RasterDisplayInfo {
         let (width, height) = self.band.band().size();
         let geo_transform = self.band.geo_transform.unwrap();
-        RasterMetadata {
+        let metadata = RasterMetadata {
             origin: (geo_transform[0], geo_transform[3]),
             width,
             height,
             // TODO: Should probably replace with x and y resolutions or even better just the full geotransform
             resolution: geo_transform[1],
             no_data_value: self.band.no_data_value(),
+        };
+        RasterDisplayInfo {
+            kind: self.info.render,
+            metadata,
         }
     }
 

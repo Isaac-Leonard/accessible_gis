@@ -16,7 +16,7 @@ use crate::{
 #[tauri::command]
 #[specta::specta]
 pub fn get_render_methods() -> Vec<RenderMethod> {
-    RenderMethod::get_variants()
+    RenderMethod::iter().collect_vec()
 }
 
 #[tauri::command]
