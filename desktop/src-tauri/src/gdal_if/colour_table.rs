@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 /// Colour table abstraction supporting all GDAL palette types.
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
+#[serde(tag = "PaletteInterpretation", content = "entries")]
 pub enum ColourTable {
     Gray(Vec<GrayEntry>),
     Rgba(Vec<RgbaEntry>),

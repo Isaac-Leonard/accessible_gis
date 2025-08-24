@@ -10,7 +10,11 @@ use crate::{
     errors::ErrorDetails,
     gdal_if::{read_raster_data, read_raster_data_enum_as},
     geometry::Point,
-    state::{AppState, gis::combined::RasterIndex, settings::AudioSettings},
+    state::{
+        AppState,
+        gis::{combined::RasterIndex, raster::AudioTable},
+        settings::AudioSettings,
+    },
     web_socket::{AppMessage, TouchDevice},
 };
 
@@ -302,4 +306,10 @@ pub fn focus_dataset(state: AppState, device: State<TouchDevice>) {
         device.send(AppMessage::FocusBox(bounds));
         Ok(())
     });
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_audio_table(table: Option<AudioTable>, state: AppState) {
+    state.with_current_raster_band(|band| band.info.audio_table = table);
 }

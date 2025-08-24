@@ -4,6 +4,10 @@ import {
   RasterScreenData,
   RasterScreenMetadata,
   DatasetMetadata,
+  AudioTable,
+  ColourTable,
+  AudioTypeDiscriminants,
+  AudioType,
 } from "./bindings";
 import { useEffect, useState } from "preact/hooks";
 import { client } from "./api";
@@ -14,6 +18,8 @@ import { SaveButton } from "./save-button";
 import { RenderMethodsSelector } from "./render_methods_selector";
 import { Dialog, useDialog } from "./dialog";
 import { AudioSettingsScreen } from "./settings-screen";
+import { bindedSelectorFactory } from "./option-picker";
+import { NumberInput, Input as TextInput } from "./binded-input";
 
 export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
   return (
@@ -78,6 +84,10 @@ const RasterNavigatorInner = ({ layer }: { layer: RasterScreenData }) => {
       ) : (
         ""
       )}
+      <AudioTableEditor
+        table={layer.audio_table}
+        colourTable={layer.colour_table}
+      />
       <PixelExplorer layer={layer} />
     </div>
   );
@@ -278,3 +288,153 @@ export const GdalMetadataViewer = ({
     ))}
   </div>
 );
+
+type AudioTableEditorProps = {
+  table: AudioTable | null;
+  colourTable: ColourTable | null;
+};
+
+const AudioTableEditor = ({ table, colourTable }: AudioTableEditorProps) => {
+  const [audioTable, setAudioTable] = useState(table);
+  useEffect(() => {
+    setAudioTable(table);
+  }, [table]);
+  const { open, setOpen } = useDialog();
+  return (
+    <Dialog
+      modal={true}
+      open={open}
+      setOpen={setOpen}
+      openText={table === null ? "Create audio table" : "Audio table"}
+      onOpen={() => {
+        if (audioTable === null) {
+          setAudioTable({
+            entries: colourTable
+              ? colourTable.entries.map(() =>
+                  getDefaultAudioTypeFromDiscriminant("Frequency")
+                )
+              : [],
+            other: { type: "Silence" },
+          });
+        }
+      }}
+    >
+      <h3>Audio table</h3>
+      <div>
+        Default sound / sound for unknown pixel values:
+        <AudioTypeInput
+          audioType={
+            audioTable?.other ??
+            getDefaultAudioTypeFromDiscriminant("Frequency")
+          }
+          setAudioType={(audioType) =>
+            setAudioTable({ other: audioType, entries: audioTable!.entries })
+          }
+        />
+      </div>
+      <ul>
+        {" "}
+        {audioTable?.entries.map((entry, index) => (
+          <li>
+            {index}:
+            <AudioTypeInput
+              audioType={entry}
+              setAudioType={(audioType) => {
+                const newEntries = audioTable.entries.slice();
+                newEntries[index] = audioType;
+                setAudioTable({ other: audioTable.other, entries: newEntries });
+              }}
+            />
+          </li>
+        ))}
+      </ul>
+      <button
+        onClick={() =>
+          setAudioTable({
+            other: audioTable!.other,
+            entries: [
+              ...audioTable!.entries,
+              getDefaultAudioTypeFromDiscriminant("Frequency"),
+            ],
+          })
+        }
+      >
+        Add entry
+      </button>
+      <button
+        onClick={() => {
+          client.setAudioTable(audioTable);
+          setOpen(false);
+        }}
+      >
+        Save
+      </button>
+      <button
+        onClick={() => {
+          if (confirm("Are you sure you want to delete this audio table?")) {
+            client.setAudioTable(null);
+            setOpen(false);
+          }
+        }}
+      >
+        Delete audio table
+      </button>{" "}
+    </Dialog>
+  );
+};
+
+const AudioTypeSelector = bindedSelectorFactory(await client.getAudioTypes());
+
+const getDefaultAudioTypeFromDiscriminant = (
+  discriminant: AudioTypeDiscriminants
+): AudioType => {
+  switch (discriminant) {
+    case "Silence":
+    case "LinearMap":
+      return { type: discriminant };
+    case "Speak":
+      return { type: discriminant, value: "" };
+    case "Frequency":
+      return { type: discriminant, value: 0 };
+  }
+};
+
+type AudioTypeInputProps = {
+  audioType: AudioType;
+  setAudioType: (audioType: AudioType) => void;
+};
+
+const AudioTypeInput = ({ audioType, setAudioType }: AudioTypeInputProps) => {
+  return (
+    <>
+      {" "}
+      <AudioTypeSelector
+        prompt="Sound for this pixel"
+        binding={{
+          value: audioType.type,
+          setValue: (discriminant) =>
+            setAudioType(getDefaultAudioTypeFromDiscriminant(discriminant)),
+        }}
+      />
+      {audioType.type === "Frequency" ? (
+        <NumberInput
+          label="Frequency for this pixel"
+          binding={{
+            value: audioType.value,
+            setValue: (value) => setAudioType({ type: "Frequency", value }),
+          }}
+        />
+      ) : audioType.type === "Speak" ? (
+        <TextInput
+          label="Word or phrase to say for this pixel"
+          binding={{
+            value: audioType.value,
+            setValue: (value) => setAudioType({ type: "Speak", value }),
+          }}
+        />
+      ) : (
+        ""
+      )}
+    </>
+  );
+};

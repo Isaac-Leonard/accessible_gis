@@ -279,6 +279,12 @@ export const commands = {
   > {
     return await TAURI_INVOKE("get_workflow_input_types");
   },
+  async getAudioTypes(): Promise<AudioTypeDiscriminants[]> {
+    return await TAURI_INVOKE("get_audio_types");
+  },
+  async setAudioTable(table: AudioTable | null): Promise<void> {
+    await TAURI_INVOKE("set_audio_table", { table });
+  },
 };
 
 /** user-defined events **/
@@ -305,7 +311,6 @@ export type ApplicationError = (
   | { type: "DemClassificationError"; error: DemClassificationError }
   | { type: "Other"; error: string }
 ) & { read: boolean; id: string };
-export type AudioClassification = { pixelValue: number; audio: AudioType };
 export type AudioIndicator =
   | "Silence"
   | "MinFreq"
@@ -321,12 +326,20 @@ export type AudioSettings = {
   histogram: HistogramSettings;
   graph: RasterGraphSettings;
 };
-export type AudioTable = { mapping: AudioClassification[]; other: AudioType };
+export type AudioTable = { entries: AudioType[]; other: AudioType };
 export type AudioType =
   | { type: "Frequency"; value: number }
   | { type: "Silence" }
   | { type: "Speak"; value: string }
   | { type: "LinearMap" };
+/**
+ * Auto-generated discriminant enum variants
+ */
+export type AudioTypeDiscriminants =
+  | "Frequency"
+  | "Silence"
+  | "Speak"
+  | "LinearMap";
 export type Classification = { min: number; max: number; target: number };
 export type ClosedLineDescription = {
   x: number;
@@ -347,10 +360,10 @@ export type CmykEntry = { c: number; m: number; y: number; k: number };
  * Colour table abstraction supporting all GDAL palette types.
  */
 export type ColourTable =
-  | { Gray: GrayEntry[] }
-  | { Rgba: RgbaEntry[] }
-  | { Cmyk: CmykEntry[] }
-  | { Hls: HlsEntry[] };
+  | { PaletteInterpretation: "Gray"; entries: GrayEntry[] }
+  | { PaletteInterpretation: "Rgba"; entries: RgbaEntry[] }
+  | { PaletteInterpretation: "Cmyk"; entries: CmykEntry[] }
+  | { PaletteInterpretation: "Hls"; entries: HlsEntry[] };
 export type CreationError = {
   file: string;
   driver: string;

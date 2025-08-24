@@ -8,6 +8,7 @@ type DialogProps = {
   setOpen: (open: boolean) => void;
   children: ComponentChildren;
   onClose?: () => void;
+  onOpen?: () => void;
 };
 
 export const Dialog = ({
@@ -17,6 +18,7 @@ export const Dialog = ({
   children,
   setOpen,
   onClose,
+  onOpen,
 }: DialogProps) => {
   const ref = useRef<HTMLDialogElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
@@ -40,7 +42,13 @@ export const Dialog = ({
 
   return (
     <div>
-      <button ref={closeRef} onClick={() => setOpen(true)}>
+      <button
+        ref={closeRef}
+        onClick={() => {
+          setOpen(true);
+          onOpen?.();
+        }}
+      >
         {openText}
       </button>
       <dialog

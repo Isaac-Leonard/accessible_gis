@@ -153,14 +153,7 @@ pub enum AudioType {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-pub struct AudioClassification {
-    pixel_value: i64,
-    audio: AudioType,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
 pub struct AudioTable {
-    mapping: Vec<AudioClassification>,
+    entries: Vec<AudioType>,
     other: AudioType,
 }
