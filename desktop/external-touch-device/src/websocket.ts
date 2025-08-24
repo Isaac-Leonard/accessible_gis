@@ -2,6 +2,8 @@ import type { BBox } from "geojson";
 import { geoJsonParsers } from "touch-device";
 import { VectorSettings } from "touch-device";
 import {
+  AudioTable,
+  AudioType,
   RasterAudioSettings,
   RasterMetadata,
   RasterOptions,
@@ -108,12 +110,38 @@ export type ImageMessage = { ocr: boolean };
 
 export type GisMessage = { vector: VectorSettings };
 
+export const AudioTypeParser: ZodType<AudioType> = z.discriminatedUnion(
+  "type",
+  [
+    z.object({
+      type: z.literal("Frequency"),
+      value: z.number(),
+    }),
+    z.object({
+      type: z.literal("Silence"),
+    }),
+    z.object({
+      type: z.literal("Speak"),
+      value: z.string(),
+    }),
+    z.object({
+      type: z.literal("LinearMap"),
+    }),
+  ]
+);
+
+export const AudioTableParser: ZodType<AudioTable> = z.object({
+  entries: z.array(AudioTypeParser),
+  other: AudioTypeParser,
+});
+
 const RasterMetadataParser: ZodType<RasterMetadata> = z.object({
   resolution: z.number(),
   width: z.number(),
   height: z.number(),
   noDataValue: z.number().nullable(),
   origin: z.tuple([z.number(), z.number()]),
+  audioTable: AudioTableParser.nullable(),
 });
 
 const RasterOptionsParser: ZodType<RasterOptions> = z.union([

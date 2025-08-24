@@ -3,6 +3,7 @@ import { Image } from "image-js";
 import { pauseAudio, playAudio, setAudioFrequency } from "./audio.ts";
 import { getCanvas } from "./canvas-manager.ts";
 import { CoordinateManager } from "./coordinate-manager.ts";
+import { speak } from "./speach.ts";
 
 export type RasterData =
   | { type: "Uint8"; data: Uint8Array }
@@ -20,7 +21,16 @@ export type RasterMetadata = {
   height: number;
   resolution: number;
   noDataValue: number | null;
+  audioTable: AudioTable | null;
 };
+
+export type AudioTable = { entries: AudioType[]; other: AudioType };
+
+export type AudioType =
+  | { type: "Frequency"; value: number }
+  | { type: "Silence" }
+  | { type: "Speak"; value: string }
+  | { type: "LinearMap" };
 
 export type RasterSettings = {
   // While normally calculated on the fly, these can be set by the user to adjust visual and audio contrast
@@ -210,17 +220,46 @@ export class RasterManager {
     } else {
       const index = y * this.raster.metadata.width + x;
       let value = this.raster.data.data[index];
-      if (value === this.raster.metadata.noDataValue) {
-        value = this.raster.settings.min;
+      if (this.raster.metadata.audioTable !== null) {
+        const entry =
+          value < this.raster.metadata.audioTable.entries.length
+            ? this.raster.metadata.audioTable.entries[value]
+            : this.raster.metadata.audioTable.other;
+        switch (entry.type) {
+          case "Silence":
+            pauseAudio();
+            return;
+          case "Frequency":
+            setAudioFrequency(entry.value);
+            playAudio();
+            return;
+          case "Speak":
+            pauseAudio();
+            speak(entry.value);
+            return;
+          case "LinearMap":
+            const frequency =
+              ((value - this.raster.settings.min) /
+                (this.raster.settings.max - this.raster.settings.min)) *
+                (this.raster.settings.audio.maxFreq -
+                  this.raster.settings.audio.minFreq) +
+              this.raster.settings.audio.minFreq;
+            setAudioFrequency(frequency);
+            playAudio();
+        }
+      } else {
+        if (value === this.raster.metadata.noDataValue) {
+          value = this.raster.settings.min;
+        }
+        const frequency =
+          ((value - this.raster.settings.min) /
+            (this.raster.settings.max - this.raster.settings.min)) *
+            (this.raster.settings.audio.maxFreq -
+              this.raster.settings.audio.minFreq) +
+          this.raster.settings.audio.minFreq;
+        setAudioFrequency(frequency);
+        playAudio();
       }
-      const frequency =
-        ((value - this.raster.settings.min) /
-          (this.raster.settings.max - this.raster.settings.min)) *
-          (this.raster.settings.audio.maxFreq -
-            this.raster.settings.audio.minFreq) +
-        this.raster.settings.audio.minFreq;
-      playAudio();
-      setAudioFrequency(frequency);
     }
   }
 

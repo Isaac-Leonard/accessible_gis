@@ -114,6 +114,7 @@ impl<'a> StatefulRasterBand<'a> {
             // TODO: Should probably replace with x and y resolutions or even better just the full geotransform
             resolution: geo_transform[1],
             no_data_value: band.no_data_value(),
+            audio_table: self.info.audio_table.clone(),
         };
         RasterDisplayInfo {
             kind: self.info.render,
@@ -139,6 +140,7 @@ pub struct RasterMetadata {
     pub height: usize,
     pub origin: (f64, f64),
     pub no_data_value: Option<f64>,
+    audio_table: Option<AudioTable>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type, EnumDiscriminants)]
