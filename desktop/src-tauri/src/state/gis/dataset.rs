@@ -127,11 +127,12 @@ impl StatefulDataset {
         }
     }
 
-    pub fn get_raster(&mut self, idx: usize) -> Option<StatefulRasterBand> {
-        let band = self.dataset.get_raster(idx);
-        let info = self.band_info.get_mut(idx - 1);
+    /// gets the raster band at the specified base 1 index
+    pub fn get_raster(&mut self, index: usize) -> Option<StatefulRasterBand> {
+        let band = self.dataset.get_raster(index);
+        let info = self.band_info.get_mut(index - 1);
         match (band, info) {
-            (Some(band), Some(info)) => Some(StatefulRasterBand { band, info }),
+            (Some(band), Some(info)) => Some(StatefulRasterBand::new(band, info, index)),
             (None, None) => None,
             _ => panic!("Mismatch in gdal layers and stateful layer info"),
         }

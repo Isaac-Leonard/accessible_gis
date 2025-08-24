@@ -22,16 +22,18 @@ use crate::{
 async fn get_raster(state: Data<AppDataSync>) -> impl Responder {
     eprintln!("get_raster called");
     let Some(data) = state.with_project_fallible(|project| {
-        let dataset = project
+        let band_to_display = project
             .get_raster_to_display()
-            .ok_or_else(|| ErrorDetails::Other("No raster to display".to_string()))?
+            .ok_or_else(|| ErrorDetails::Other("No raster to display".to_string()))?;
+        let index = band_to_display.get_index();
+        let dataset = band_to_display
             .info
             .wgs84_reprojected_file
             .as_mut()
             .ok_or_else(|| {
                 ErrorDetails::Other("No reprojected dataset for display raster".to_string())
             })?;
-        let band = dataset.get_raster(1).ok_or_else(|| {
+        let band = dataset.get_raster(index).ok_or_else(|| {
             ErrorDetails::Other("Failed to get band for reprojected display raster".to_string())
         })?;
         read_raster_data_enum(&band.band).ok_or_else(|| {

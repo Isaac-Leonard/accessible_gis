@@ -51,13 +51,28 @@ pub enum RenderMethod {
 pub struct StatefulRasterBand<'a> {
     pub band: WrappedRasterBand<'a>,
     pub info: &'a mut StatefulRasterInfo,
+    index: usize,
 }
 
 impl<'a> StatefulRasterBand<'a> {
+    pub fn new(
+        band: WrappedRasterBand<'a>,
+        info: &'a mut StatefulRasterInfo,
+        index: usize,
+    ) -> Self {
+        Self { band, info, index }
+    }
+
+    /// Returns the base 1 index of this raster band
+    pub fn get_index(&self) -> usize {
+        self.index
+    }
+
     /// Gets the necessary information to display the raster and performs any required reprojections.
     /// As this is called before any actual data is sent to the touch device the reprojection is centralised here so other functions can just unwrap the wgs84_reprojected_dataset field on band.info.
     /// TODO: This isn't perfect, maybe we could replace with a LazyCell or something but this will do for now as it minimises reprojections and makes the code less fragile then it was before.
     pub fn get_info_for_display(&mut self, app: &AppHandle) -> RasterDisplayInfo {
+        let index = self.get_index();
         let dataset = if let Some(dataset) = self.info.wgs84_reprojected_file.as_mut() {
             dataset
         } else {
@@ -68,7 +83,7 @@ impl<'a> StatefulRasterBand<'a> {
             self.info.wgs84_reprojected_file = Some(wgs84_dataset);
             self.info.wgs84_reprojected_file.as_mut().unwrap()
         };
-        let band = dataset.get_raster(1).unwrap();
+        let band = dataset.get_raster(index).unwrap();
         eprintln!(
             "Reprojected display band to bounds: {:?}",
             band.get_bounds()
