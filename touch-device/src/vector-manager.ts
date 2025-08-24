@@ -106,14 +106,15 @@ export class VectorManager {
 
   speakFeatures(coords: [number, number]) {
     let foundFeatures: Feature[] = [];
-    const degrees = { units: "degrees" } as const;
+    const kilometres = { units: "kilometres" } as const;
     const geodesic = { method: "geodesic" } as const;
     for (let feature of this.features) {
       const { geometry } = feature;
       switch (geometry.type) {
         case "Point":
           if (
-            turf.distance(coords, geometry.coordinates, degrees) < this.radius
+            turf.distance(coords, geometry.coordinates, kilometres) <
+            this.radius
           ) {
             foundFeatures.push(feature);
           }
@@ -122,18 +123,17 @@ export class VectorManager {
           if (
             geometry.coordinates.some(
               (position) =>
-                turf.distance(coords, position, degrees) < this.radius
+                turf.distance(coords, position, kilometres) < this.radius
             )
           ) {
             foundFeatures.push(feature);
           }
           continue;
         case "LineString":
-          const distanceToLine = turf.pointToLineDistance(
-            coords,
-            geometry,
-            geodesic
-          );
+          const distanceToLine = turf.pointToLineDistance(coords, geometry, {
+            ...geodesic,
+            ...kilometres,
+          });
           if (distanceToLine < this.radius) {
             foundFeatures.push(feature);
           }
@@ -142,11 +142,10 @@ export class VectorManager {
           if (
             geometry.coordinates.some(
               (line) =>
-                turf.pointToLineDistance(
-                  coords,
-                  turf.lineString(line),
-                  geodesic
-                ) < this.radius
+                turf.pointToLineDistance(coords, turf.lineString(line), {
+                  ...geodesic,
+                  ...kilometres,
+                }) < this.radius
             )
           ) {
             foundFeatures.push(feature);
