@@ -35,6 +35,7 @@ pub struct StatefulRasterInfo {
     pub render: RenderMethod,
     pub ocr: bool,
     pub wgs84_reprojected_file: Option<WrappedDataset>,
+    pub audio_table: Option<AudioTable>,
 }
 
 #[derive(Clone, Copy, Debug, EnumIter, specta::Type, Serialize, Deserialize, PartialEq)]
@@ -122,4 +123,26 @@ pub struct RasterMetadata {
     pub height: usize,
     pub origin: (f64, f64),
     pub no_data_value: Option<f64>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+pub enum AudioType {
+    Frequency(f64),
+    Silence,
+    Speak(String),
+    LinearMap,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct Classification {
+    pixel_value: i64,
+    audio: AudioType,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioTable {
+    mapping: Vec<Classification>,
+    other: Classification,
 }

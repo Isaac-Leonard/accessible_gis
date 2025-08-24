@@ -14,7 +14,10 @@ use crate::{
     gdal_if::{DatasetMetadata, FieldSchema, FieldValue, LayerExt, LayerIndex},
     state::{
         AppData,
-        gis::{combined::RasterIndex, raster::RenderMethod},
+        gis::{
+            combined::RasterIndex,
+            raster::{AudioTable, RenderMethod},
+        },
         settings::{AudioSettings, GlobalSettings},
         tools::{SavedToolOutputAction, ToolInputDescriptor},
         workflows::Workflow,
@@ -106,6 +109,7 @@ pub struct RasterScreenData {
     pub ocr: bool,
     pub audio_settings: AudioSettings,
     pub metadata: RasterScreenMetadata,
+    audio_table: Option<AudioTable>,
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -202,6 +206,7 @@ impl AppData {
                             render_method: band.info.render,
                             ocr: band.info.ocr,
                             audio_settings: band.info.audio_settings.clone(),
+                            audio_table: band.info.audio_table.clone(),
                             metadata: RasterScreenMetadata {
                                 cols,
                                 rows,

@@ -64,6 +64,7 @@ impl StatefulDataset {
                 render: RenderMethod::RawData,
                 ocr: false,
                 wgs84_reprojected_file: None,
+                audio_table: None,
             })
             .collect_vec();
 
