@@ -305,6 +305,7 @@ export type ApplicationError = (
   | { type: "DemClassificationError"; error: DemClassificationError }
   | { type: "Other"; error: string }
 ) & { read: boolean; id: string };
+export type AudioClassification = { pixelValue: number; audio: AudioType };
 export type AudioIndicator =
   | "Silence"
   | "MinFreq"
@@ -320,14 +321,13 @@ export type AudioSettings = {
   histogram: HistogramSettings;
   graph: RasterGraphSettings;
 };
-export type AudioTable = { mapping: Classification[]; other: Classification };
+export type AudioTable = { mapping: AudioClassification[]; other: AudioType };
 export type AudioType =
-  | { Frequency: number }
-  | "Silence"
-  | { Speak: string }
-  | "LinearMap";
+  | { type: "Frequency"; value: number }
+  | { type: "Silence" }
+  | { type: "Speak"; value: string }
+  | { type: "LinearMap" };
 export type Classification = { min: number; max: number; target: number };
-export type Classification = { pixelValue: number; audio: AudioType };
 export type ClosedLineDescription = {
   x: number;
   y: number;
@@ -339,6 +339,18 @@ export type ClosedLineDescription = {
   distances: number;
   number_of_points: number;
 };
+/**
+ * Serializable CMYK colour entry.
+ */
+export type CmykEntry = { c: number; m: number; y: number; k: number };
+/**
+ * Colour table abstraction supporting all GDAL palette types.
+ */
+export type ColourTable =
+  | { Gray: GrayEntry[] }
+  | { Rgba: RgbaEntry[] }
+  | { Cmyk: CmykEntry[] }
+  | { Hls: HlsEntry[] };
 export type CreationError = {
   file: string;
   driver: string;
@@ -466,6 +478,10 @@ export type GlobalSettings = {
   default_rendering_method_for_images: RenderMethod;
   audio: AudioSettings;
 };
+/**
+ * Serializable grayscale colour entry.
+ */
+export type GrayEntry = { g: number };
 export type HistogramSettings = {
   /**
    * The length the histogram should play for in milliseconds
@@ -474,6 +490,10 @@ export type HistogramSettings = {
   min_freq: number;
   max_freq: number;
 };
+/**
+ * Serializable HLS colour entry.
+ */
+export type HlsEntry = { h: number; l: number; s: number };
 export type LayerDescriptor = (
   | { type: "Vector"; index: number }
   | { type: "Raster"; index: number }
@@ -720,6 +740,7 @@ export type RasterScreenData = {
   audio_settings: AudioSettings;
   metadata: RasterScreenMetadata;
   audio_table: AudioTable | null;
+  colour_table: ColourTable | null;
 };
 export type RasterScreenMetadata = {
   cols: number;
@@ -745,6 +766,10 @@ export type ReturnedToolOutput =
   | { type: "Command"; value: Output }
   | { type: "String"; value: string }
   | { type: "File"; value: string };
+/**
+ * Serializable RGBA colour entry.
+ */
+export type RgbaEntry = { r: number; g: number; b: number; a: number };
 export type RuntimeInputs = { inputs: WorkflowInput[] };
 export type SavedToolOutputAction = {
   tool: string;

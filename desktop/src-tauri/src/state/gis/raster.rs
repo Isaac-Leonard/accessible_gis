@@ -4,7 +4,7 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use strum::EnumIter;
+use strum::{EnumDiscriminants, EnumIter};
 use tauri::AppHandle;
 
 use crate::{
@@ -141,7 +141,9 @@ pub struct RasterMetadata {
     pub no_data_value: Option<f64>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type, EnumDiscriminants)]
+#[serde(tag = "type", content = "value")]
+#[strum_discriminants(derive(EnumIter, Serialize, Deserialize, specta::Type))]
 pub enum AudioType {
     Frequency(f64),
     Silence,
@@ -151,7 +153,7 @@ pub enum AudioType {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-pub struct Classification {
+pub struct AudioClassification {
     pixel_value: i64,
     audio: AudioType,
 }
@@ -159,6 +161,6 @@ pub struct Classification {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioTable {
-    mapping: Vec<Classification>,
-    other: Classification,
+    mapping: Vec<AudioClassification>,
+    other: AudioType,
 }

@@ -4,7 +4,7 @@ use strum::IntoEnumIterator;
 use crate::{
     audio::Waveform,
     state::{
-        gis::raster::RenderMethod,
+        gis::raster::{AudioTypeDiscriminants, RenderMethod},
         settings::AudioIndicator,
         tools::{ToolInputTypeDiscriminants, ToolPresetParameterValueDiscriminants},
         workflows::WorkflowInputValueDescriptorDiscriminants,
@@ -47,4 +47,10 @@ pub fn get_tool_preset_input_types() -> Vec<ToolPresetParameterValueDiscriminant
 #[specta::specta]
 pub fn get_workflow_input_types() -> Vec<WorkflowInputValueDescriptorDiscriminants> {
     WorkflowInputValueDescriptorDiscriminants::iter().collect_vec()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_audio_types() -> Vec<AudioTypeDiscriminants> {
+    AudioTypeDiscriminants::iter().collect_vec()
 }
