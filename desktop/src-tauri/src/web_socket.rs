@@ -20,8 +20,6 @@ use tokio::{
 use crate::{
     commands::{AppDataSync, MessageEvent},
     errors::ErrorDetails,
-    gdal_if::Srs,
-    server::get_raster_path,
     state::gis::raster::{RasterMetadata, RenderMethod},
 };
 
@@ -52,18 +50,10 @@ pub async fn ws_handle(
         device_sender.send(AppMessage::Gis(project.get_touch_device_settings()));
         device_sender.send(AppMessage::FetchVector);
         let band_to_display = project.get_raster_to_display();
-        if let Some(band) = band_to_display {
-            let render_method = band.info.render;
-            let raster_name = get_raster_path(&app, "tif");
-            std::fs::remove_file(&raster_name);
-            let _band = band.reproject(&raster_name, Srs::Epsg(4326));
-            let wgs84_raster = project
-                .datasets
-                .open(raster_name, &project.settings)
-                .unwrap();
-            let band = wgs84_raster.get_raster(1).unwrap();
-            band.info.render = render_method;
-            device_sender.send(AppMessage::FetchRaster(dbg!(band.get_info_for_display())));
+        if let Some(mut band) = band_to_display {
+            device_sender.send(AppMessage::FetchRaster(dbg!(
+                band.get_info_for_display(&app)
+            )));
         }
         Some(())
     });

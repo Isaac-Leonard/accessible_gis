@@ -5,9 +5,11 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
+use tauri::AppHandle;
 
 use crate::{
-    gdal_if::{Srs, WrappedRasterBand},
+    files::get_random_temp_path,
+    gdal_if::{Srs, WrappedDataset, WrappedRasterBand},
     state::settings::AudioSettings,
     web_socket::RasterDisplayInfo,
 };
@@ -32,6 +34,7 @@ pub struct StatefulRasterInfo {
     pub image_type: ImageType,
     pub render: RenderMethod,
     pub ocr: bool,
+    pub wgs84_reprojected_file: Option<WrappedDataset>,
 }
 
 #[derive(Clone, Copy, Debug, EnumIter, specta::Type, Serialize, Deserialize, PartialEq)]
@@ -51,16 +54,34 @@ pub struct StatefulRasterBand<'a> {
 }
 
 impl<'a> StatefulRasterBand<'a> {
-    pub fn get_info_for_display(&self) -> RasterDisplayInfo {
-        let (width, height) = self.band.band().size();
-        let geo_transform = self.band.geo_transform.unwrap();
+    /// Gets the necessary information to display the raster and performs any required reprojections.
+    /// As this is called before any actual data is sent to the touch device the reprojection is centralised here so other functions can just unwrap the wgs84_reprojected_dataset field on band.info.
+    /// TODO: This isn't perfect, maybe we could replace with a LazyCell or something but this will do for now as it minimises reprojections and makes the code less fragile then it was before.
+    pub fn get_info_for_display(&mut self, app: &AppHandle) -> RasterDisplayInfo {
+        let dataset = if let Some(dataset) = self.info.wgs84_reprojected_file.as_mut() {
+            dataset
+        } else {
+            let reprojected_dataset_name = get_random_temp_path(app, "tif");
+            std::fs::remove_file(&reprojected_dataset_name);
+            dbg!(self.reproject(&reprojected_dataset_name, Srs::Epsg(4326)));
+            let wgs84_dataset = WrappedDataset::open(reprojected_dataset_name).unwrap();
+            self.info.wgs84_reprojected_file = Some(wgs84_dataset);
+            self.info.wgs84_reprojected_file.as_mut().unwrap()
+        };
+        let band = dataset.get_raster(1).unwrap();
+        eprintln!(
+            "Reprojected display band to bounds: {:?}",
+            band.get_bounds()
+        );
+        let (width, height) = band.band().size();
+        let geo_transform = band.geo_transform.unwrap();
         let metadata = RasterMetadata {
             origin: (geo_transform[0], geo_transform[3]),
             width,
             height,
             // TODO: Should probably replace with x and y resolutions or even better just the full geotransform
             resolution: geo_transform[1],
-            no_data_value: self.band.no_data_value(),
+            no_data_value: band.no_data_value(),
         };
         RasterDisplayInfo {
             kind: self.info.render,

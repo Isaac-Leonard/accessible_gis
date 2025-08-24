@@ -1,5 +1,3 @@
-use std::{ffi::OsStr, path::PathBuf};
-
 use actix_files::{self as fs};
 use actix_web::{
     App, Error, HttpRequest, HttpResponse, HttpServer, Responder, get,
@@ -13,37 +11,34 @@ use tauri::{AppHandle, Manager, path::BaseDirectory};
 use tokio::task::spawn_local;
 
 use crate::{
+    errors::ErrorDetails,
+    files::get_random_temp_path,
     gdal_if::{Srs, merge_layers, read_raster_data_enum},
     state::AppDataSync,
     web_socket::ws_handle,
 };
 
-pub fn get_raster_path(app: &AppHandle, ext: impl AsRef<OsStr>) -> PathBuf {
-    let mut path = app.path().resolve("raster", BaseDirectory::Temp).unwrap();
-    path.set_extension(ext);
-    path
-}
-
 #[get("/get_raster")]
-async fn get_raster(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Responder {
+async fn get_raster(state: Data<AppDataSync>) -> impl Responder {
     eprintln!("get_raster called");
-    let raster_name = get_raster_path(&app, "tif");
-    std::fs::remove_file(&raster_name);
-    let Some(data) = state.with_lock(|state| -> Option<_> {
-        let output = state.with_project(|project| {
-            project
-                .get_raster_to_display()
-                .map(|raster| raster.reproject(&raster_name, Srs::Epsg(4326)))
-        })??;
-        eprintln!("{:?}", output);
-        let wgs84_raster = state.open_dataset(raster_name).unwrap();
-        let band = wgs84_raster.get_raster(1).unwrap();
-        eprintln!(
-            "Reprojected display band to bounds: {:?}",
-            band.band.get_bounds()
-        );
-        let data = read_raster_data_enum(&band.band.band)?;
-        Some(data)
+    let Some(data) = state.with_project_fallible(|project| {
+        let dataset = project
+            .get_raster_to_display()
+            .ok_or_else(|| ErrorDetails::Other("No raster to display".to_string()))?
+            .info
+            .wgs84_reprojected_file
+            .as_mut()
+            .ok_or_else(|| {
+                ErrorDetails::Other("No reprojected dataset for display raster".to_string())
+            })?;
+        let band = dataset.get_raster(1).ok_or_else(|| {
+            ErrorDetails::Other("Failed to get band for reprojected display raster".to_string())
+        })?;
+        read_raster_data_enum(&band.band).ok_or_else(|| {
+            ErrorDetails::Other(
+                "Failed to read data for reprojected version of display raster".to_string(),
+            )
+        })
     }) else {
         return HttpResponse::NotFound().finish();
     };
@@ -166,7 +161,7 @@ async fn get_ocr(state: Data<AppDataSync>) -> impl Responder {
 
 #[get("/get_image")]
 async fn get_image(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Responder {
-    let raster_name = get_raster_path(&app, "png");
+    let raster_name = get_random_temp_path(&app, "png");
     std::fs::remove_file(&raster_name);
     state.with_lock(|state| {
         let output = state.with_project(|project| {

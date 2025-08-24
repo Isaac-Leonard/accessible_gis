@@ -3,7 +3,7 @@ use std::{cmp::Ordering, path::PathBuf, process::Command};
 use gdal::spatial_ref::{CoordTransform, SpatialRef};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use crate::{
     dataset_collection::NonEmptyDelegatorImpl,
@@ -111,11 +111,12 @@ pub fn set_display_raster(
     raster: Option<RasterIndex>,
     state: AppState,
     touch_device: State<TouchDevice>,
+    app: AppHandle,
 ) {
     state.with_project(|project| {
         project.display_current_raster(raster);
-        let band = project.get_raster_to_display()?;
-        touch_device.send(AppMessage::FetchRaster(band.get_info_for_display()));
+        let mut band = project.get_raster_to_display()?;
+        touch_device.send(AppMessage::FetchRaster(band.get_info_for_display(&app)));
         Some(())
     });
 }
