@@ -11,7 +11,9 @@ use crate::{
     commands::SortOption,
     dataset_collection::NonEmptyDelegatorImplExt,
     errors::ApplicationError,
-    gdal_if::{DatasetMetadata, FieldSchema, FieldValue, LayerExt, LayerIndex},
+    gdal_if::{
+        DatasetMetadata, FieldSchema, FieldValue, LayerExt, LayerIndex, colour_table::ColourTable,
+    },
     state::{
         AppData,
         gis::{
@@ -50,7 +52,7 @@ pub struct NewDatasetScreenData {
     pub drivers: Vec<String>,
 }
 
-#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, Default, specta::Type)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default, specta::Type)]
 #[serde(tag = "type")]
 pub enum ProjectScreen {
     Project(ProjectScreenInfo),
@@ -58,7 +60,7 @@ pub enum ProjectScreen {
     NotLoaded,
 }
 
-#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+#[derive(Clone, Deserialize, Serialize, Debug, specta::Type)]
 pub struct ProjectScreenInfo {
     pub layers: Vec<LayerDescriptor>,
     pub layer_info: Option<LayerScreenInfo>,
@@ -66,7 +68,7 @@ pub struct ProjectScreenInfo {
     prefered_display_fields: Vec<String>,
 }
 
-#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+#[derive(Clone, Deserialize, Serialize, Debug, specta::Type)]
 #[serde(tag = "type")]
 pub enum LayerScreenInfo {
     Vector(VectorScreenData),
@@ -100,7 +102,7 @@ pub struct FeatureIdentifier {
     fid: u64,
 }
 
-#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
+#[derive(Clone, Deserialize, Serialize, Debug, specta::Type)]
 pub struct RasterScreenData {
     pub layer_index: usize,
     pub dataset_index: usize,
@@ -110,6 +112,7 @@ pub struct RasterScreenData {
     pub audio_settings: AudioSettings,
     pub metadata: RasterScreenMetadata,
     audio_table: Option<AudioTable>,
+    colour_table: Option<ColourTable>,
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -207,6 +210,11 @@ impl AppData {
                             ocr: band.info.ocr,
                             audio_settings: band.info.audio_settings.clone(),
                             audio_table: band.info.audio_table.clone(),
+                            colour_table: band
+                                .band
+                                .band()
+                                .color_table()
+                                .and_then(|table| ColourTable::try_from(table).ok()),
                             metadata: RasterScreenMetadata {
                                 cols,
                                 rows,
