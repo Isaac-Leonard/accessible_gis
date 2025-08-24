@@ -1,5 +1,7 @@
 use std::process::{Command, Output};
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     commands::SortOption,
     gdal_if::{Srs, WrappedLayer},
@@ -7,7 +9,7 @@ use crate::{
 
 use super::shared::SharedInfo;
 
-#[derive(Clone, Default, Debug, PartialEq)]
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct StatefulVectorInfo {
     /// The index of each user selected feature for each layer of the dataset
     pub selected_feature: Option<usize>,

@@ -115,8 +115,8 @@ pub fn theissen_polygons_to_file(points: MultiPoint, srs: String, file: PathBuf,
         project.datasets.add(StatefulDataset {
             dataset: wrapped_dataset,
             layer_index: None,
-            layer_info: vec![StatefulVectorInfo::default()],
-            band_info: vec![],
+            vector_info: vec![StatefulVectorInfo::default()],
+            raster_info: vec![],
         });
     });
 }

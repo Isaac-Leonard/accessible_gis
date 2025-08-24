@@ -320,7 +320,14 @@ export type AudioSettings = {
   histogram: HistogramSettings;
   graph: RasterGraphSettings;
 };
+export type AudioTable = { mapping: Classification[]; other: Classification };
+export type AudioType =
+  | { Frequency: number }
+  | "Silence"
+  | { Speak: string }
+  | "LinearMap";
 export type Classification = { min: number; max: number; target: number };
+export type Classification = { pixelValue: number; audio: AudioType };
 export type ClosedLineDescription = {
   x: number;
   y: number;
@@ -712,6 +719,7 @@ export type RasterScreenData = {
   ocr: boolean;
   audio_settings: AudioSettings;
   metadata: RasterScreenMetadata;
+  audio_table: AudioTable | null;
 };
 export type RasterScreenMetadata = {
   cols: number;

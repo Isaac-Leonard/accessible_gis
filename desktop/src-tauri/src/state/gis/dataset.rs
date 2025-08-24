@@ -25,8 +25,8 @@ use super::{
 pub struct StatefulDataset {
     pub dataset: WrappedDataset,
     pub layer_index: Option<LayerIndex>,
-    pub layer_info: Vec<StatefulVectorInfo>,
-    pub band_info: Vec<StatefulRasterInfo>,
+    pub vector_info: Vec<StatefulVectorInfo>,
+    pub raster_info: Vec<StatefulRasterInfo>,
 }
 
 impl StatefulDataset {
@@ -78,8 +78,8 @@ impl StatefulDataset {
         Self {
             dataset,
             layer_index,
-            layer_info,
-            band_info,
+            vector_info: layer_info,
+            raster_info: band_info,
         }
     }
 
@@ -99,7 +99,7 @@ impl StatefulDataset {
         self.dataset
             .vectors()
             .into_iter()
-            .zip(&mut self.layer_info)
+            .zip(&mut self.vector_info)
             .map(|(layer, info)| StatefulVectorLayer { layer, info })
     }
 
@@ -120,7 +120,7 @@ impl StatefulDataset {
 
     pub fn get_vector(&mut self, idx: usize) -> Option<StatefulVectorLayer> {
         let layer = self.dataset.get_vector(idx);
-        let info = self.layer_info.get_mut(idx);
+        let info = self.vector_info.get_mut(idx);
         match (layer, info) {
             (Some(layer), Some(info)) => Some(StatefulVectorLayer { layer, info }),
             (None, None) => None,
@@ -131,7 +131,7 @@ impl StatefulDataset {
     /// gets the raster band at the specified base 1 index
     pub fn get_raster(&mut self, index: usize) -> Option<StatefulRasterBand> {
         let band = self.dataset.get_raster(index);
-        let info = self.band_info.get_mut(index - 1);
+        let info = self.raster_info.get_mut(index - 1);
         match (band, info) {
             (Some(band), Some(info)) => Some(StatefulRasterBand::new(band, info, index)),
             (None, None) => None,

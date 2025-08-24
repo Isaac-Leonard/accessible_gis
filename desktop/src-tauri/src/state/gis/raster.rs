@@ -16,7 +16,7 @@ use crate::{
 
 use super::shared::SharedInfo;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub enum ImageType {
     Dem,
     Red,
@@ -27,15 +27,31 @@ pub enum ImageType {
     Unknown,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct StatefulRasterInfo {
     pub audio_settings: AudioSettings,
     pub shared: SharedInfo,
     pub image_type: ImageType,
     pub render: RenderMethod,
     pub ocr: bool,
+    #[serde(skip)]
     pub wgs84_reprojected_file: Option<WrappedDataset>,
     pub audio_table: Option<AudioTable>,
+}
+
+impl Clone for StatefulRasterInfo {
+    /// Copies all fields but for the wgs84_reprojected_dataset as it cannot be stored
+    fn clone(&self) -> Self {
+        Self {
+            audio_settings: self.audio_settings.clone(),
+            shared: self.shared.clone(),
+            image_type: self.image_type.clone(),
+            render: self.render.clone(),
+            ocr: self.ocr.clone(),
+            wgs84_reprojected_file: None,
+            audio_table: self.audio_table.clone(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, EnumIter, specta::Type, Serialize, Deserialize, PartialEq)]

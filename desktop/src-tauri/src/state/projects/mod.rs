@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     errors::{ApplicationError, ErrorDetails},
-    gdal_if::{Srs, WrappedDataset},
+    gdal_if::{LayerIndex, OpenDatasetError, Srs, WrappedDataset},
     web_socket::{GisMessage, RasterMessage, VectorMessage},
 };
 
@@ -14,8 +14,10 @@ use super::{
         DatasetCollection, NonEmptyDelegator, NonEmptyDelegatorImpl, NonEmptyDelegatorImplExt,
     },
     gis::{
-        combined::RasterIndex, dataset::StatefulDataset, raster::StatefulRasterBand,
-        vector::StatefulVectorLayer,
+        combined::RasterIndex,
+        dataset::StatefulDataset,
+        raster::{StatefulRasterBand, StatefulRasterInfo},
+        vector::{StatefulVectorInfo, StatefulVectorLayer},
     },
     settings::GlobalSettings,
     tools::{SavedToolOutputAction, Tool, UserDefinedTool, get_built_in_tools},
@@ -80,7 +82,12 @@ impl Project {
             datasets: self
                 .datasets
                 .iter()
-                .map(|ds| ds.dataset.file_name.clone())
+                .map(|ds| StoredDataset::WithInfo {
+                    path: ds.dataset.file_name.clone(),
+                    layer_index: ds.layer_index.clone(),
+                    vector_info: ds.vector_info.clone(),
+                    raster_info: ds.raster_info.clone(),
+                })
                 .collect(),
             settings: self.settings.clone(),
             prefered_display_fields: self.prefered_display_fields.clone(),
@@ -103,8 +110,7 @@ impl Project {
     ) -> Result<Self, ApplicationError> {
         let mut datasets = DatasetCollection::Empty;
         for dataset in project.datasets {
-            datasets
-                .open(dataset, &project.settings)
+            load_dataset(&mut datasets, dataset, &project.settings)
                 .map_err(ErrorDetails::OpenDatasetError)?;
         }
 
@@ -211,10 +217,10 @@ impl NonEmptyDelegator for Project {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct StoredProject {
     pub srs: Srs,
-    pub datasets: Vec<PathBuf>,
+    pub datasets: Vec<StoredDataset>,
     pub settings: GlobalSettings,
     pub prefered_display_fields: Vec<String>,
     pub raster_to_display: Option<RasterIndex>,
@@ -233,4 +239,43 @@ pub struct StoredProject {
 /// This just exists to use true as a default value for serde
 fn get_true() -> bool {
     true
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum StoredDataset {
+    RawFile(PathBuf),
+    WithInfo {
+        path: PathBuf,
+        layer_index: Option<LayerIndex>,
+        vector_info: Vec<StatefulVectorInfo>,
+        raster_info: Vec<StatefulRasterInfo>,
+    },
+}
+
+fn load_dataset(
+    datasets: &mut DatasetCollection,
+    dataset: StoredDataset,
+    settings: &GlobalSettings,
+) -> Result<(), OpenDatasetError> {
+    match dataset {
+        StoredDataset::RawFile(path) => {
+            datasets.open(path, &settings);
+        }
+        StoredDataset::WithInfo {
+            path,
+            layer_index,
+            vector_info,
+            raster_info,
+        } => {
+            let dataset = WrappedDataset::open(path)?;
+            datasets.add(StatefulDataset {
+                dataset,
+                layer_index,
+                vector_info,
+                raster_info,
+            });
+        }
+    }
+    Ok(())
 }
