@@ -1,4 +1,3 @@
-import type { ImageConstructorOptions } from "image-js";
 import * as ImageJs from "image-js";
 import { Image } from "image-js";
 import { pauseAudio, playAudio, setAudioFrequency } from "./audio.ts";
@@ -113,7 +112,7 @@ export class RasterManager {
       throw new Error("Expected to get raster data and couldn't");
     }
     const settings = getDefaultSettings(data, options.metadata.noDataValue);
-    const image = await Image.load("/get_image");
+    const image = await ImageJs.fetchURL("/get_image");
     this.raster = {
       type: options.type,
       settings,
@@ -125,7 +124,7 @@ export class RasterManager {
   }
 
   async getImageRaster(options: Extract<RasterOptions, { type: "Image" }>) {
-    const image = await Image.load("/get_image");
+    const image = await ImageJs.fetchURL("/get_image");
     const data = this.dataFromImage(image);
     const settings = getDefaultSettings(data, options.metadata.noDataValue);
     this.raster = {
@@ -139,13 +138,13 @@ export class RasterManager {
   }
 
   dataFromImage(image: Image): RasterData {
-    const data = image.grey().data;
+    const data = image.grey().getRawImage().data;
     if (data instanceof Uint8Array) {
       return { type: "Uint8", data };
     } else if (data instanceof Uint16Array) {
       return { type: "Uint16", data };
-    } else if (data instanceof Float32Array) {
-      return { type: "Float32", data };
+    } else if (data instanceof Uint8ClampedArray) {
+      return { type: "Uint8", data: Uint8Array.from(data) };
     } else {
       throw new Error("Unknown data type for image.");
     }
@@ -257,13 +256,12 @@ export class RasterManager {
     const scale = width / this.raster.metadata.width;
     const transformedImage = this.raster.image
       .clone()
-      .resize({ factor: scale });
-    const imageData = new ImageData(
-      transformedImage.getRGBAData({ clamped: true }) as Uint8ClampedArray,
-      transformedImage.width,
-      transformedImage.height
-    );
-    this.ctx.putImageData(imageData, ...topLeftScreen);
+      .resize({ xFactor: scale, yFactor: scale });
+    ImageJs.writeCanvas(transformedImage, this.canvas, {
+      dx: topLeftScreen[0],
+      dy: topLeftScreen[1],
+      resizeCanvas: false,
+    });
   }
 }
 
@@ -292,19 +290,15 @@ const rasterToGrey = (
   min: number,
   max: number
 ): Image => {
-  const options: ImageConstructorOptions = {
-    width,
-    height,
-    kind: "GREY" as ImageJs.ImageKind,
-    colorModel: "GREY" as ImageJs.ColorModel,
-    components: 1,
+  const options: ImageJs.ImageOptions = {
+    colorModel: "GREY",
     bitDepth: 8,
   };
   switch (data.type) {
     case "Uint8":
-      return new Image({ ...options, data: data.data });
+      return new Image(width, height, { ...options, data: data.data });
     case "Int8":
-      return new Image({
+      return new Image(width, height, {
         ...options,
         data: Uint8Array.from(data.data, (x) => x + 128),
       });
@@ -313,6 +307,6 @@ const rasterToGrey = (
       const scaledData = Uint8Array.from(data.data, (x) =>
         Math.round(((x - min) / range) * 256)
       );
-      return new Image({ ...options, data: scaledData });
+      return new Image(width, height, { ...options, data: scaledData });
   }
 };

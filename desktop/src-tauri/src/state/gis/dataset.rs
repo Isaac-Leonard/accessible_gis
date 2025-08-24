@@ -52,9 +52,6 @@ impl StatefulDataset {
             })
             .collect_vec();
 
-        // TODO: Make this customisable in settings
-        let render_method = RenderMethod::RawData;
-
         let band_info = dataset
             .dataset
             .rasterbands()
@@ -64,7 +61,7 @@ impl StatefulDataset {
                     name: dataset.file_name.clone(),
                 },
                 image_type: ImageType::default(),
-                render: render_method,
+                render: RenderMethod::RawData,
                 ocr: false,
             })
             .collect_vec();

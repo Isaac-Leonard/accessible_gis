@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{ffi::OsStr, path::PathBuf};
 
 use actix_files::{self as fs};
 use actix_web::{
@@ -18,16 +18,16 @@ use crate::{
     web_socket::ws_handle,
 };
 
-pub fn get_raster_path(app: &AppHandle) -> PathBuf {
-    app.path()
-        .resolve("raster.tif", BaseDirectory::Temp)
-        .unwrap()
+pub fn get_raster_path(app: &AppHandle, ext: impl AsRef<OsStr>) -> PathBuf {
+    let mut path = app.path().resolve("raster", BaseDirectory::Temp).unwrap();
+    path.set_extension(ext);
+    path
 }
 
 #[get("/get_raster")]
 async fn get_raster(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Responder {
     eprintln!("get_raster called");
-    let raster_name = get_raster_path(&app);
+    let raster_name = get_raster_path(&app, "tif");
     std::fs::remove_file(&raster_name);
     let Some(data) = state.with_lock(|state| -> Option<_> {
         let output = state.with_project(|project| {
@@ -166,13 +166,13 @@ async fn get_ocr(state: Data<AppDataSync>) -> impl Responder {
 
 #[get("/get_image")]
 async fn get_image(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Responder {
-    let raster_name = get_raster_path(&app);
+    let raster_name = get_raster_path(&app, "png");
     std::fs::remove_file(&raster_name);
     state.with_lock(|state| {
         let output = state.with_project(|project| {
             project
                 .get_raster_to_display()
-                .map(|raster| raster.reproject(&raster_name, Srs::Epsg(4326)))
+                .map(|raster| dbg!(raster.reproject(&raster_name, Srs::Epsg(4326))))
         });
         eprintln!("{:?}", output);
     });

@@ -22,7 +22,7 @@ use crate::{
     errors::ErrorDetails,
     gdal_if::Srs,
     server::get_raster_path,
-    state::gis::raster::{ImageType, RasterMetadata, RenderMethod},
+    state::gis::raster::{RasterMetadata, RenderMethod},
 };
 
 /// How often heartbeat pings are sent
@@ -53,7 +53,8 @@ pub async fn ws_handle(
         device_sender.send(AppMessage::FetchVector);
         let band_to_display = project.get_raster_to_display();
         if let Some(band) = band_to_display {
-            let raster_name = get_raster_path(&app);
+            let render_method = band.info.render;
+            let raster_name = get_raster_path(&app, "tif");
             std::fs::remove_file(&raster_name);
             let _band = band.reproject(&raster_name, Srs::Epsg(4326));
             let wgs84_raster = project
@@ -61,6 +62,7 @@ pub async fn ws_handle(
                 .open(raster_name, &project.settings)
                 .unwrap();
             let band = wgs84_raster.get_raster(1).unwrap();
+            band.info.render = render_method;
             device_sender.send(AppMessage::FetchRaster(dbg!(band.get_info_for_display())));
         }
         Some(())

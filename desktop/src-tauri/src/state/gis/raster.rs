@@ -3,9 +3,8 @@ use std::{
     process::{Command, Output},
 };
 
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use strum::{EnumIter, IntoEnumIterator};
+use strum::EnumIter;
 
 use crate::{
     gdal_if::{Srs, WrappedRasterBand},

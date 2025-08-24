@@ -25,6 +25,7 @@ pub fn reproject_layer(srs: Srs, name: &str, state: AppState) {
                 eprint!("{:?}", output)
             }
             Some(StatefulLayerEnum::Raster(band)) => {
+                // TODO: Allow users to specify option for expand_rgba
                 let output = band
                     .reproject(name, srs)
                     .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
