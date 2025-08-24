@@ -79,6 +79,7 @@ impl<'a> StatefulRasterBand<'a> {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct RasterMetadata {
     pub resolution: f64,
     pub width: usize,

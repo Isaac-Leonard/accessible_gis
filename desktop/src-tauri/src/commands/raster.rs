@@ -114,7 +114,9 @@ pub fn set_display_raster(
 ) {
     state.with_project(|project| {
         project.display_current_raster(raster);
-        touch_device.send(AppMessage::RefetchRaster)
+        let band = project.get_raster_to_display()?;
+        touch_device.send(AppMessage::FetchRaster(band.get_info_for_display()));
+        Some(())
     });
 }
 

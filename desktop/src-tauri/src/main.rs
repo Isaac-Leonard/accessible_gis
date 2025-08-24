@@ -52,14 +52,15 @@ fn main() {
 }
 
 fn launch_gui() {
-    let handlers = generate_handlers("../src/bindings.ts");
+    let specta_builder = generate_handlers("../src/bindings.ts");
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .manage(TouchDevice::default())
-        .invoke_handler(handlers)
-        .setup(|app| {
+        .invoke_handler(specta_builder.invoke_handler())
+        .setup(move |app| {
+            specta_builder.mount_events(app);
             let resolver = app.path();
             std::fs::create_dir_all(resolver.temp_dir().unwrap()).unwrap();
             let countries = load_countries(resolver);

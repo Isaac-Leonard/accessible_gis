@@ -16,7 +16,6 @@ mod vector;
 use std::path::Path;
 
 use specta_typescript::{BigIntExportBehavior, Typescript, formatter::prettier};
-use tauri::{Wry, ipc::Invoke};
 use tauri_specta::{Builder, collect_commands, collect_events};
 
 pub use crate::*;
@@ -38,9 +37,7 @@ pub use vector::*;
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, specta::Type, tauri_specta::Event)]
 pub struct MessageEvent;
 
-pub fn generate_handlers(
-    s: impl AsRef<Path>,
-) -> impl (Fn(Invoke<Wry>) -> bool) + Send + Sync + 'static {
+pub fn generate_handlers(s: impl AsRef<Path>) -> Builder {
     let builder = Builder::new()
         .commands(collect_commands![
             load_file,
@@ -122,5 +119,5 @@ pub fn generate_handlers(
             s,
         )
         .expect("Failed to export typescript bindings");
-    builder.invoke_handler()
+    builder
 }

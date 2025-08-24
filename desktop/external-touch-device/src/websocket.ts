@@ -1,6 +1,7 @@
 import type { BBox } from "geojson";
 import { geoJsonParsers } from "touch-device";
 import { VectorSettings } from "touch-device";
+import { RasterAudioSettings, RasterMetadata } from "touch-device/src/raster";
 import { ZodType, z } from "zod";
 
 const host = window.location.host;
@@ -50,7 +51,7 @@ export class WsConnection {
   onError(e: Event) {
     console.log("Error in websocket");
     console.log(e);
-    this.connect();
+    // this.connect();
   }
 
   onMessage(e: MessageEvent) {
@@ -74,7 +75,7 @@ export class WsConnection {
   onClose(e: CloseEvent) {
     console.log("Closed socket");
     console.log(e);
-    this.connect();
+    // this.connect();
   }
 
   handleReconnects() {
@@ -83,7 +84,7 @@ export class WsConnection {
         document.visibilityState === "visible" &&
         this.socket?.readyState === WebSocket.CLOSED
       ) {
-        this.connect();
+        //        this.connect();
       }
     });
   }
@@ -94,24 +95,24 @@ export class WsConnection {
 }
 
 export type AppMessage =
-  | { type: "Image"; data: ImageMessage }
   | { type: "Gis"; data: GisMessage }
   | { type: "FocusBox"; data: BBox }
-  | { type: "RefetchRaster" }
-  | { type: "RefetchVector" };
+  | { type: "FetchRaster"; data: RasterMetadata }
+  | { type: "FetchVector" };
 
 export type ImageMessage = { ocr: boolean };
 
-export type GisMessage = { vector: VectorSettings; raster: RasterSettings };
+export type GisMessage = { vector: VectorSettings };
 
-export type AudioSettings = {};
+const RasterMetadataParser: ZodType<RasterMetadata> = z.object({
+  resolution: z.number(),
+  width: z.number(),
+  height: z.number(),
+  noDataValue: z.number().nullable(),
+  origin: z.tuple([z.number(), z.number()]),
+});
 
-export type RasterSettings = {
-  minFreq: number;
-  maxFreq: number;
-};
-
-const rasterParser: ZodType<RasterSettings> = z.object({
+const RasterAudioSettingsParser: ZodType<RasterAudioSettings> = z.object({
   minFreq: z.number(),
   maxFreq: z.number(),
 });
@@ -123,18 +124,17 @@ const vectorSettingsParser = z.object({
   announceGeometryType: z.boolean(),
 });
 
-const GisParser = z.object({
+const GisParser: ZodType<GisMessage> = z.object({
   vector: vectorSettingsParser,
-  raster: rasterParser,
+  raster: RasterAudioSettingsParser,
 });
 
 const messageParser: ZodType<AppMessage> = z.union([
-  z.object({ type: z.literal("Image"), data: z.object({ ocr: z.boolean() }) }),
   z.object({ type: z.literal("Gis"), data: GisParser }),
   z.object({
     type: z.literal("FocusBox"),
     data: geoJsonParsers.bBox,
   }),
-  z.object({ type: z.literal("RefetchRaster") }),
-  z.object({ type: z.literal("RefetchVector") }),
+  z.object({ type: z.literal("FetchRaster"), data: RasterMetadataParser }),
+  z.object({ type: z.literal("FetchVector") }),
 ]);

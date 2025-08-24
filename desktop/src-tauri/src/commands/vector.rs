@@ -152,7 +152,7 @@ pub fn set_display_vector(state: AppState, touch_device: State<TouchDevice>) {
     state
         .with_current_vector_layer(|layer| {
             layer.info.display = true;
-            touch_device.send(AppMessage::RefetchVector)
+            touch_device.send(AppMessage::FetchVector)
         })
         .expect("No vector found when trying to set display");
 }

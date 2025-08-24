@@ -20,6 +20,9 @@ use tokio::{
 use crate::{
     commands::{AppDataSync, MessageEvent},
     errors::ErrorDetails,
+    gdal_if::Srs,
+    server::get_raster_path,
+    state::gis::raster::RasterMetadata,
 };
 
 /// How often heartbeat pings are sent
@@ -47,6 +50,19 @@ pub async fn ws_handle(
     // Ensure the device has the right settings for the current data on start
     app.state::<AppDataSync>().with_project(|project| {
         device_sender.send(AppMessage::Gis(project.get_touch_device_settings()));
+        device_sender.send(AppMessage::FetchVector);
+        let band_to_display = project.get_raster_to_display();
+        if let Some(band) = band_to_display {
+            let raster_name = get_raster_path(&app);
+            std::fs::remove_file(&raster_name);
+            let _band = band.reproject(&raster_name, Srs::Epsg(4326));
+            let wgs84_raster = project
+                .datasets
+                .open(raster_name, &project.settings)
+                .unwrap();
+            let band = wgs84_raster.get_raster(1).unwrap();
+            device_sender.send(AppMessage::FetchRaster(dbg!(band.get_info_for_display())));
+        }
         Some(())
     });
 
@@ -90,7 +106,7 @@ pub async fn ws_handle(
 
                     // client WebSocket stream error
                     (Some(Err(err)), _) => {
-                        eprintln!("Socket error: {:?}", err);
+                        eprintln!("Socket error: {err:?}");
                         break None;
                     }
 
@@ -124,7 +140,7 @@ pub async fn ws_handle(
             }
         };
     };
-    eprintln!("Socket closed: {:?}", close_reason);
+    eprintln!("Socket closed: {close_reason:?}");
     device_sender.disconnect();
 }
 
@@ -134,8 +150,8 @@ pub enum AppMessage {
     Gis(GisMessage),
     FocusRaster,
     FocusBox([f64; 4]),
-    RefetchRaster,
-    RefetchVector,
+    FetchRaster(RasterMetadata),
+    FetchVector,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -173,7 +189,7 @@ pub struct DeviceData {
 }
 
 fn process_device_message(app: AppHandle, message: DeviceMessage) {
-    eprintln!("Message: {:?}", message);
+    eprintln!("Message: {message:?}");
     match message {
         DeviceMessage::Error(err) => app.state::<AppDataSync>().with_lock(|state| {
             state
@@ -182,7 +198,7 @@ fn process_device_message(app: AppHandle, message: DeviceMessage) {
         }),
         _ => {}
     };
-    MessageEvent.emit_to(&app, "MessageEvent").unwrap();
+    MessageEvent.emit(&app).unwrap();
 }
 
 #[derive(Default)]

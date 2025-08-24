@@ -1,4 +1,4 @@
-use std::{io::Write, path::PathBuf};
+use std::path::PathBuf;
 
 use actix_files::{self as fs};
 use actix_web::{
@@ -18,7 +18,7 @@ use crate::{
     web_socket::ws_handle,
 };
 
-fn get_raster_path(app: &AppHandle) -> PathBuf {
+pub fn get_raster_path(app: &AppHandle) -> PathBuf {
     app.path()
         .resolve("raster.tif", BaseDirectory::Temp)
         .unwrap()
@@ -29,7 +29,7 @@ async fn get_raster(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Resp
     eprintln!("get_raster called");
     let raster_name = get_raster_path(&app);
     std::fs::remove_file(&raster_name);
-    let Some((metadata, data)) = state.with_lock(|state| -> Option<(_, _)> {
+    let Some(data) = state.with_lock(|state| -> Option<_> {
         let output = state.with_project(|project| {
             project
                 .get_raster_to_display()
@@ -43,45 +43,15 @@ async fn get_raster(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Resp
             band.band.get_bounds()
         );
         let data = read_raster_data_enum(&band.band.band)?;
-        let metadata = band.get_info_for_display();
-        Some((metadata, data))
+        Some(data)
     }) else {
         return HttpResponse::NotFound().finish();
     };
-    eprintln!("Metadata: {:?}", metadata);
-
-    let mut bytes = Vec::<u8>::new();
-    bytes
-        .write_all(metadata.resolution.to_le_bytes().as_slice())
-        .unwrap();
-    bytes
-        .write_all(metadata.width.to_le_bytes().as_slice())
-        .unwrap();
-    bytes
-        .write_all(metadata.height.to_le_bytes().as_slice())
-        .unwrap();
-    bytes
-        .write_all(metadata.origin.0.to_le_bytes().as_slice())
-        .unwrap();
-    bytes
-        .write_all(metadata.origin.1.to_le_bytes().as_slice())
-        .unwrap();
-    match metadata.no_data_value {
-        Some(ndv) => {
-            // We need to indicate that the following value is defined
-            bytes.write_all(1_f64.to_le_bytes().as_slice()).unwrap();
-            bytes.write_all(ndv.to_le_bytes().as_slice()).unwrap();
-        }
-        None => {
-            bytes.write_all(0_f64.to_le_bytes().as_slice()).unwrap();
-            bytes.write_all(0_f64.to_le_bytes().as_slice()).unwrap();
-        }
-    }
-    data.into_f64_vec().into_iter().for_each(|x| {
-        bytes
-            .write_all((x as f32).to_le_bytes().as_slice())
-            .unwrap()
-    });
+    let bytes = data
+        .into_f64_vec()
+        .into_iter()
+        .flat_map(|x| x.to_le_bytes())
+        .collect_vec();
     eprintln!("Sending {}Mb to touch device", bytes.len() / 1024 / 1024);
     HttpResponse::Ok().body(bytes)
 }

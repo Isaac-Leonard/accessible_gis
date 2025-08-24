@@ -3,13 +3,12 @@ import {
   VectorManager,
   geoJsonParsers,
   pauseAudio,
-  playAudio,
   setAudioFrequency,
   speak,
-  Raster,
   CoordinateManager,
   getCanvas,
   GestureManager,
+  RasterManager,
 } from "touch-device";
 import { AppMessage, GisMessage, WsConnection } from "./websocket";
 
@@ -31,7 +30,6 @@ const createButton = () => {
 };
 
 const defaultSettings: GisMessage = {
-  raster: { minFreq: 220, maxFreq: 880 },
   vector: {
     preferedKeys: [],
     useLabels: false,
@@ -42,7 +40,7 @@ const defaultSettings: GisMessage = {
 
 class GisManager {
   // Required variables
-  raster: Raster | null = null;
+  raster: RasterManager;
 
   coordinateManager = new CoordinateManager();
   settings: GisMessage = defaultSettings;
@@ -61,6 +59,7 @@ class GisManager {
       this.settings.vector,
       this.coordinateManager
     );
+    this.raster = new RasterManager(this.coordinateManager);
     this.gestureManager = new GestureManager(this.canvas);
     this.connection = new WsConnection();
     this.connection.addMessageHandler(this.wsMessageHandler.bind(this));
@@ -77,7 +76,7 @@ class GisManager {
       const coords = this.coordinateManager.screenToCoords(screenX, screenY);
       console.log(`Lon: ${coords[0]}, lat: ${coords[1]}`);
       this.vectorManager.speakFeatures(coords);
-      this.playAudioInRaster(coords);
+      this.raster.playAudio(coords);
     });
 
     this.canvas.addEventListener("touchmove", (e) => {
@@ -90,7 +89,7 @@ class GisManager {
       console.log(`screen x: ${screenX}, screen y: ${screenY}`);
       const coords = this.coordinateManager.screenToCoords(screenX, screenY);
       this.vectorManager.speakFeatures(coords);
-      this.playAudioInRaster(coords);
+      this.raster.playAudio(coords);
     });
 
     this.canvas.addEventListener("touchend", (e) => {
@@ -164,30 +163,37 @@ class GisManager {
         speak("Could not scroll left, at right of map");
       }
     });
-
-    this.getVectors();
-    this.getRaster();
   }
 
   // Functions
 
-  wsMessageHandler(msg: AppMessage) {
-    if (msg?.type === "Gis") {
-      this.settings = msg.data;
-      this.vectorManager.setSettings(msg.data.vector);
-      this.render();
-      // speak("Updated settings");
-    } else if (msg.type === "FocusBox") {
-      speak("Focusing bounding box");
-      this.coordinateManager.focusScreen(
-        [msg.data[0], msg.data[3]],
-        [msg.data[2], msg.data[1]]
+  async wsMessageHandler(msg: AppMessage) {
+    try {
+      if (msg?.type === "Gis") {
+        this.settings = msg.data;
+        this.vectorManager.setSettings(msg.data.vector);
+        this.render();
+        // speak("Updated settings");
+      } else if (msg.type === "FocusBox") {
+        speak("Focusing bounding box");
+        this.coordinateManager.focusScreen(
+          [msg.data[0], msg.data[3]],
+          [msg.data[2], msg.data[1]]
+        );
+        this.render();
+      } else if (msg.type === "FetchRaster") {
+        await this.raster.updateImage({ type: "RawData", metadata: msg.data });
+        this.render();
+      } else if (msg.type === "FetchVector") {
+        await this.getVectors();
+        this.render();
+      }
+    } catch (e) {
+      this.connection.sendError(
+        `Something went wrong when processing message: ${e}, ${JSON.stringify(
+          e
+        )}`
       );
-      this.render();
-    } else if (msg.type === "RefetchRaster") {
-      this.getRaster();
-    } else if (msg.type === "RefetchVector") {
-      this.getVectors();
     }
   }
 
@@ -211,118 +217,11 @@ class GisManager {
     }
   }
 
-  renderRaster() {
-    if (this.raster === null) {
-      return;
-    }
-    if (
-      this.raster.topLeft[0] > this.coordinateManager.rightLon ||
-      this.raster.topLeft[1] < this.coordinateManager.bottomLat ||
-      this.raster.topLeft[0] + this.raster.width * this.raster.xResolution <
-        this.coordinateManager.leftLon ||
-      this.raster.topLeft[1] + this.raster.height * this.raster.yResolution >
-        this.coordinateManager.topLat
-    ) {
-      // No raster data is visable
-      console.log("Raster off screen");
-      return;
-    }
-    console.log("Rendering raster on screen");
-    const topLeftScreen = this.coordinateManager.coordsToScreen(
-      this.raster.topLeft
-    );
-    const bottomRightScreen = this.coordinateManager.coordsToScreen(
-      this.raster.rasterToCoords(this.raster.width, this.raster.height)
-    );
-    const width = bottomRightScreen[0] - topLeftScreen[0];
-    const scale = width / this.raster.width;
-    const transformedImage = this.raster.image
-      .clone()
-      .resize({ factor: scale });
-    const imageData = new ImageData(
-      transformedImage.getRGBAData({ clamped: true }) as Uint8ClampedArray,
-      transformedImage.width,
-      transformedImage.height
-    );
-    this.ctx.putImageData(imageData, ...topLeftScreen);
-  }
-
-  playAudioInRaster(coords: [number, number]) {
-    if (this.raster === null) {
-      return;
-    }
-    const [x, y] = this.raster.coordsToRaster(coords);
-    console.log(`lon: ${coords[0]}, x:${x}, lat:${coords[1]}, y:${y}`);
-    if (x < 0 || x >= this.raster.width || y < 0 || y >= this.raster.height) {
-      pauseAudio();
-    } else {
-      const index = y * this.raster.width + x;
-      let value = this.raster.data.data[index];
-      if (value === this.raster.noDataValue) {
-        value = this.raster.min;
-      }
-      const frequency =
-        ((value - this.raster.min) / (this.raster.max - this.raster.min)) *
-          (this.settings.raster.maxFreq - this.settings.raster.minFreq) +
-        this.settings.raster.minFreq;
-      playAudio();
-      setAudioFrequency(frequency);
-    }
-  }
-
-  async getRaster() {
-    try {
-      console.log("Called get raster");
-      const dataRes = await fetch("/get_raster");
-      console.log("Fetched data");
-      if (dataRes.status !== 200) {
-        console.log("No raster data");
-        this.raster = null;
-        return;
-      }
-      const rasterData = await dataRes.arrayBuffer();
-      console.log("Got rasterData array buffer");
-      const dataView = new DataView(rasterData);
-      const metadata = {
-        resolution: dataView.getFloat64(0, true),
-        width: Number(dataView.getBigUint64(8, true)),
-        height: Number(dataView.getBigUint64(16, true)),
-        origin: [
-          dataView.getFloat64(24, true),
-          dataView.getFloat64(32, true),
-        ] as [number, number],
-        noDataValue:
-          dataView.getFloat64(40, true) > 0
-            ? dataView.getFloat64(48, true)
-            : null,
-      };
-      console.log(metadata);
-      const data = new Float32Array(rasterData, 56);
-      console.log("Parsed data");
-      this.raster = new Raster(
-        { type: "Float32", data },
-        metadata.origin,
-        metadata.width,
-        metadata.height,
-        metadata.resolution,
-        metadata.noDataValue
-      );
-
-      this.renderRaster();
-    } catch (e) {
-      speak(`Something went wrong when fetching raster data: ${e}`);
-      console.log(e);
-      this.connection.sendError(
-        `Something went wrong when fetching raster data: ${e}`
-      );
-    }
-  }
-
   render() {
     this.ctx.fillStyle = "#000000";
     this.ctx.strokeStyle = "#ffffff";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    this.renderRaster();
+    this.raster.render();
     this.vectorManager.render();
   }
 }
