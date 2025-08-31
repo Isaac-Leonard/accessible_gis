@@ -25,6 +25,8 @@
     "dialog:allow-confirm",
     "fs:default",
     "dialog:default",
-    "shell:default"
+    "shell:default",
+    "core:path:default",
+    "core:path:allow-basename"
   ]
 }

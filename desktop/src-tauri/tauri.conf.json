@@ -5,11 +5,12 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420"
   },
-    "bundle": {
+  "bundle": {
 	"resources":{
 	    "../data": "data",
 	    "../external-touch-device/dist": "external-touch-device",
-	    "../../scripts": "scripts"
+	    "../../scripts": "scripts",
+	    "../../esc-50": "esc-50"
 	},
     "active": true,
     "targets": "all",
@@ -21,7 +22,11 @@
   "plugins": {},
   "app": {
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; media-src 'self' asset: https://asset.localhost;",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**/*"]
+      }
     },
     "windows": [
       {
