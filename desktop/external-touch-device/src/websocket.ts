@@ -127,6 +127,10 @@ export const AudioTypeParser: ZodType<AudioType> = z.discriminatedUnion(
     z.object({
       type: z.literal("LinearMap"),
     }),
+    z.object({
+      type: z.literal("EscSound"),
+      value: z.number(),
+    }),
   ]
 );
 

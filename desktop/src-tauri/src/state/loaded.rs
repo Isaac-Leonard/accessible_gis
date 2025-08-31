@@ -5,7 +5,7 @@ use geo::{Closest, ClosestPoint, Contains, GeodesicDistance};
 use geo_types::{LineString, Point, Polygon};
 use itertools::Itertools;
 use serde::Serialize;
-use tauri::{Runtime, Wry, path::PathResolver};
+use tauri::{AppHandle, Manager, Runtime, Wry, path::PathResolver};
 use uuid::Uuid;
 
 use crate::{
@@ -53,13 +53,13 @@ impl AppData {
         })
     }
 
-    pub fn new<R: Runtime>(resolver: &PathResolver<R>) -> Self {
+    pub fn new(app: &AppHandle) -> Self {
         let mut errors = ErrorList::new();
         Self {
             towns: HashMap::new(),
             screen: Screen::Main,
             project: None,
-            settings: GlobalSettings::read(resolver)
+            settings: GlobalSettings::read(app.path())
                 .map_err(|err| errors.push(err.into()))
                 .unwrap_or_default(),
             errors,

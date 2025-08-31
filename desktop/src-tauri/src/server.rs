@@ -2,7 +2,7 @@ use actix_files::{self as fs};
 use actix_web::{
     App, Error, HttpRequest, HttpResponse, HttpServer, Responder, get,
     http::header::ContentType,
-    web::{self, Data, Json, PayloadConfig},
+    web::{self, Data, Json, Path, PayloadConfig},
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -68,6 +68,7 @@ pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
             .app_data(Data::new(PayloadConfig::new(1024 * 1024 * 1024)))
             .service(get_raster)
             .service(get_image)
+            .service(get_audio)
             .service(get_info)
             .service(get_ocr)
             .service(get_vector)
@@ -174,4 +175,25 @@ async fn get_image(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Respo
         eprintln!("{:?}", output);
     });
     fs::NamedFile::open_async(raster_name).await
+}
+
+#[get("/get_audio/{index}.wav")]
+async fn get_audio(
+    index: Path<usize>,
+    state: Data<AppDataSync>,
+    app: Data<AppHandle>,
+) -> impl Responder {
+    dbg!(&index);
+    let filename = &state.default_data.esc_sounds[*index].filename;
+    const ESC_AUDIO_DIR: &str = "esc-50/audio/";
+
+    let path = app
+        .path()
+        .resolve(
+            format!("{ESC_AUDIO_DIR}/{filename}"),
+            tauri::path::BaseDirectory::Resource,
+        )
+        .unwrap();
+    dbg!(&path);
+    fs::NamedFile::open_async(path).await
 }

@@ -2,8 +2,6 @@ import { Feature } from "geojson";
 import {
   VectorManager,
   geoJsonParsers,
-  pauseAudio,
-  setAudioFrequency,
   speak,
   CoordinateManager,
   getCanvas,
@@ -64,7 +62,6 @@ class GisManager {
     this.connection = new WsConnection();
     this.connection.addMessageHandler(this.wsMessageHandler.bind(this));
 
-    setAudioFrequency(440);
     this.coordinateManager.focusFullScreen();
     this.canvas.addEventListener("touchstart", (e) => {
       e.preventDefault();
@@ -82,7 +79,7 @@ class GisManager {
     this.canvas.addEventListener("touchmove", (e) => {
       e.preventDefault();
       if (e.targetTouches.length > 1) {
-        pauseAudio();
+        this.raster.pauseAudio();
         return;
       }
       const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
@@ -97,7 +94,7 @@ class GisManager {
       if (e.touches.length > 1) {
         return;
       }
-      pauseAudio();
+      this.raster.pauseAudio();
     });
 
     this.canvas.addEventListener("touchcancel", (e) => {
@@ -105,7 +102,7 @@ class GisManager {
       if (e.touches.length > 1) {
         return;
       }
-      pauseAudio();
+      this.raster.pauseAudio();
     });
 
     this.gestureManager.addPinchHandler(() => {

@@ -1,3 +1,4 @@
+import * as Path from "@tauri-apps/api/path";
 import {
   AudioSettings,
   Point,
@@ -18,8 +19,13 @@ import { SaveButton } from "./save-button";
 import { RenderMethodsSelector } from "./render_methods_selector";
 import { Dialog, useDialog } from "./dialog";
 import { AudioSettingsScreen } from "./settings-screen";
-import { bindedSelectorFactory } from "./option-picker";
+import {
+  bindedSelectorFactory,
+  IndexedOptionPicker,
+  OptionPicker,
+} from "./option-picker";
 import { NumberInput, Input as TextInput } from "./binded-input";
+import { convertFileSrc } from "@tauri-apps/api/core";
 
 export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
   return (
@@ -289,6 +295,8 @@ export const GdalMetadataViewer = ({
   </div>
 );
 
+const EscSounds = await client.getEscSounds();
+
 type AudioTableEditorProps = {
   table: AudioTable | null;
   colourTable: ColourTable | null;
@@ -396,6 +404,8 @@ const getDefaultAudioTypeFromDiscriminant = (
       return { type: discriminant, value: "" };
     case "Frequency":
       return { type: discriminant, value: 0 };
+    case "EscSound":
+      return { type: discriminant, value: 0 };
   }
 };
 
@@ -432,9 +442,62 @@ const AudioTypeInput = ({ audioType, setAudioType }: AudioTypeInputProps) => {
             setValue: (value) => setAudioType({ type: "Speak", value }),
           }}
         />
+      ) : audioType.type === "EscSound" ? (
+        <EscSoundSelector
+          selected={audioType.value}
+          setSound={(value) => setAudioType({ type: "EscSound", value })}
+        />
       ) : (
         ""
       )}
     </>
+  );
+};
+
+const resourcesPath = await Path.resourceDir();
+const audioPath = await Path.join(resourcesPath, "esc-50/audio");
+
+type EscSoundSelectorProps = {
+  selected: number;
+  setSound: (index: number) => void;
+};
+
+const EscSoundSelector = ({ selected, setSound }: EscSoundSelectorProps) => {
+  const selectedSound = Object.values(EscSounds)
+    .flat()
+    .find((sound) => sound.index === selected)!;
+
+  const [category, setCategory] = useState(selectedSound.category);
+  const indexInCategory = EscSounds[category].indexOf(selectedSound);
+  const playAudio = async (name: string) => {
+    const path = await Path.join(audioPath, name);
+    console.log(path);
+    const src = convertFileSrc(path);
+    console.log(src);
+    const audio = new Audio(src);
+    return audio.play();
+  };
+  console.log(selectedSound);
+  return (
+    <div>
+      <OptionPicker
+        prompt="Category"
+        options={Object.keys(EscSounds)}
+        selectedOption={category}
+        setOption={setCategory}
+        emptyText="This shouldn't be empty"
+      />
+      <IndexedOptionPicker
+        prompt="Sound"
+        options={EscSounds[category].map((sound) => sound.filename)}
+        index={indexInCategory === -1 ? null : indexInCategory}
+        setIndex={(index) => {
+          const sound = EscSounds[category][index];
+          playAudio(sound.filename);
+          setSound(sound.index);
+        }}
+        emptyText="This shouldn't be empty"
+      />
+    </div>
   );
 };

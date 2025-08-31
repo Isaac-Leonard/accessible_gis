@@ -3,9 +3,14 @@ use std::{
     process::{Command, Output},
 };
 
-use serde::{Deserialize, Serialize};
+use csv::ReaderBuilder;
+use itertools::Itertools;
+use serde::{
+    Deserialize, Deserializer, Serialize,
+    de::{self, Unexpected},
+};
 use strum::{EnumDiscriminants, EnumIter};
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 use crate::{
     files::get_random_temp_path,
@@ -151,6 +156,7 @@ pub enum AudioType {
     Silence,
     Speak(String),
     LinearMap,
+    EscSound(usize),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
@@ -158,4 +164,49 @@ pub enum AudioType {
 pub struct AudioTable {
     entries: Vec<AudioType>,
     other: AudioType,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+pub struct EscSound {
+    pub filename: String,
+    pub fold: String,
+    pub target: String,
+    pub category: String,
+    #[serde(deserialize_with = "bool_from_str")]
+    pub esc10: bool,
+    pub src_file: String,
+    pub take: char,
+}
+
+const ESC_META_PATH: &str = "esc-50/meta/esc50.csv";
+
+pub fn load_esc_sounds(app: &AppHandle) -> Result<Vec<EscSound>, csv::Error> {
+    let path = app
+        .path()
+        .resolve(ESC_META_PATH, tauri::path::BaseDirectory::Resource)
+        .unwrap();
+    let mut reader = ReaderBuilder::new().has_headers(true).from_path(path)?;
+    reader.deserialize::<EscSound>().try_collect()
+}
+
+/// Converts a string to a boolean based on truthy and falsy values
+/// Copied from This github comment: https://github.com/BurntSushi/rust-csv/issues/135#issuecomment-752783194
+fn bool_from_str<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    match String::deserialize(deserializer)?.to_lowercase().as_str() {
+        "t" | "true" | "1" | "on" | "y" | "yes" => Ok(true),
+        "f" | "false" | "0" | "off" | "n" | "no" => Ok(false),
+        other => Err(de::Error::invalid_value(
+            Unexpected::Str(other),
+            &"Must be truthy (t, true, 1, on, y, yes) or falsey (f, false, 0, off, n, no)",
+        )),
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct Foo {
+    /// Some field
+    bar: bool,
 }

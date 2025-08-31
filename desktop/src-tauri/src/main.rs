@@ -27,8 +27,8 @@ use gdal_if::Field;
 use geometry::Geometry;
 use rstar::{RTree, primitives::GeomWithData};
 use serde::{Deserialize, Serialize};
-use state::AppData;
-use tauri::Manager;
+use state::{AppData, gis::raster::load_esc_sounds};
+use tauri::{AppHandle, Manager};
 
 use std::sync::{Arc, Mutex};
 
@@ -61,12 +61,15 @@ fn launch_gui() {
         .invoke_handler(specta_builder.invoke_handler())
         .setup(move |app| {
             specta_builder.mount_events(app);
-            let resolver = app.path();
-            std::fs::create_dir_all(resolver.temp_dir().unwrap()).unwrap();
-            let countries = load_countries(resolver);
+            std::fs::create_dir_all(app.path().temp_dir().unwrap()).unwrap();
+            let countries = load_countries(app.handle());
+            let esc_sounds = load_esc_sounds(app.handle()).unwrap();
             app.manage(AppDataSync {
-                data: Arc::new(Mutex::new(AppData::new(resolver))),
-                default_data: PreloadedAppData { countries },
+                data: Arc::new(Mutex::new(AppData::new(app.handle()))),
+                default_data: PreloadedAppData {
+                    countries,
+                    esc_sounds,
+                },
             });
 
             //            let window = app.get_webview_window("main").unwrap();
@@ -102,10 +105,9 @@ impl FeatureInfo {
     }
 }
 
-fn load_countries<R: tauri::Runtime>(
-    resolver: &tauri::path::PathResolver<R>,
-) -> RTree<GeomWithData<Polygon, Vec<Field>>> {
-    let countries_path = resolver
+fn load_countries(app: &AppHandle) -> RTree<GeomWithData<Polygon, Vec<Field>>> {
+    let countries_path = app
+        .path()
         .resolve(
             "data/countries.geojson",
             tauri::path::BaseDirectory::Resource,

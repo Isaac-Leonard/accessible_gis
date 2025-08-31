@@ -30,7 +30,8 @@ export type AudioType =
   | { type: "Frequency"; value: number }
   | { type: "Silence" }
   | { type: "Speak"; value: string }
-  | { type: "LinearMap" };
+  | { type: "LinearMap" }
+  | { type: "EscSound"; value: number };
 
 export type RasterSettings = {
   // While normally calculated on the fly, these can be set by the user to adjust visual and audio contrast
@@ -67,11 +68,43 @@ const getDefaultSettings = (
   };
 };
 
+class SoundManager {
+  currentIndex: number | null = null;
+  sounds: Map<number, HTMLAudioElement> = new Map();
+
+  constructor(sounds: number[]) {
+    for (let index of sounds) {
+      const audio = new Audio(`/get_audio/${index}.wav`);
+      audio.preload = "auto";
+      audio.loop = true;
+      this.sounds.set(index, audio);
+    }
+  }
+
+  async play(index: number) {
+    if (this.currentIndex !== index) {
+      if (this.currentIndex !== null) {
+        this.pause();
+      }
+      this.sounds.get(index)!.play();
+      this.currentIndex = index;
+    }
+  }
+
+  pause() {
+    if (this.currentIndex !== null) {
+      this.sounds.get(this.currentIndex)!.pause();
+      this.currentIndex = null;
+    }
+  }
+}
+
 export class RasterManager {
   loading: boolean = false;
   raster: Raster | null = null;
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
+  soundManager: SoundManager = new SoundManager([]);
 
   constructor(private coordinateManager: CoordinateManager) {
     const { canvas, ctx } = getCanvas();
@@ -80,6 +113,15 @@ export class RasterManager {
   }
 
   async updateImage(options: RasterOptions): Promise<null> {
+    const sounds = [...(options.metadata.audioTable?.entries ?? [])];
+    if (options.metadata.audioTable) {
+      sounds.push(options.metadata.audioTable.other);
+    }
+    this.soundManager = new SoundManager(
+      sounds
+        .filter((sound) => sound.type === "EscSound")
+        .map((sound) => sound.value)
+    );
     switch (options.type) {
       case "RawData":
         return this.getRawDataRaster(options);
@@ -227,17 +269,21 @@ export class RasterManager {
             : this.raster.metadata.audioTable.other;
         switch (entry.type) {
           case "Silence":
+            this.soundManager.pause();
             pauseAudio();
             return;
           case "Frequency":
+            this.soundManager.pause();
             setAudioFrequency(entry.value);
             playAudio();
             return;
           case "Speak":
+            this.soundManager.pause();
             pauseAudio();
             speak(entry.value);
             return;
           case "LinearMap":
+            this.soundManager.pause();
             const frequency =
               ((value - this.raster.settings.min) /
                 (this.raster.settings.max - this.raster.settings.min)) *
@@ -246,6 +292,10 @@ export class RasterManager {
               this.raster.settings.audio.minFreq;
             setAudioFrequency(frequency);
             playAudio();
+            return;
+          case "EscSound":
+            pauseAudio();
+            this.soundManager.play(entry.value);
         }
       } else {
         if (value === this.raster.metadata.noDataValue) {
@@ -301,6 +351,11 @@ export class RasterManager {
       dy: topLeftScreen[1],
       resizeCanvas: false,
     });
+  }
+
+  pauseAudio() {
+    pauseAudio();
+    this.soundManager.pause();
   }
 }
 

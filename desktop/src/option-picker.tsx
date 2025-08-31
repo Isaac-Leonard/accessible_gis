@@ -23,7 +23,6 @@ export const IndexedOptionPicker = ({
   try {
     visableOptions = options.slice(visableIndex, visableIndex + 240);
   } catch (e) {
-    console.log(e);
     visableOptions = [];
   }
 
@@ -107,7 +106,6 @@ export function OptionPicker<T extends readonly string[]>({
   prompt,
   emptyText,
 }: OptionPickerProps<T>) {
-  console.log(options);
   //  const [optionsPerPage, setOptionsPerPage] = useState(240);
   const [visableIndex, setVisableIndex] = useState(0);
   let visableOptions: ("Select option" | T[number])[];

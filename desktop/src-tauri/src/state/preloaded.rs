@@ -7,6 +7,8 @@ use crate::{
     geometry::{GeoSingleGeometry, SingleGeometry},
 };
 
+use super::gis::raster::EscSound;
+
 pub type Country = GeomWithData<Polygon, Vec<Field>>;
 
 impl From<LocalFeatureInfo> for Vec<Country> {
@@ -62,6 +64,7 @@ impl CountryImpl for Country {
 #[derive(Clone)]
 pub struct PreloadedAppData {
     pub countries: RTree<Country>,
+    pub esc_sounds: Vec<EscSound>,
 }
 
 impl PreloadedAppData {

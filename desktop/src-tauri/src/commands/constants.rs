@@ -1,10 +1,14 @@
+use std::collections::BTreeMap;
+
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 
 use crate::{
     audio::Waveform,
     state::{
-        gis::raster::{AudioTypeDiscriminants, RenderMethod},
+        AppState,
+        gis::raster::{AudioTypeDiscriminants, EscSound, RenderMethod},
         settings::AudioIndicator,
         tools::{ToolInputTypeDiscriminants, ToolPresetParameterValueDiscriminants},
         workflows::WorkflowInputValueDescriptorDiscriminants,
@@ -53,4 +57,26 @@ pub fn get_workflow_input_types() -> Vec<WorkflowInputValueDescriptorDiscriminan
 #[specta::specta]
 pub fn get_audio_types() -> Vec<AudioTypeDiscriminants> {
     AudioTypeDiscriminants::iter().collect_vec()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_esc_sounds(state: AppState) -> BTreeMap<String, Vec<IndexedEscSound>> {
+    state
+        .default_data
+        .esc_sounds
+        .iter()
+        .cloned()
+        .enumerate()
+        .map(|(index, sound)| IndexedEscSound { index, sound })
+        .into_group_map_by(|sound| sound.sound.category.clone())
+        .into_iter()
+        .collect::<BTreeMap<_, _>>()
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+pub struct IndexedEscSound {
+    index: usize,
+    #[serde(flatten)]
+    sound: EscSound,
 }

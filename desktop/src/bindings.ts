@@ -285,6 +285,9 @@ export const commands = {
   async setAudioTable(table: AudioTable | null): Promise<void> {
     await TAURI_INVOKE("set_audio_table", { table });
   },
+  async getEscSounds(): Promise<{ [key in string]: IndexedEscSound[] }> {
+    return await TAURI_INVOKE("get_esc_sounds");
+  },
 };
 
 /** user-defined events **/
@@ -331,7 +334,8 @@ export type AudioType =
   | { type: "Frequency"; value: number }
   | { type: "Silence" }
   | { type: "Speak"; value: string }
-  | { type: "LinearMap" };
+  | { type: "LinearMap" }
+  | { type: "EscSound"; value: number };
 /**
  * Auto-generated discriminant enum variants
  */
@@ -339,7 +343,8 @@ export type AudioTypeDiscriminants =
   | "Frequency"
   | "Silence"
   | "Speak"
-  | "LinearMap";
+  | "LinearMap"
+  | "EscSound";
 export type Classification = { min: number; max: number; target: number };
 export type ClosedLineDescription = {
   x: number;
@@ -507,6 +512,15 @@ export type HistogramSettings = {
  * Serializable HLS colour entry.
  */
 export type HlsEntry = { h: number; l: number; s: number };
+export type IndexedEscSound = {
+  filename: string;
+  fold: string;
+  target: string;
+  category: string;
+  esc10: boolean;
+  src_file: string;
+  take: string;
+} & { index: number };
 export type LayerDescriptor = (
   | { type: "Vector"; index: number }
   | { type: "Raster"; index: number }

@@ -110,6 +110,7 @@ pub fn generate_handlers(s: impl AsRef<Path>) -> Builder {
             get_workflow_input_types,
             get_audio_types,
             set_audio_table,
+            get_esc_sounds,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds
