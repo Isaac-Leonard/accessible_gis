@@ -104,27 +104,6 @@ pub struct IndividualGraphArgs {
     #[serde(flatten)]
     pub global: GlobalGraphArgs,
 }
-#[derive(Debug, Args)]
-pub struct MultiBandArgs {
-    #[arg(global = true)]
-    pub band: BandWave,
-}
-
-#[derive(Debug, Clone)]
-pub struct BandWave(usize, WaveType);
-impl FromStr for BandWave {
-    type Err = &'static str;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let Some((band, wave)) = s.split('=').map(str::trim).collect_tuple::<(_, _)>() else {
-            return Err("Invalid band=wave specified");
-        };
-        Ok(Self(
-            band.parse()
-                .map_err(|_| "Band must be an integer in band wave pairs")?,
-            wave.parse()?,
-        ))
-    }
-}
 
 fn parse_duration(arg: &str) -> Result<std::time::Duration, std::num::ParseIntError> {
     let millis = arg.parse()?;

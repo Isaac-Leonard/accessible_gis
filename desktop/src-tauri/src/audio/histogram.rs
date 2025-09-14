@@ -3,16 +3,6 @@ use serde::{Deserialize, Serialize};
 use super::low_level::{AudioWave, Playable, Waveform};
 use std::{thread::sleep, time::Duration};
 
-/// Generate a sine wave audio signal for a given frequency.
-///
-/// # Arguments
-///
-/// * `frequency` - Frequency of the sine wave in Hertz.
-///
-/// # Returns
-///
-/// * A Vec<f64> containing the samples of the sine wave.
-
 pub struct AudioHistogram {
     y: Vec<f64>,
     waveform: Waveform,
@@ -69,14 +59,6 @@ impl Playable for AudioHistogram {
             sleep(duration_per_sample_ms);
         }
     }
-}
-
-pub fn generate_image_histogram(data: Vec<u8>) -> Vec<f64> {
-    let mut counts: Vec<f64> = vec![0.0; 255];
-    for x in data {
-        counts[x as usize] += 1.0;
-    }
-    counts
 }
 
 pub fn play_histogram(counts: Vec<f64>, settings: HistogramSettings, wave: Waveform) {

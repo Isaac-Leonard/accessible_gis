@@ -94,7 +94,7 @@ pub struct FeatureInfo {
 }
 
 impl FeatureInfo {
-    fn new(geometry: Geometry, fields: Vec<Field>) -> Self {
+    pub fn new(geometry: Geometry, fields: Vec<Field>) -> Self {
         Self {
             geometry: Some(geometry),
             fields,

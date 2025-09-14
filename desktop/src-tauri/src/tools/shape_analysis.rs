@@ -1,9 +1,6 @@
 use std::{f64::consts::PI, fmt::Display};
 
-use geo::{
-    BooleanOps, Centroid, ConcaveHull, ConvexHull, Coord, CoordsIter, EuclideanDistance,
-    GeodesicArea, MapCoords, Polygon, Relate, Rotate, Simplify, TriangulateSpade,
-};
+use geo::{Centroid, Coord, CoordsIter, EuclideanDistance, MapCoords, Polygon, Rotate, Simplify};
 use serde::{Deserialize, Serialize};
 
 /// Algorithm derived from the paper at:
@@ -142,15 +139,9 @@ impl Display for FloatWrapper {
     }
 }
 
-fn find_concavities(polygon: Polygon) {
-    let convex = polygon.convex_hull();
-    let area_ratio = convex.geodesic_area_signed() / polygon.geodesic_area_signed();
-    convex.intersection(&polygon);
-}
-
 #[cfg(test)]
 mod test {
-    use geo::{Polygon, Rotate, coord, polygon};
+    use geo::{Rotate, polygon};
 
     use crate::tools::shape_analysis::shape_correspondence;
 

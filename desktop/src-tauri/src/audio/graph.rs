@@ -271,31 +271,3 @@ impl Playable for RasterGraph {
         }
     }
 }
-
-fn interpolate_nans(arr: &Array2<f64>) -> Array2<f64> {
-    let mut result = arr.clone();
-    for ((x, y), el) in arr.indexed_iter() {
-        if el.is_nan() {
-            let mut sum = 0.0;
-            let mut count = 0;
-            let neighbours = [
-                arr.get((x - 1, y + 1)),
-                arr.get((x - 1, y)),
-                arr.get((x - 1, y - 1)),
-                arr.get((x, y - 1)),
-                arr.get((x + 1, y - 1)),
-                arr.get((x + 1, y)),
-                arr.get((x + 1, y + 1)),
-                arr.get((x, y + 1)),
-            ];
-            for neighbour in neighbours {
-                if neighbour.copied().is_some_and(f64::is_finite) {
-                    count += 1;
-                    sum += *neighbour.unwrap();
-                }
-            }
-            *result.get_mut((x, y)).unwrap() = sum / count as f64;
-        }
-    }
-    result
-}

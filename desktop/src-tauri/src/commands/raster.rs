@@ -195,17 +195,6 @@ pub fn get_point_of_min_value(state: AppState) -> Option<Point> {
     })
 }
 
-pub trait IntoIndex {
-    fn to_2d_index(self) -> (usize, usize);
-}
-
-impl IntoIndex for Point {
-    fn to_2d_index(self) -> (usize, usize) {
-        let Point { x, y } = self;
-        (y as usize, x as usize)
-    }
-}
-
 pub trait FromIndex {
     fn from_2d_index(index: (usize, usize)) -> Point;
 }

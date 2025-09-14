@@ -5,7 +5,6 @@ mod preloaded;
 pub mod projects;
 pub mod settings;
 pub mod tools;
-mod ui_state;
 pub mod workflows;
 
 use std::sync::{Arc, Mutex};
