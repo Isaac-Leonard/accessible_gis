@@ -213,8 +213,8 @@ pub struct DescribeLandformsTool;
 
 impl Tool for DescribeLandformsTool {
     fn get_id(&self) -> Uuid {
-        static id: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
-        *id
+        static ID: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
+        *ID
     }
 
     fn get_label(&self) -> String {
@@ -222,12 +222,12 @@ impl Tool for DescribeLandformsTool {
     }
 
     fn get_expected_input_parameters(&self) -> Vec<ToolInputDescriptor> {
-        static id: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
+        static ID: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
         vec![ToolInputDescriptor {
             label: "Landforms layer".to_string(),
             name: None,
             param_type: ToolInputType::Layer(LayerIndexDiscriminants::Vector),
-            id: *id,
+            id: *ID,
         }]
     }
 

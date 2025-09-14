@@ -144,9 +144,9 @@ pub fn read_raster_data(band: &RasterBand) -> Result<Array2<f64>, ErrorDetails> 
             .map_err(|err| ErrorDetails::Other(err.to_string()))?
             .to_array()
             .map_err(|err| ErrorDetails::Other(err.to_string()))?,
-        other => Err(ErrorDetails::Other(
-            "Unknown datatype in raster band{other:?}".to_string(),
-        ))?,
+        other => Err(ErrorDetails::Other(format!(
+            "Unknown datatype in raster band{other:?}"
+        )))?,
     })
 }
 
