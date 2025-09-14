@@ -1,5 +1,4 @@
 use gdal::{
-    Dataset,
     raster::RasterBand,
     vector::{LayerAccess, LayerIterator},
 };
@@ -10,7 +9,7 @@ use crate::{
     commands::SortOption,
     dataset_collection::{IndexedLayer, get_default_field_name},
     errors::ErrorDetails,
-    gdal_if::{LayerIndex, OpenDatasetError, WrappedDataset},
+    gdal_if::{LayerIndex, WrappedDataset},
     state::settings::GlobalSettings,
 };
 
@@ -30,10 +29,6 @@ pub struct StatefulDataset {
 }
 
 impl StatefulDataset {
-    fn open(name: String, settings: &GlobalSettings) -> Result<Self, OpenDatasetError> {
-        Ok(Self::new(WrappedDataset::open(name)?, settings))
-    }
-
     pub fn new(dataset: WrappedDataset, settings: &GlobalSettings) -> Self {
         let layer_count = dataset.dataset.layer_count();
         let band_count = dataset.dataset.rasterbands().count();
@@ -81,10 +76,6 @@ impl StatefulDataset {
             vector_info: layer_info,
             raster_info: band_info,
         }
-    }
-
-    fn from_raw(dataset: Dataset, name: String, settings: &GlobalSettings) -> Self {
-        Self::new(WrappedDataset::wrap_existing(dataset, name), settings)
     }
 
     pub fn get_all_layers(&mut self) -> Result<Vec<IndexedLayer>, ErrorDetails> {

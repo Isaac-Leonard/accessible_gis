@@ -117,11 +117,13 @@ pub fn set_display_raster(
     touch_device: State<TouchDevice>,
     app: AppHandle,
 ) {
-    state.with_project(|project| {
+    state.with_project_fallible(|project| {
         project.display_current_raster(raster);
-        let mut band = project.get_raster_to_display()?;
-        touch_device.send(AppMessage::FetchRaster(band.get_info_for_display(&app)));
-        Some(())
+        let band = project.get_raster_to_display();
+        if let Some(mut band) = band {
+            touch_device.send(AppMessage::FetchRaster(band.get_info_for_display(&app)?));
+        }
+        Ok(())
     });
 }
 

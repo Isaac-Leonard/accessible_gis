@@ -13,6 +13,7 @@ use strum::{EnumDiscriminants, EnumIter};
 use tauri::{AppHandle, Manager};
 
 use crate::{
+    errors::ErrorDetails,
     files::get_random_temp_path,
     gdal_if::{Srs, WrappedDataset, WrappedRasterBand},
     state::settings::AudioSettings,
@@ -93,15 +94,21 @@ impl<'a> StatefulRasterBand<'a> {
     /// Gets the necessary information to display the raster and performs any required reprojections.
     /// As this is called before any actual data is sent to the touch device the reprojection is centralised here so other functions can just unwrap the wgs84_reprojected_dataset field on band.info.
     /// TODO: This isn't perfect, maybe we could replace with a LazyCell or something but this will do for now as it minimises reprojections and makes the code less fragile then it was before.
-    pub fn get_info_for_display(&mut self, app: &AppHandle) -> RasterDisplayInfo {
+    pub fn get_info_for_display(
+        &mut self,
+        app: &AppHandle,
+    ) -> Result<RasterDisplayInfo, ErrorDetails> {
         let index = self.get_index();
         let dataset = if let Some(dataset) = self.info.wgs84_reprojected_file.as_mut() {
             dataset
         } else {
             let reprojected_dataset_name = get_random_temp_path(app, "tif");
-            std::fs::remove_file(&reprojected_dataset_name);
-            dbg!(self.reproject(&reprojected_dataset_name, Srs::Epsg(4326)));
-            let wgs84_dataset = WrappedDataset::open(reprojected_dataset_name).unwrap();
+            // Deliberately ignore the result as it is almost certain to get an error as most paths should be unique.
+            let _ = std::fs::remove_file(&reprojected_dataset_name);
+            self.reproject(&reprojected_dataset_name, Srs::Epsg(4326))
+                .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
+            let wgs84_dataset = WrappedDataset::open(reprojected_dataset_name)
+                .map_err(|err| ErrorDetails::OpenDatasetError(err))?;
             self.info.wgs84_reprojected_file = Some(wgs84_dataset);
             self.info.wgs84_reprojected_file.as_mut().unwrap()
         };
@@ -121,10 +128,10 @@ impl<'a> StatefulRasterBand<'a> {
             no_data_value: band.no_data_value(),
             audio_table: self.info.audio_table.clone(),
         };
-        RasterDisplayInfo {
+        Ok(RasterDisplayInfo {
             kind: self.info.render,
             metadata,
-        }
+        })
     }
 
     pub fn reproject<S: AsRef<OsStr>>(&self, output_name: S, srs: Srs) -> std::io::Result<Output> {

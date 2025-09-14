@@ -260,7 +260,7 @@ fn load_dataset(
 ) -> Result<(), OpenDatasetError> {
     match dataset {
         StoredDataset::RawFile(path) => {
-            datasets.open(path, &settings);
+            datasets.open(path, &settings)?;
         }
         StoredDataset::WithInfo {
             path,

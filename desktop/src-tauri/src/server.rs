@@ -165,7 +165,8 @@ async fn get_ocr(state: Data<AppDataSync>) -> impl Responder {
 #[get("/get_image")]
 async fn get_image(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Responder {
     let raster_name = get_random_temp_path(&app, "png");
-    std::fs::remove_file(&raster_name);
+    // Deliberately ignore the result as it is almost certain to get an error as most paths should be unique.
+    let _ = std::fs::remove_file(&raster_name);
     state.with_lock(|state| {
         let output = state.with_project(|project| {
             project

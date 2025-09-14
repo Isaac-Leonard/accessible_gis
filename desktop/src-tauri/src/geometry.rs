@@ -264,26 +264,6 @@ pub enum SingleGeometryType {
     LineString,
 }
 
-pub trait ToGeometryType {
-    fn to_type(&self) -> GeometryType;
-}
-
-impl ToGeometryType for GeoGeometry {
-    fn to_type(&self) -> GeometryType {
-        match self {
-            Self::Point(_) => GeometryType::Point,
-            Self::Line(_) => GeometryType::Line,
-            Self::LineString(_) => GeometryType::LineString,
-            Self::Polygon(_) => GeometryType::Polygon,
-            Self::MultiPoint(_) => GeometryType::MultiPoint,
-            Self::MultiPolygon(_) => GeometryType::MultiPolygon,
-            Self::MultiLineString(_) => GeometryType::MultiLineString,
-            Self::GeometryCollection(_) => GeometryType::GeometryCollection,
-            Self::Rect(_) | Self::Triangle(_) => GeometryType::Polygon,
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, EnumAsInner)]
 #[serde(tag = "type")]
 pub enum SingleGeometry {
@@ -407,43 +387,4 @@ impl AsPoint for GeoGeometry {
             _ => None,
         }
     }
-}
-
-pub fn points_to_single_geometry(
-    points: Vec<GeoPoint>,
-    geometry: SingleGeometryType,
-) -> Result<GeoSingleGeometry, (String, Vec<GeoPoint>)> {
-    let res = match geometry {
-        SingleGeometryType::Point => {
-            if points.len() > 1 {
-                Err("Too many points to save as a single point".to_owned())
-            } else {
-                Ok(GeoSingleGeometry::Point(points[0]))
-            }
-        }
-        SingleGeometryType::Line => match points[..] {
-            [start, end] => Ok(GeoSingleGeometry::Line(GeoLine::new(start, end))),
-            _ => Err(format!("Cannot make line from {} points", points.len())),
-        },
-        SingleGeometryType::Polygon => {
-            if points.len() < 3 {
-                Err("A polygon needs at least 3 points".to_owned())
-            } else {
-                Ok(GeoSingleGeometry::Polygon(GeoPolygon::new(
-                    points.clone().into(),
-                    Vec::new(),
-                )))
-            }
-        }
-        SingleGeometryType::LineString => {
-            if points.len() < 2 {
-                Err("A line string needs at least 2 points".to_owned())
-            } else {
-                Ok(GeoSingleGeometry::LineString(GeoLineString::from(
-                    points.clone(),
-                )))
-            }
-        }
-    };
-    res.map_err(|e| (e, points))
 }

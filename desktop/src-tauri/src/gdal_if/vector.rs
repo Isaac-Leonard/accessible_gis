@@ -1,5 +1,5 @@
 use std::{
-    ffi::{CStr, OsStr},
+    ffi::OsStr,
     process::{Command, Output},
 };
 
@@ -67,18 +67,6 @@ impl<'a> LayerExt for Layer<'a> {
                 field_type: x.field_type().try_into().ok(),
             })
             .collect()
-    }
-}
-
-fn get_layer_name(layer: &Layer) -> Option<String> {
-    unsafe {
-        let defn = layer.defn().c_defn();
-        let ptr = gdal_sys::OGR_FD_GetName(defn);
-        if ptr.is_null() {
-            None
-        } else {
-            Some(CStr::from_ptr(ptr).to_string_lossy().to_string())
-        }
     }
 }
 

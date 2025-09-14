@@ -201,9 +201,9 @@ impl AppData {
         resolver: &PathResolver<R>,
     ) -> &GlobalSettings {
         self.settings = settings;
-        self.settings
-            .write_to_file(resolver)
-            .map_err(|err| self.errors.push(err.into()));
+        if let Err(err) = self.settings.write_to_file(resolver) {
+            self.errors.push(err.into())
+        };
         &self.settings
     }
 }

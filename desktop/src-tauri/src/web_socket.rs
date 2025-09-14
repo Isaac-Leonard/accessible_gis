@@ -46,16 +46,16 @@ pub async fn ws_handle(
     let mut msg_stream = pin!(msg_stream);
 
     // Ensure the device has the right settings for the current data on start
-    app.state::<AppDataSync>().with_project(|project| {
+    app.state::<AppDataSync>().with_project_fallible(|project| {
         device_sender.send(AppMessage::Gis(project.get_touch_device_settings()));
         device_sender.send(AppMessage::FetchVector);
         let band_to_display = project.get_raster_to_display();
         if let Some(mut band) = band_to_display {
             device_sender.send(AppMessage::FetchRaster(dbg!(
-                band.get_info_for_display(&app)
+                band.get_info_for_display(&app)?
             )));
         }
-        Some(())
+        Ok(())
     });
 
     let close_reason = loop {
@@ -218,10 +218,6 @@ impl TouchDevice {
             *sender = None
         }
         sent
-    }
-
-    pub fn is_connected(&self) -> bool {
-        self.sender.lock().unwrap().is_some()
     }
 
     pub fn disconnect(&self) {
