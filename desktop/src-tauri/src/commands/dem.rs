@@ -4,7 +4,7 @@ use tauri::AppHandle;
 
 use crate::{
     errors::ErrorDetails,
-    gdal_if::processing::{aspect, roughness, slope},
+    gdal_if::processing::{aspect, color_relief, hillshade, roughness, slope, tpi, tri},
     state::AppState,
     tools::dem_to_landform_polygons,
 };
@@ -32,6 +32,10 @@ macro_rules! gen_processing_command {
 gen_processing_command!(calc_slope, slope);
 gen_processing_command!(calc_aspect, aspect);
 gen_processing_command!(calc_roughness, roughness);
+gen_processing_command!(calc_hillshade, hillshade);
+gen_processing_command!(calc_tpi, tpi);
+gen_processing_command!(calc_tri, tri);
+gen_processing_command!(calc_color_relief, color_relief);
 
 #[tauri::command]
 #[specta::specta]

@@ -147,6 +147,18 @@ export const commands = {
   async calcRoughness(name: string): Promise<void> {
     await TAURI_INVOKE("calc_roughness", { name });
   },
+  async calcHillshade(name: string): Promise<void> {
+    await TAURI_INVOKE("calc_hillshade", { name });
+  },
+  async calcTpi(name: string): Promise<void> {
+    await TAURI_INVOKE("calc_tpi", { name });
+  },
+  async calcTri(name: string): Promise<void> {
+    await TAURI_INVOKE("calc_tri", { name });
+  },
+  async calcColorRelief(name: string): Promise<void> {
+    await TAURI_INVOKE("calc_color_relief", { name });
+  },
   async playAsSound(): Promise<void> {
     await TAURI_INVOKE("play_as_sound");
   },
