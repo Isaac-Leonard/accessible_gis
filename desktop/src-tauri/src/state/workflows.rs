@@ -1,3 +1,9 @@
+// my_module.rs
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+#![allow(unused_mut)]
+
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
