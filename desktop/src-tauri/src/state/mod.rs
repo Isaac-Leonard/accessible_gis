@@ -157,6 +157,7 @@ pub enum Screen {
     NewDataset,
     Settings,
     Tools,
+    Workflows,
     TouchDevice,
     Errors,
 }

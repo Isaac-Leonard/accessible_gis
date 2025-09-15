@@ -821,6 +821,7 @@ export type Screen =
   | "NewDataset"
   | "Settings"
   | "Tools"
+  | "Workflows"
   | "TouchDevice"
   | "Errors";
 export type SortOption =

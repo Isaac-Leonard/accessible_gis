@@ -290,6 +290,7 @@ type Connection = { tool: string; parameter: string };
 const AddWorkflowScreen = ({ toolList }: { toolList: ToolDescriptor[] }) => {
   const [label, setLabel] = useState("");
   const [inputs, setInputs] = useState<NewWorkflowInputDescriptor[]>([]);
+  console.log(inputs);
   const [tools, setTools] = useState<string[]>([]);
   const { open, setOpen } = useDialog();
   return (
@@ -328,7 +329,7 @@ const AddWorkflowScreen = ({ toolList }: { toolList: ToolDescriptor[] }) => {
           client.addWorkflow({ label, tools, inputs });
         }}
       >
-        Create workflow{" "}
+        Create workflow
       </button>
     </Dialog>
   );
@@ -416,12 +417,16 @@ const WorkflowInputDescriptorEditor = ({
   setInput: (input: NewWorkflowInputDescriptor) => void;
   tools: ToolDescriptor[];
 }) => {
-  const addConnection = (connection: Connection) =>
+  console.log(input);
+  const addConnection = (connection: Connection) => {
+    console.log("add connection called");
+    console.log(connection);
     setInput({
       label: input.label,
       value: input.value,
       connections: [...input.connections, connection],
     });
+  };
 
   const setType = (value: NewWorkflowInputDescriptor["value"]) =>
     setInput({ label: input.label, value, connections: input.connections });
@@ -464,10 +469,16 @@ const WorkflowInputConnector = ({
   tools: ToolDescriptor[];
   addConnection: (connection: Connection) => void;
 }) => {
+  const { open, setOpen } = useDialog();
   const [tool, setTool] = useState<number | null>(null);
   const [parameter, setParameter] = useState<number | null>(null);
   return (
-    <div>
+    <Dialog
+      modal={true}
+      openText="Add connection"
+      open={open}
+      setOpen={setOpen}
+    >
       <IndexedOptionPicker
         prompt="Tool"
         emptyText="No tools added"
@@ -475,9 +486,18 @@ const WorkflowInputConnector = ({
         index={tool}
         setIndex={(index) => {
           setTool(index);
-          setParameter(0);
+          setParameter(null);
         }}
       />
+      {tool !== null ? (
+        <IndexedOptionPicker
+          prompt="Parameter for tool"
+          emptyText="No parameters for tool"
+          options={tools[tool].inputs.map((input) => input.label)}
+          index={parameter}
+          setIndex={setParameter}
+        />
+      ) : null}
       <button
         disabled={tool === null || parameter === null}
         onClick={() => {
@@ -486,12 +506,14 @@ const WorkflowInputConnector = ({
               tool: tools[tool].id,
               parameter: tools[tool].inputs[parameter].id,
             });
+            setTool(null);
+            setParameter(null);
           }
         }}
       >
         Add
       </button>
-    </div>
+    </Dialog>
   );
 };
 
@@ -506,8 +528,10 @@ const ListOfInputs = ({
 }) => {
   const getInputSetter =
     (index: number) => (input: NewWorkflowInputDescriptor) => {
+      console.log("set input called for input " + index);
+      console.log(input);
       const newInputs = inputs.slice();
-      inputs[index] = input;
+      newInputs[index] = input;
       setInputs(newInputs);
     };
 

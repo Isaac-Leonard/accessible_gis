@@ -36,6 +36,7 @@ function App() {
       </button>
       <button onClick={() => client.openSettings()}>Settings</button>
       <button onClick={() => client.setScreen("Tools")}>Tools</button>
+      <button onClick={() => client.setScreen("Workflows")}>Workflows</button>
       <button onClick={() => client.setScreen("TouchDevice")}>
         Touch Device
       </button>

@@ -6,6 +6,7 @@ import { SettingsScreen } from "./settings-screen";
 import { TouchDeviceScreen } from "./touch-device-screen";
 import { ErrorsScreen } from "./errors-screen";
 import { ToolsScreen } from "./tools-screen";
+import { WorkflowScreen } from "./workflow-screen";
 
 export const Router = () => {
   switch (state.value.screen.name) {
@@ -21,6 +22,8 @@ export const Router = () => {
       return <TouchDeviceScreen {...state.value.screen} />;
     case "Tools":
       return <ToolsScreen {...state.value.screen} />;
+    case "Workflows":
+      return <WorkflowScreen info={state.value.screen} />;
     case "Errors":
       return <ErrorsScreen errors={state.value.errors} />;
   }

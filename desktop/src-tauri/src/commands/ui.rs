@@ -6,6 +6,7 @@ use crate::{
     state::{AppState, Screen},
     ui::{
         NewDatasetScreenData, ProjectScreen, ToolsScreenInfo, TouchDeviceState, UiScreen, UiState,
+        WorkflowsScreenInfo,
     },
 };
 
@@ -39,6 +40,22 @@ pub fn get_app_info(state: AppState) -> UiState {
                     .with_project_fallible(|project| {
                         Ok(ToolsScreenInfo {
                             tools: project.tools.iter().map(|tool| tool.for_ui()).collect(),
+                            layers: project
+                                .datasets
+                                .get_all_layers()?
+                                .into_iter()
+                                .map_into()
+                                .collect(),
+                        })
+                    })
+                    .unwrap_or_default(),
+            ),
+            Screen::Workflows => UiScreen::Workflows(
+                state
+                    .with_project_fallible(|project| {
+                        Ok(WorkflowsScreenInfo {
+                            tools: project.tools.iter().map(|tool| tool.for_ui()).collect(),
+                            workflows: Vec::new(),
                             layers: project
                                 .datasets
                                 .get_all_layers()?
