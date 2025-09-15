@@ -7,8 +7,10 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    errors::ErrorDetails, gdal_if::LayerIndexDiscriminants,
-    tools::describe_landforms::DescribeLandformsTool, ui::ToolDescriptor,
+    errors::ErrorDetails,
+    gdal_if::LayerIndexDiscriminants,
+    tools::{describe_landforms::DescribeLandformsTool, get_sieve_filter_tool},
+    ui::ToolDescriptor,
 };
 
 use super::{
@@ -67,9 +69,12 @@ pub trait Tool: Send + Sync {
         let params = self.parse_input_parameters(params, project)?;
 
         for param in &params {
-            let param_val = param
-                .try_as_raw_ref()
-                .unwrap_or_else(|| param.try_as_named_ref().unwrap().1);
+            dbg!(param);
+            let param_val = match param {
+                ToolNamedParsedParamValue::Raw(val) => val,
+                ToolNamedParsedParamValue::Named(_, val) => val,
+                ToolNamedParsedParamValue::Flag(_) => continue,
+            };
             if let Some(file) = param_val.try_as_file_ref()
                 && file.use_as_output
             {
@@ -343,7 +348,10 @@ impl<'a> ToolNamedParsedParamValue<'a> {
 }
 
 pub fn get_built_in_tools() -> Vec<Box<dyn Tool>> {
-    vec![Box::new(DescribeLandformsTool)]
+    vec![
+        Box::new(DescribeLandformsTool),
+        Box::new(get_sieve_filter_tool()),
+    ]
 }
 
 pub fn parse_option(

@@ -857,6 +857,9 @@ export type ToolInputType =
   | { type: "Dataset" }
   | { type: "Option"; options: string[] }
   | { type: "Flag" }
+  /**
+   * bool to determine if this file is an output of the tool or not
+   */
   | { type: "File"; options: boolean }
   | { type: "Preset"; options: ToolPresetParameterValue };
 /**
@@ -870,6 +873,9 @@ export type ToolInputTypeDiscriminants =
   | "Dataset"
   | "Option"
   | "Flag"
+  /**
+   * bool to determine if this file is an output of the tool or not
+   */
   | "File"
   | "Preset";
 export type ToolOutput = {

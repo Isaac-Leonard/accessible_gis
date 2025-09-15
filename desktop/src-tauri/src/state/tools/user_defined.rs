@@ -21,11 +21,11 @@ pub struct NewUserDefinedTool {
 
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
 pub struct UserDefinedTool {
-    label: String,
-    inputs: Vec<ToolInputDescriptor>,
-    command: String,
-    output_actions: ToolOutputAction,
-    id: Uuid,
+    pub label: String,
+    pub inputs: Vec<ToolInputDescriptor>,
+    pub command: String,
+    pub output_actions: ToolOutputAction,
+    pub id: Uuid,
 }
 
 impl From<NewUserDefinedTool> for UserDefinedTool {
@@ -115,6 +115,7 @@ pub enum ToolInputType {
     Dataset,
     Option(Vec<String>),
     Flag,
+    /// bool to determine if this file is an output of the tool or not
     File(bool),
     Preset(ToolPresetParameterValue),
 }

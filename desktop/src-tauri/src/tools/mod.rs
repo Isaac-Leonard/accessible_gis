@@ -4,10 +4,17 @@ pub mod shape_analysis;
 use std::{
     path::Path,
     process::{Command, Output},
+    sync::LazyLock,
 };
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, path::BaseDirectory};
+use uuid::Uuid;
+
+use crate::{
+    gdal_if::LayerIndexDiscriminants,
+    state::tools::{ToolInputDescriptor, ToolInputType, ToolOutputAction, UserDefinedTool},
+};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "type", content = "error")]
@@ -119,35 +126,43 @@ fn wbt() -> Command {
     Command::new("whitebox_tools")
 }
 
-pub enum Connectedness {
-    Four,
-    Eight,
-}
-
-/// Runs the GDAL sieve filter to remove small regions from a classified raster.
-///
-/// - `input`: Path to the input raster.
-/// - `output`: Path to the output raster.
-/// - `threshold`: Minimum region size (in pixels) to keep.
-/// - `connectedness`: Use for 4- or 8-connected components.
-pub fn sieve_filter(
-    input: impl AsRef<Path>,
-    output: impl AsRef<Path>,
-    threshold: usize,
-    connectedness: Connectedness, // should be 4 or 8
-) -> Result<Output, DemClassificationError> {
-    let mut command = Command::new("gdal_sieve.py");
-    command.arg("-st").arg(threshold.to_string());
-
-    match connectedness {
-        Connectedness::Four => command.arg("-4"),
-        Connectedness::Eight => command.arg("-8"),
-    };
-
-    command.arg(input.as_ref());
-    command.arg(output.as_ref());
-
-    run_program(command)
+pub fn get_sieve_filter_tool() -> UserDefinedTool {
+    static TOOL: LazyLock<UserDefinedTool> = LazyLock::new(|| UserDefinedTool {
+        label: "Sieve filter".to_string(),
+        inputs: vec![
+            ToolInputDescriptor {
+                label: "Filter threshold".to_string(),
+                name: Some("-st".to_string()),
+                param_type: ToolInputType::Int,
+                id: Uuid::new_v4(),
+            },
+            ToolInputDescriptor {
+                label: "Use 8 connectedness".to_string(),
+                name: Some("-8".to_string()),
+                param_type: ToolInputType::Flag,
+                id: Uuid::new_v4(),
+            },
+            ToolInputDescriptor {
+                label: "Input".to_string(),
+                name: None,
+                param_type: ToolInputType::Layer(LayerIndexDiscriminants::Raster),
+                id: Uuid::new_v4(),
+            },
+            ToolInputDescriptor {
+                label: "Output raster".to_string(),
+                name: None,
+                param_type: ToolInputType::File(true),
+                id: Uuid::new_v4(),
+            },
+        ],
+        command: "gdal_sieve.py".to_string(),
+        output_actions: ToolOutputAction {
+            alert_output: false,
+            load_layers: vec![0],
+        },
+        id: Uuid::new_v4(),
+    });
+    TOOL.clone()
 }
 
 fn proc_to_result(output: Output) -> Result<String, String> {
