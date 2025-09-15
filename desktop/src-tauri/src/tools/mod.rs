@@ -15,7 +15,7 @@ use crate::{
     gdal_if::LayerIndexDiscriminants,
     state::tools::{
         ToolInputDescriptor, ToolInputType, ToolOutputAction, ToolPresetParameterValue,
-        UserDefinedTool,
+        ToolRuntimeInputDescriptor, UserDefinedTool,
     },
 };
 
@@ -133,33 +133,31 @@ pub fn get_sieve_filter_tool() -> UserDefinedTool {
     static TOOL: LazyLock<UserDefinedTool> = LazyLock::new(|| UserDefinedTool {
         label: "Sieve filter".to_string(),
         inputs: vec![
-            ToolInputDescriptor::Preset {
-                value: ToolPresetParameterValue::String("-st".to_string()),
-            },
-            ToolInputDescriptor::Runtime {
+            ToolInputDescriptor::Preset(ToolPresetParameterValue::String("-st".to_string())),
+            ToolInputDescriptor::Runtime(ToolRuntimeInputDescriptor {
                 label: "Filter threshold".to_string(),
                 param_type: ToolInputType::Int,
                 id: Uuid::new_v4(),
                 optional: false,
-            },
-            ToolInputDescriptor::Runtime {
+            }),
+            ToolInputDescriptor::Runtime(ToolRuntimeInputDescriptor {
                 label: "Use 8 connectedness".to_string(),
                 param_type: ToolInputType::Option(vec!["-4".to_string(), "-8".to_string()]),
                 optional: true,
                 id: Uuid::new_v4(),
-            },
-            ToolInputDescriptor::Runtime {
+            }),
+            ToolInputDescriptor::Runtime(ToolRuntimeInputDescriptor {
                 label: "Input".to_string(),
                 param_type: ToolInputType::Layer(LayerIndexDiscriminants::Raster),
                 optional: false,
                 id: Uuid::new_v4(),
-            },
-            ToolInputDescriptor::Runtime {
+            }),
+            ToolInputDescriptor::Runtime(ToolRuntimeInputDescriptor {
                 label: "Output raster".to_string(),
                 param_type: ToolInputType::File(true),
                 optional: false,
                 id: Uuid::new_v4(),
-            },
+            }),
         ],
         command: "gdal_sieve.py".to_string(),
         output_actions: ToolOutputAction {

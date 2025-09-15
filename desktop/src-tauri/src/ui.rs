@@ -21,7 +21,7 @@ use crate::{
             raster::{AudioTable, RenderMethod},
         },
         settings::{AudioSettings, GlobalSettings},
-        tools::{SavedToolOutputAction, ToolInputDescriptor},
+        tools::{SavedToolOutputAction, ToolRuntimeInputDescriptor},
         workflows::Workflow,
     },
     tools::shape_analysis::FloatWrapper,
@@ -270,7 +270,7 @@ pub struct ToolsScreenInfo {
 #[derive(Clone, Default, Debug, Serialize, Deserialize, specta::Type)]
 pub struct ToolDescriptor {
     pub label: String,
-    pub inputs: Vec<ToolInputDescriptor>,
+    pub inputs: Vec<ToolRuntimeInputDescriptor>,
     pub id: Uuid,
 }
 

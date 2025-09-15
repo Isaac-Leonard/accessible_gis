@@ -37,13 +37,13 @@ pub trait Tool: Send + Sync {
         let mut parsed = Vec::new();
         for expected in self.get_expected_input_parameters() {
             let parsed_val = match expected {
-                ToolInputDescriptor::Preset { value } => ToolParsedParamValue::from(value),
-                ToolInputDescriptor::Runtime {
+                ToolInputDescriptor::Preset(value) => ToolParsedParamValue::from(value),
+                ToolInputDescriptor::Runtime(ToolRuntimeInputDescriptor {
                     label,
                     param_type,
                     optional,
                     id,
-                } => {
+                }) => {
                     let param = params.iter().find(|param| param.id == id);
                     if param.is_none() && optional {
                         continue;
@@ -105,7 +105,11 @@ pub trait Tool: Send + Sync {
     fn for_ui(&self) -> ToolDescriptor {
         ToolDescriptor {
             label: self.get_label(),
-            inputs: self.get_expected_input_parameters(),
+            inputs: self
+                .get_expected_input_parameters()
+                .into_iter()
+                .filter_map(ToolInputDescriptor::try_as_runtime)
+                .collect(),
             id: self.get_id(),
         }
     }
@@ -170,19 +174,20 @@ pub struct ToolOutputAction {
     pub load_layers: Vec<usize>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type, strum::EnumTryAs)]
+#[serde(tag = "type", content = "value")]
 pub enum ToolInputDescriptor {
-    Preset {
-        value: ToolPresetParameterValue,
-    },
-    Runtime {
-        label: String,
-        param_type: ToolInputType,
-        optional: bool,
-        id: Uuid,
-    },
+    Preset(ToolPresetParameterValue),
+    Runtime(ToolRuntimeInputDescriptor),
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
+pub struct ToolRuntimeInputDescriptor {
+    pub label: String,
+    pub param_type: ToolInputType,
+    pub optional: bool,
+    pub id: Uuid,
+}
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
 pub struct ToolParameter {
     id: Uuid,

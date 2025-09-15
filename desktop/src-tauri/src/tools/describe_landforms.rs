@@ -14,7 +14,7 @@ use crate::{
     gdal_if::LayerIndexDiscriminants,
     state::tools::{
         ReturnedToolOutput, Tool, ToolInputDescriptor, ToolInputType, ToolOutputAction,
-        ToolParsedParamValue,
+        ToolParsedParamValue, ToolRuntimeInputDescriptor,
     },
 };
 
@@ -223,12 +223,12 @@ impl Tool for DescribeLandformsTool {
 
     fn get_expected_input_parameters(&self) -> Vec<ToolInputDescriptor> {
         static ID: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
-        vec![ToolInputDescriptor::Runtime {
+        vec![ToolInputDescriptor::Runtime(ToolRuntimeInputDescriptor {
             label: "Landforms layer".to_string(),
             param_type: ToolInputType::Layer(LayerIndexDiscriminants::Vector),
             optional: false,
             id: *ID,
-        }]
+        })]
     }
 
     fn execute(

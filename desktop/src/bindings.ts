@@ -708,11 +708,14 @@ export type MyShapeError =
   | "Other";
 export type MyUtf8Error = { valid_up_to: number; error_len: number | null };
 export type NewDatasetScreenData = { drivers: string[] };
-export type NewToolInput = {
-  label: string;
-  name: string | null;
-  param_type: ToolInputType;
-};
+export type NewToolInput =
+  | { type: "Preset"; value: ToolPresetParameterValue }
+  | {
+      type: "Runtime";
+      label: string;
+      param_type: ToolInputType;
+      optional: boolean;
+    };
 export type NewUserDefinedTool = {
   label: string;
   inputs: NewToolInput[];
@@ -844,12 +847,16 @@ export type ToolDescriptor = {
   inputs: ToolInputDescriptor[];
   id: string;
 };
-export type ToolInputDescriptor = {
-  label: string;
-  name: string | null;
-  param_type: ToolInputType;
-  id: string;
-};
+export type ToolInputDescriptor =
+  | { Preset: { value: ToolPresetParameterValue } }
+  | {
+      Runtime: {
+        label: string;
+        param_type: ToolInputType;
+        optional: boolean;
+        id: string;
+      };
+    };
 export type ToolInputType =
   | { type: "Float" }
   | { type: "Int" }
@@ -857,12 +864,10 @@ export type ToolInputType =
   | { type: "Layer"; options: LayerIndexDiscriminants }
   | { type: "Dataset" }
   | { type: "Option"; options: string[] }
-  | { type: "Flag" }
   /**
    * bool to determine if this file is an output of the tool or not
    */
-  | { type: "File"; options: boolean }
-  | { type: "Preset"; options: ToolPresetParameterValue };
+  | { type: "File"; options: boolean };
 /**
  * Auto-generated discriminant enum variants
  */
@@ -873,12 +878,10 @@ export type ToolInputTypeDiscriminants =
   | "Layer"
   | "Dataset"
   | "Option"
-  | "Flag"
   /**
    * bool to determine if this file is an output of the tool or not
    */
-  | "File"
-  | "Preset";
+  | "File";
 export type ToolOutput = {
   returned_output: ReturnedToolOutput | null;
   files: string[];

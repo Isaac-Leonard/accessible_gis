@@ -8,7 +8,7 @@ use crate::{errors::ErrorDetails, gdal_if::LayerIndexDiscriminants};
 
 use super::{
     ReturnedToolOutput, Tool, ToolInputDescriptor, ToolOutputAction, ToolParsedParamValue,
-    ToolPresetParameterValue,
+    ToolPresetParameterValue, ToolRuntimeInputDescriptor,
 };
 
 #[derive(Clone, Debug, Deserialize, specta::Type)]
@@ -100,13 +100,13 @@ impl From<NewToolInput> for ToolInputDescriptor {
                 label,
                 param_type,
                 optional,
-            } => Self::Runtime {
+            } => Self::Runtime(ToolRuntimeInputDescriptor {
                 label,
                 param_type,
                 optional,
                 id: Uuid::new_v4(),
-            },
-            NewToolInput::Preset { value } => Self::Preset { value },
+            }),
+            NewToolInput::Preset { value } => Self::Preset(value),
         }
     }
 }
