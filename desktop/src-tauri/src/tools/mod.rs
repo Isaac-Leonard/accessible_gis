@@ -13,7 +13,10 @@ use uuid::Uuid;
 
 use crate::{
     gdal_if::LayerIndexDiscriminants,
-    state::tools::{ToolInputDescriptor, ToolInputType, ToolOutputAction, UserDefinedTool},
+    state::tools::{
+        ToolInputDescriptor, ToolInputType, ToolOutputAction, ToolPresetParameterValue,
+        UserDefinedTool,
+    },
 };
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
@@ -130,28 +133,31 @@ pub fn get_sieve_filter_tool() -> UserDefinedTool {
     static TOOL: LazyLock<UserDefinedTool> = LazyLock::new(|| UserDefinedTool {
         label: "Sieve filter".to_string(),
         inputs: vec![
-            ToolInputDescriptor {
+            ToolInputDescriptor::Preset {
+                value: ToolPresetParameterValue::String("-st".to_string()),
+            },
+            ToolInputDescriptor::Runtime {
                 label: "Filter threshold".to_string(),
-                name: Some("-st".to_string()),
                 param_type: ToolInputType::Int,
                 id: Uuid::new_v4(),
+                optional: false,
             },
-            ToolInputDescriptor {
+            ToolInputDescriptor::Runtime {
                 label: "Use 8 connectedness".to_string(),
-                name: Some("-8".to_string()),
-                param_type: ToolInputType::Flag,
+                param_type: ToolInputType::Option(vec!["-4".to_string(), "-8".to_string()]),
+                optional: true,
                 id: Uuid::new_v4(),
             },
-            ToolInputDescriptor {
+            ToolInputDescriptor::Runtime {
                 label: "Input".to_string(),
-                name: None,
                 param_type: ToolInputType::Layer(LayerIndexDiscriminants::Raster),
+                optional: false,
                 id: Uuid::new_v4(),
             },
-            ToolInputDescriptor {
+            ToolInputDescriptor::Runtime {
                 label: "Output raster".to_string(),
-                name: None,
                 param_type: ToolInputType::File(true),
+                optional: false,
                 id: Uuid::new_v4(),
             },
         ],

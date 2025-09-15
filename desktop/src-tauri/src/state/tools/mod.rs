@@ -33,25 +33,40 @@ pub trait Tool: Send + Sync {
         &self,
         params: Vec<ToolParameter>,
         project: &'a mut DatasetCollection,
-    ) -> Result<Vec<ToolNamedParsedParamValue<'a>>, ErrorDetails> {
+    ) -> Result<Vec<ToolParsedParamValue<'a>>, ErrorDetails> {
         let mut parsed = Vec::new();
-        let mut params = params.into_iter().map(|param| param.value);
         for expected in self.get_expected_input_parameters() {
-            let parsed_val = ToolNamedParsedParamValue::parse_from(&mut params, expected, project)?;
+            let parsed_val = match expected {
+                ToolInputDescriptor::Preset { value } => ToolParsedParamValue::from(value),
+                ToolInputDescriptor::Runtime {
+                    label,
+                    param_type,
+                    optional,
+                    id,
+                } => {
+                    let param = params.iter().find(|param| param.id == id);
+                    if param.is_none() && optional {
+                        continue;
+                    };
+                    let param = param.ok_or_else(|| {
+                        ErrorDetails::Other(format!(
+                            "Did not get required parameter {} for tool {}",
+                            label,
+                            self.get_label()
+                        ))
+                    })?;
+                    ToolParsedParamValue::parse_from(param.value.clone(), param_type, project)?
+                }
+            };
             // TODO: This is really bad
             // This needs to be refactored properly however I suspect that cannot be done without rewriting large parts of the gdal-rs library.
             // This shouldn't currently cause any issues as all of this code is currently affectively single threaded for now.
             let parsed_val = unsafe {
-                parsed_val.map(|v| {
-                    transmute::<ToolNamedParsedParamValue<'_>, ToolNamedParsedParamValue<'a>>(v)
-                })
+                transmute::<ToolParsedParamValue<'_>, ToolParsedParamValue<'a>>(parsed_val)
             };
-            match parsed_val {
-                Some(val) => parsed.push(val),
-                _ => eprintln!("Got none when parsing params"),
-            }
+            parsed.push(parsed_val);
         }
-        if params.count() != 0 {
+        if params.len() != 0 {
             Err(ErrorDetails::Other(
                 "Not all params used for tool call".to_string(),
             ))
@@ -69,13 +84,7 @@ pub trait Tool: Send + Sync {
         let params = self.parse_input_parameters(params, project)?;
 
         for param in &params {
-            dbg!(param);
-            let param_val = match param {
-                ToolNamedParsedParamValue::Raw(val) => val,
-                ToolNamedParsedParamValue::Named(_, val) => val,
-                ToolNamedParsedParamValue::Flag(_) => continue,
-            };
-            if let Some(file) = param_val.try_as_file_ref()
+            if let Some(file) = param.try_as_file_ref()
                 && file.use_as_output
             {
                 output_files.push(file.path.clone())
@@ -90,7 +99,7 @@ pub trait Tool: Send + Sync {
 
     fn execute(
         &self,
-        params: &[ToolNamedParsedParamValue],
+        params: &[ToolParsedParamValue],
     ) -> Result<Option<ReturnedToolOutput>, ErrorDetails>;
 
     fn for_ui(&self) -> ToolDescriptor {
@@ -162,11 +171,16 @@ pub struct ToolOutputAction {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
-pub struct ToolInputDescriptor {
-    pub label: String,
-    pub name: Option<String>,
-    pub param_type: ToolInputType,
-    pub id: Uuid,
+pub enum ToolInputDescriptor {
+    Preset {
+        value: ToolPresetParameterValue,
+    },
+    Runtime {
+        label: String,
+        param_type: ToolInputType,
+        optional: bool,
+        id: Uuid,
+    },
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
@@ -264,86 +278,52 @@ pub struct ToolParsedFileParameter {
     use_as_output: bool,
 }
 
-#[derive(Debug, strum::EnumTryAs)]
-pub enum ToolNamedParsedParamValue<'a> {
-    Named(String, ToolParsedParamValue<'a>),
-    Raw(ToolParsedParamValue<'a>),
-    Flag(String),
-}
-
-impl<'a> ToolNamedParsedParamValue<'a> {
+impl<'a> ToolParsedParamValue<'a> {
     pub fn parse_from(
-        params: &mut impl Iterator<Item = ToolParameterValue>,
-        expected: ToolInputDescriptor,
+        param: ToolParameterValue,
+        expected: ToolInputType,
         datasets: &'a mut DatasetCollection,
-    ) -> Result<Option<Self>, ErrorDetails> {
-        let val: ToolParsedParamValue = match expected.param_type {
-            ToolInputType::Preset(value) => ToolParsedParamValue::from(value),
-            expected_type => {
-                let Some(value) = params.next() else {
-                    return Err(ErrorDetails::Other(
-                        "Not enough params passed for tool".to_string(),
-                    ));
-                };
-
-                match (value, expected_type) {
-                    (ToolParameterValue::Float(num), ToolInputType::Float) => {
-                        ToolParsedParamValue::Float(num)
-                    }
-                    (ToolParameterValue::Int(num), ToolInputType::Int) => {
-                        ToolParsedParamValue::Int(num)
-                    }
-                    (ToolParameterValue::String(str), ToolInputType::String) => {
-                        ToolParsedParamValue::String(str)
-                    }
-                    (ToolParameterValue::Dataset(index), ToolInputType::Dataset) => {
-                        ToolParsedParamValue::Dataset(
-                            datasets.get_dataset(index).ok_or_else(|| {
-                                ErrorDetails::Other("Missing dataset".to_string())
-                            })?,
-                        )
-                    }
-                    (ToolParameterValue::Layer(index), ToolInputType::Layer(kind)) => match kind {
-                        LayerIndexDiscriminants::Vector => ToolParsedParamValue::Vector(
-                            datasets
-                                .get(index)
-                                .and_then(|layer| layer.try_as_vector())
-                                .ok_or_else(|| {
-                                    ErrorDetails::Other("Missing vector layer".to_string())
-                                })?,
-                        ),
-                        LayerIndexDiscriminants::Raster => ToolParsedParamValue::Raster(
-                            datasets
-                                .get(index)
-                                .and_then(|layer| layer.try_as_raster())
-                                .ok_or_else(|| {
-                                    ErrorDetails::Other("Missing raster layer".to_string())
-                                })?,
-                        ),
-                    },
-                    (ToolParameterValue::Option(option), ToolInputType::Option(options)) => {
-                        parse_option(option, options)?
-                    }
-                    (ToolParameterValue::Flag(include), ToolInputType::Flag) => {
-                        return Ok(include.then_some(Self::Flag(expected.name.ok_or_else(
-                            || ErrorDetails::Other("Missing name for flag".to_string()),
-                        )?)));
-                    }
-                    (ToolParameterValue::File(path), ToolInputType::File(use_as_output)) => {
-                        ToolParsedParamValue::File(ToolParsedFileParameter {
-                            path,
-                            use_as_output,
-                        })
-                    }
-                    _ => Err(ErrorDetails::Other("Mismatched command types".to_string()))?,
-                }
+    ) -> Result<Self, ErrorDetails> {
+        Ok(match (param, expected) {
+            (ToolParameterValue::Float(num), ToolInputType::Float) => {
+                ToolParsedParamValue::Float(num)
             }
-        };
-
-        Ok(Some(match expected.name {
-            Some(name) => Self::Named(name, val),
-            None => Self::Raw(val),
-        }))
+            (ToolParameterValue::Int(num), ToolInputType::Int) => ToolParsedParamValue::Int(num),
+            (ToolParameterValue::String(str), ToolInputType::String) => {
+                ToolParsedParamValue::String(str)
+            }
+            (ToolParameterValue::Dataset(index), ToolInputType::Dataset) => {
+                ToolParsedParamValue::Dataset(
+                    datasets
+                        .get_dataset(index)
+                        .ok_or_else(|| ErrorDetails::Other("Missing dataset".to_string()))?,
+                )
+            }
+            (ToolParameterValue::Layer(index), ToolInputType::Layer(kind)) => match kind {
+                LayerIndexDiscriminants::Vector => ToolParsedParamValue::Vector(
+                    datasets
+                        .get(index)
+                        .and_then(|layer| layer.try_as_vector())
+                        .ok_or_else(|| ErrorDetails::Other("Missing vector layer".to_string()))?,
+                ),
+                LayerIndexDiscriminants::Raster => ToolParsedParamValue::Raster(
+                    datasets
+                        .get(index)
+                        .and_then(|layer| layer.try_as_raster())
+                        .ok_or_else(|| ErrorDetails::Other("Missing raster layer".to_string()))?,
+                ),
+            },
+            (ToolParameterValue::Option(option), ToolInputType::Option(options)) => {
+                parse_option(option, options)?
+            }
+            (ToolParameterValue::File(path), ToolInputType::File(use_as_output)) => {
+                ToolParsedParamValue::File(ToolParsedFileParameter {
+                    path,
+                    use_as_output,
+                })
+            }
+            _ => Err(ErrorDetails::Other("Mismatched command types".to_string()))?,
+        })
     }
 }
 

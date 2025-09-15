@@ -13,8 +13,8 @@ use crate::{
     errors::ErrorDetails,
     gdal_if::LayerIndexDiscriminants,
     state::tools::{
-        ReturnedToolOutput, Tool, ToolInputDescriptor, ToolInputType, ToolNamedParsedParamValue,
-        ToolOutputAction,
+        ReturnedToolOutput, Tool, ToolInputDescriptor, ToolInputType, ToolOutputAction,
+        ToolParsedParamValue,
     },
 };
 
@@ -223,23 +223,19 @@ impl Tool for DescribeLandformsTool {
 
     fn get_expected_input_parameters(&self) -> Vec<ToolInputDescriptor> {
         static ID: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
-        vec![ToolInputDescriptor {
+        vec![ToolInputDescriptor::Runtime {
             label: "Landforms layer".to_string(),
-            name: None,
             param_type: ToolInputType::Layer(LayerIndexDiscriminants::Vector),
+            optional: false,
             id: *ID,
         }]
     }
 
     fn execute(
         &self,
-        params: &[ToolNamedParsedParamValue],
+        params: &[ToolParsedParamValue],
     ) -> Result<Option<ReturnedToolOutput>, ErrorDetails> {
-        let layer = params[0]
-            .try_as_raw_ref()
-            .unwrap()
-            .try_as_vector_ref()
-            .unwrap();
+        let layer = params[0].try_as_vector_ref().unwrap();
         let result =
             describe_landforms(&layer.info.shared.name).map_err(|err| ErrorDetails::Other(err))?;
         Ok(Some(ReturnedToolOutput::String(result)))

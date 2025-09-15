@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::{errors::ErrorDetails, gdal_if::LayerIndexDiscriminants};
 
 use super::{
-    ReturnedToolOutput, Tool, ToolInputDescriptor, ToolNamedParsedParamValue, ToolOutputAction,
+    ReturnedToolOutput, Tool, ToolInputDescriptor, ToolOutputAction, ToolParsedParamValue,
     ToolPresetParameterValue,
 };
 
@@ -59,17 +59,11 @@ impl Tool for UserDefinedTool {
 
     fn execute(
         &self,
-        params: &[ToolNamedParsedParamValue],
+        params: &[ToolParsedParamValue],
     ) -> Result<Option<ReturnedToolOutput>, ErrorDetails> {
         let mut command = Command::new(&self.command);
         for param in params {
-            match param {
-                ToolNamedParsedParamValue::Named(name, value) => {
-                    command.arg(name).arg(value.to_command_string())
-                }
-                ToolNamedParsedParamValue::Raw(value) => command.arg(value.to_command_string()),
-                ToolNamedParsedParamValue::Flag(flag) => command.arg(flag),
-            };
+            command.arg(param.to_command_string());
         }
         command
             .output()
@@ -87,19 +81,32 @@ impl Tool for UserDefinedTool {
 }
 
 #[derive(Clone, Debug, Deserialize, specta::Type)]
-pub struct NewToolInput {
-    pub label: String,
-    pub name: Option<String>,
-    pub param_type: ToolInputType,
+#[serde(tag = "type")]
+pub enum NewToolInput {
+    Preset {
+        value: ToolPresetParameterValue,
+    },
+    Runtime {
+        label: String,
+        param_type: ToolInputType,
+        optional: bool,
+    },
 }
 
 impl From<NewToolInput> for ToolInputDescriptor {
     fn from(value: NewToolInput) -> Self {
-        Self {
-            label: value.label,
-            name: value.name,
-            param_type: value.param_type,
-            id: Uuid::new_v4(),
+        match value {
+            NewToolInput::Runtime {
+                label,
+                param_type,
+                optional,
+            } => Self::Runtime {
+                label,
+                param_type,
+                optional,
+                id: Uuid::new_v4(),
+            },
+            NewToolInput::Preset { value } => Self::Preset { value },
         }
     }
 }
@@ -114,8 +121,6 @@ pub enum ToolInputType {
     Layer(LayerIndexDiscriminants),
     Dataset,
     Option(Vec<String>),
-    Flag,
     /// bool to determine if this file is an output of the tool or not
     File(bool),
-    Preset(ToolPresetParameterValue),
 }
