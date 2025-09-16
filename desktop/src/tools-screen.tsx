@@ -8,7 +8,6 @@ import {
 } from "./binded-input";
 import {
   DatasetLayerIndex,
-  ToolInputDescriptor,
   ToolInputType,
   ToolInputTypeDiscriminants,
   LayerDescriptor,
@@ -22,6 +21,7 @@ import {
   ToolOutput,
   ToolParameter,
   ToolsScreenInfo,
+  ToolRuntimeInputDescriptor,
 } from "./bindings";
 import { Dialog, useDialog } from "./dialog";
 import {
@@ -48,18 +48,28 @@ export const ToolsScreen = ({ tools, layers }: ToolsScreenInfo) => {
 };
 
 type ParameterDescriptor = { label: string; id: string } & (
-  | { type: "Float"; value: number }
-  | { type: "Int"; value: number }
-  | { type: "String"; value: string }
-  | { type: "Dataset"; value: number }
-  | { type: "Layer"; value: DatasetLayerIndex; options: "Vector" | "Raster" }
-  | { type: "Option"; value: string; options: string[] }
-  | { type: "Flag"; value: boolean }
-  | { type: "File"; value: string }
-  | { type: "Preset"; value: ToolPresetParameterValue }
-);
+  | { optional: true; included: boolean }
+  | { optional: false }
+) &
+  (
+    | { type: "Float"; value: number }
+    | { type: "Int"; value: number }
+    | { type: "String"; value: string }
+    | { type: "Dataset"; value: number }
+    | { type: "Layer"; value: DatasetLayerIndex; options: "Vector" | "Raster" }
+    | { type: "Option"; value: string; options: string[] }
+    | { type: "Flag"; value: boolean }
+    | { type: "File"; value: string }
+    | { type: "Preset"; value: ToolPresetParameterValue }
+  );
 
-const paramFromInput = (input: ToolInputDescriptor): ParameterDescriptor => {
+const paramFromInput = (
+  input: ToolRuntimeInputDescriptor
+): ParameterDescriptor => {
+  const optional = input.optional
+    ? { optional: input.optional, included: false }
+    : { optional: input.optional };
+
   switch (input.param_type.type) {
     case "Float":
       return {
@@ -67,6 +77,7 @@ const paramFromInput = (input: ToolInputDescriptor): ParameterDescriptor => {
         value: 0,
         label: input.label,
         id: input.id,
+        ...optional,
       };
     case "Int":
       return {
@@ -74,6 +85,7 @@ const paramFromInput = (input: ToolInputDescriptor): ParameterDescriptor => {
         value: 0,
         label: input.label,
         id: input.id,
+        ...optional,
       };
     case "String":
       return {
@@ -81,6 +93,7 @@ const paramFromInput = (input: ToolInputDescriptor): ParameterDescriptor => {
         value: "",
         label: input.label,
         id: input.id,
+        ...optional,
       };
     case "Dataset":
       return {
@@ -88,6 +101,7 @@ const paramFromInput = (input: ToolInputDescriptor): ParameterDescriptor => {
         value: 0,
         label: input.label,
         id: input.id,
+        ...optional,
       };
     case "Layer":
       return {
@@ -99,6 +113,7 @@ const paramFromInput = (input: ToolInputDescriptor): ParameterDescriptor => {
         label: input.label,
         options: input.param_type.options,
         id: input.id,
+        ...optional,
       };
     case "Option":
       return {
@@ -107,13 +122,7 @@ const paramFromInput = (input: ToolInputDescriptor): ParameterDescriptor => {
         label: input.label,
         options: input.param_type.options,
         id: input.id,
-      };
-    case "Flag":
-      return {
-        type: input.param_type.type,
-        value: false,
-        label: input.label,
-        id: input.id,
+        ...optional,
       };
     case "File":
       return {
@@ -121,13 +130,7 @@ const paramFromInput = (input: ToolInputDescriptor): ParameterDescriptor => {
         value: "",
         label: input.label,
         id: input.id,
-      };
-    case "Preset":
-      return {
-        type: input.param_type.type,
-        value: input.param_type.options,
-        label: input.label,
-        id: input.id,
+        ...optional,
       };
   }
 };
@@ -152,6 +155,13 @@ const ToolDialog = ({ tool, layers }: ToolDialogProps) => {
       setParams(newArray);
     };
 
+  const setIncludeParam = (index: number, included: boolean) => {
+    const replacement = { ...params[index], included };
+    const newArray = params.slice();
+    newArray[index] = replacement;
+    setParams(newArray);
+  };
+
   const makeParamBinding = <T extends ParameterDescriptor>(
     param: T,
     index: number
@@ -175,15 +185,28 @@ const ToolDialog = ({ tool, layers }: ToolDialogProps) => {
     <Dialog openText={tool.label} modal={true} open={open} setOpen={setOpen}>
       <h3>{tool.label}</h3>
       {params.map((param, index) => (
-        <ToolInput
-          param={param}
-          index={index}
-          makeParamBinding={makeParamBinding}
-          vectorLayers={vectorLayers}
-          rasterLayers={rasterLayers}
-          datasets={datasets}
-          setValueAt={setValueAt}
-        />
+        <div>
+          {param.optional ? (
+            <button
+              role="switch"
+              aria-checked={param.included}
+              onClick={() => setIncludeParam(index, !param.included)}
+            >
+              Include {param.label}
+            </button>
+          ) : null}
+          {(param.optional && param.included) || !param.optional ? (
+            <ToolInput
+              param={param}
+              index={index}
+              makeParamBinding={makeParamBinding}
+              vectorLayers={vectorLayers}
+              rasterLayers={rasterLayers}
+              datasets={datasets}
+              setValueAt={setValueAt}
+            />
+          ) : null}{" "}
+        </div>
       ))}
       <button
         onClick={() => {
@@ -199,10 +222,7 @@ const ToolDialog = ({ tool, layers }: ToolDialogProps) => {
 
 const parametersFromUi = (params: ParameterDescriptor[]): ToolParameter[] => {
   return params
-    .filter(
-      (param): param is Exclude<ParameterDescriptor, { type: "Preset" }> =>
-        param.type !== "Preset"
-    )
+    .filter((param) => !(param.optional && !param.included))
     .map((param) => ({
       id: param.id,
       value: ParameterValueFromDescriptor(param),
@@ -460,12 +480,8 @@ const inputTypeFromDiscriminant = (
       return { type: discriminant, options: "Vector" };
     case "Option":
       return { type: discriminant, options: [] };
-    case "Flag":
-      return { type: discriminant };
     case "File":
       return { type: discriminant, options: false };
-    case "Preset":
-      return { type: discriminant, options: { type: "File", value: "" } };
   }
 };
 
@@ -505,6 +521,7 @@ const ToolCreationDialog = () => {
   const { open, setOpen } = useDialog();
 
   const output_files = tool.inputs.value
+    .filter((input) => input.type === "Runtime")
     .filter((input) => input.param_type.type === "File")
     .map((input) => input.label);
 
@@ -529,7 +546,12 @@ const ToolCreationDialog = () => {
           onClick={() =>
             tool.inputs.setValue([
               ...tool.inputs.value,
-              { label: "", name: null, param_type: { type: "String" } },
+              {
+                type: "Runtime",
+                label: "",
+                param_type: { type: "String" },
+                optional: false,
+              },
             ])
           }
         >
@@ -604,144 +626,149 @@ const ToolInputCreator = ({
 }: {
   input: NewToolInput;
   setInput: (element: NewToolInput) => void;
-}) => (
-  <div>
-    <TextInput
-      label="label for input when running tool"
-      binding={{
-        value: input.label,
-        setValue: (value) => setInput({ ...input, label: value }),
-      }}
-    />
-    <button
-      role="switch"
-      aria-checked={input.name !== null}
-      onClick={() =>
-        setInput({
-          ...input,
-          name: input.name === null ? "" : null,
-        })
-      }
-    >
-      Named
-    </button>
-    {input.name === null ? null : (
-      <TextInput
-        label="Name to pass to command"
-        binding={{
-          value: input.name,
-          setValue: (value) => setInput({ ...input, name: value }),
-        }}
-      />
-    )}
-    <InputTypeDiscriminantSelector
-      prompt="Type of input"
-      binding={{
-        value: input.param_type.type,
-        setValue: (option) =>
-          setInput({
-            ...input,
-            param_type: inputTypeFromDiscriminant(option),
-          }),
-      }}
-    />
-    {input.param_type.type === "Layer" ? (
-      <OptionPicker
-        options={["Vector", "Raster"] as const}
-        selectedOption={input.param_type.options}
-        prompt="Layer type"
-        emptyText="This should not be empty"
-        setOption={(option) =>
-          setInput({
-            ...input,
-            param_type: { type: "Layer", options: option },
-          })
+}) => {
+  return (
+    <div>
+      <button
+        role="switch"
+        aria-checked={input.type === "Preset"}
+        onClick={() =>
+          setInput(
+            input.type === "Preset"
+              ? {
+                  type: "Runtime",
+                  label: "",
+                  optional: false,
+                  param_type: { type: "String" },
+                }
+              : { type: "Preset", value: { type: "String", value: "" } }
+          )
         }
-      />
-    ) : input.param_type.type === "Option" ? (
-      <div>
-        {input.param_type.options.map((option, option_index, options) => (
-          <TextInput
-            label={"Option " + (option_index + 1)}
+      >
+        Preset value
+      </button>
+      {input.type === "Preset" ? (
+        <>
+          <PresetInputTypeSelector
+            prompt="Type of preset input"
             binding={{
-              value: option,
-              setValue: (option) =>
+              value: input.value.type,
+              setValue: (discriminant) =>
                 setInput({
-                  ...input,
-                  param_type: {
-                    type: "Option",
-                    options: (() => {
-                      const newOptions = options.slice();
-                      newOptions[option_index] = option;
-                      return newOptions;
-                    })(),
-                  },
+                  type: "Preset",
+                  value: presetInputFromDiscriminant(discriminant),
                 }),
             }}
           />
-        ))}
-        <button
-          onClick={() => {
-            // Not really needed but there is the odd edge case and makes ts happy
-            if (input.param_type.type === "Option")
-              setInput({
-                ...input,
-                param_type: {
-                  type: "Option",
-                  options: [...input.param_type.options, ""],
-                },
-              });
-          }}
-          autofocus={true}
-        >
-          Add Option
-        </button>
-      </div>
-    ) : input.param_type.type === "Preset" ? (
-      <>
-        <PresetInputTypeSelector
-          prompt="Type of preset input"
-          binding={{
-            value: input.param_type.options.type,
-            setValue: (option) =>
-              setInput({
-                ...input,
-                param_type: {
-                  type: "Preset",
-                  options: presetInputFromDiscriminant(option),
-                },
-              }),
-          }}
-        />
-        <PresetInputValueEditor
-          input={input.param_type.options}
-          setInput={(value) =>
-            setInput({
-              ...input,
-              param_type: { type: "Preset", options: value },
-            })
-          }
-        />
-      </>
-    ) : input.param_type.type === "File" ? (
-      <button
-        role="switch"
-        aria-checked={input.param_type.options}
-        onClick={() => {
-          // Here to make TS happy and just in case of the rare edge case
-          if (input.param_type.type === "File") {
-            setInput({
-              ...input,
-              param_type: { type: "File", options: !input.param_type.options },
-            });
-          }
-        }}
-      >
-        Use as output
-      </button>
-    ) : null}
-  </div>
-);
+          <PresetInputValueEditor
+            input={input.value}
+            setInput={(value) => setInput({ type: "Preset", value })}
+          />
+        </>
+      ) : (
+        <div>
+          <TextInput
+            label="label for input when running tool"
+            binding={{
+              value: input.label,
+              setValue: (value) => setInput({ ...input, label: value }),
+            }}
+          />
+          <Checkbox
+            label="Optional"
+            binding={{
+              value: input.optional,
+              setValue: (value) => setInput({ ...input, optional: value }),
+            }}
+          />
+          <InputTypeDiscriminantSelector
+            prompt="Type of input"
+            binding={{
+              value: input.param_type.type,
+              setValue: (option) =>
+                setInput({
+                  ...input,
+                  param_type: inputTypeFromDiscriminant(option),
+                }),
+            }}
+          />
+          {input.param_type.type === "Layer" ? (
+            <OptionPicker
+              options={["Vector", "Raster"] as const}
+              selectedOption={input.param_type.options}
+              prompt="Layer type"
+              emptyText="This should not be empty"
+              setOption={(option) =>
+                setInput({
+                  ...input,
+                  param_type: { type: "Layer", options: option },
+                })
+              }
+            />
+          ) : input.param_type.type === "Option" ? (
+            <div>
+              {input.param_type.options.map((option, option_index, options) => (
+                <TextInput
+                  label={"Option " + (option_index + 1)}
+                  binding={{
+                    value: option,
+                    setValue: (option) =>
+                      setInput({
+                        ...input,
+                        param_type: {
+                          type: "Option",
+                          options: (() => {
+                            const newOptions = options.slice();
+                            newOptions[option_index] = option;
+                            return newOptions;
+                          })(),
+                        },
+                      }),
+                  }}
+                />
+              ))}
+              <button
+                onClick={() => {
+                  // Not really needed but there is the odd edge case and makes ts happy
+                  if (input.param_type.type === "Option")
+                    setInput({
+                      ...input,
+                      param_type: {
+                        type: "Option",
+                        options: [...input.param_type.options, ""],
+                      },
+                    });
+                }}
+                autofocus={true}
+              >
+                Add Option
+              </button>
+            </div>
+          ) : input.param_type.type === "File" ? (
+            <button
+              role="switch"
+              aria-checked={input.param_type.options}
+              onClick={() => {
+                // Here to make TS happy and just in case of the rare edge case
+                if (input.param_type.type === "File") {
+                  setInput({
+                    ...input,
+                    param_type: {
+                      type: "File",
+                      options: !input.param_type.options,
+                    },
+                  });
+                }
+              }}
+            >
+              Use as output
+            </button>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+};
 
 type PresetInputValueEditorProps = {
   input: ToolPresetParameterValue;

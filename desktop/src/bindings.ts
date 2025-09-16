@@ -844,19 +844,9 @@ export type ThiessenPolygonRecord = {
 };
 export type ToolDescriptor = {
   label: string;
-  inputs: ToolInputDescriptor[];
+  inputs: ToolRuntimeInputDescriptor[];
   id: string;
 };
-export type ToolInputDescriptor =
-  | { Preset: { value: ToolPresetParameterValue } }
-  | {
-      Runtime: {
-        label: string;
-        param_type: ToolInputType;
-        optional: boolean;
-        id: string;
-      };
-    };
 export type ToolInputType =
   | { type: "Float" }
   | { type: "Int" }
@@ -910,6 +900,12 @@ export type ToolPresetParameterValueDiscriminants =
   | "Int"
   | "String"
   | "File";
+export type ToolRuntimeInputDescriptor = {
+  label: string;
+  param_type: ToolInputType;
+  optional: boolean;
+  id: string;
+};
 export type ToolsScreenInfo = {
   tools: ToolDescriptor[];
   layers: LayerDescriptor[];

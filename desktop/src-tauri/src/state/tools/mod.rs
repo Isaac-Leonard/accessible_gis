@@ -66,13 +66,7 @@ pub trait Tool: Send + Sync {
             };
             parsed.push(parsed_val);
         }
-        if params.len() != 0 {
-            Err(ErrorDetails::Other(
-                "Not all params used for tool call".to_string(),
-            ))
-        } else {
-            Ok(parsed)
-        }
+        Ok(parsed)
     }
 
     fn run(
