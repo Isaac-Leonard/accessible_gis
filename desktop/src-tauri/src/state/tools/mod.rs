@@ -184,8 +184,8 @@ pub struct ToolRuntimeInputDescriptor {
 }
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
 pub struct ToolParameter {
-    id: Uuid,
-    value: ToolParameterValue,
+    pub id: Uuid,
+    pub value: ToolParameterValue,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type, strum::EnumTryAs)]
@@ -232,6 +232,17 @@ impl From<ToolPresetParameterValue> for ToolParsedParamValue<'_> {
                     use_as_output: false,
                 })
             }
+        }
+    }
+}
+
+impl From<ToolPresetParameterValue> for ToolParameterValue {
+    fn from(value: ToolPresetParameterValue) -> Self {
+        match value {
+            ToolPresetParameterValue::Float(num) => Self::Float(num),
+            ToolPresetParameterValue::Int(num) => Self::Int(num),
+            ToolPresetParameterValue::String(string) => Self::String(string),
+            ToolPresetParameterValue::File(path) => Self::File(path),
         }
     }
 }
