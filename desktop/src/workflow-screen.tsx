@@ -181,6 +181,22 @@ const WorkflowInputDescriptorEditor = ({
         label="Label"
         binding={{ value: input.label, setValue: setLabel }}
       />
+      <button
+        role="switch"
+        aria-checked={input.value.type === "Preset"}
+        onClick={() =>
+          setType(
+            input.value.type === "Preset"
+              ? {
+                  type: "Runtime",
+                  value: { optional: false, param_type: { type: "String" } },
+                }
+              : { type: "Preset", value: { type: "String", value: "" } }
+          )
+        }
+      >
+        Preset value
+      </button>
       {input.value.type === "Runtime" ? (
         <WorkflowInputTypePicker
           type={input.value.value.param_type}
