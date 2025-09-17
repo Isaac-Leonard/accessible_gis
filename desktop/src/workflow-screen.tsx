@@ -1,297 +1,31 @@
 import { useState } from "preact/hooks";
 import {
   ToolDescriptor,
-  Workflow,
   NewWorkflowInputDescriptor,
-  WorkflowInputValueDescriptor,
-  WorkflowInputValueDescriptorDiscriminants,
-  DatasetLayerIndex,
-  WorkflowInputDescriptor,
-  LayerIndexDiscriminants,
-  LayerDescriptor,
-  WorkflowInputValue,
   WorkflowsScreenInfo,
+  NewToolCall,
+  ToolInputTypeDiscriminants,
+  ToolInputType,
+  ToolPresetParameterValueDiscriminants,
 } from "./bindings";
-import {
-  bindedSelectorFactory,
-  IndexedOptionPicker,
-  OptionPicker,
-} from "./option-picker";
+import { IndexedOptionPicker } from "./option-picker";
 import { Dialog, useDialog } from "./dialog";
 import { client } from "./api";
-import { Checkbox, NumberInput, Input as TextInput } from "./binded-input";
-import { SaveButton } from "./save-button";
-import { ReactElement } from "preact/compat";
-
-type UiWorkflowInput = { id: string; label: string } & (
-  | { type: "Float"; value: number }
-  | { type: "Int"; value: number }
-  | { type: "String"; value: string }
-  | {
-      type: "Layer";
-      layerType: LayerIndexDiscriminants;
-      value: DatasetLayerIndex;
-    }
-  | {
-      type: "File";
-      value: { type: "Temp" } | { type: "Custom"; value: string | null };
-    }
-  | { type: "Option"; options: string[]; value: string }
-  | { type: "Flag"; value: boolean }
-);
-
-const getWorkflowInput = (input: WorkflowInputDescriptor): UiWorkflowInput => {
-  switch (input.value.type) {
-    case "Float":
-    case "Int":
-      return {
-        type: input.value.type,
-        value: 0,
-        label: input.label,
-        id: input.id,
-      };
-    case "String":
-      return {
-        type: input.value.type,
-        value: "",
-        label: input.label,
-        id: input.id,
-      };
-    case "Layer":
-      return {
-        type: input.value.type,
-        value: {
-          dataset_index: 0,
-          layer: { type: input.value.value, index: null },
-        },
-      };
-    case "File":
-      return {
-        type: input.value.type,
-        value: { type: "Temp" },
-        label: input.label,
-        id: input.id,
-      };
-    case "Option":
-      return {
-        type: input.value.type,
-        options: input.value.value,
-        value: input.value.value[0],
-        label: input.label,
-        id: input.id,
-      };
-    case "Flag":
-      return {
-        type: input.value.type,
-        value: false,
-        label: input.label,
-        id: input.id,
-      };
-  }
-};
-
-type RunWorkflowScreenProps = {
-  workflow: Workflow;
-  layers: LayerDescriptor[];
-};
-
-const RunWorkflowScreen = ({ workflow, layers }: RunWorkflowScreenProps) => {
-  const [inputs, setInputs] = useState(workflow.inputs.map(getWorkflowInput));
-  const setInputAt =
-    <T extends UiWorkflowInput>(index: number) =>
-    (value: T["value"]) => {
-      const replacement = { ...(inputs[index] as T), value };
-      const newInputs = inputs.slice();
-      newInputs[index] = replacement;
-      setInputs(newInputs);
-    };
-
-  const datasets = layers.reduce((arr, el) => {
-    if (arr.includes(el.dataset_file)) {
-      return arr;
-    } else {
-      return [...arr, el.dataset_file];
-    }
-  }, [] as string[]);
-
-  const vectorLayers = layers.filter((layer) => layer.type === "Vector");
-  const rasterLayers = layers.filter((layer) => layer.type === "Raster");
-  const { open, setOpen } = useDialog();
-  return (
-    <Dialog
-      open={open}
-      setOpen={setOpen}
-      modal={true}
-      openText={workflow.label}
-    >
-      {inputs.map((input, index) => (
-        <WorkflowInputEditor
-          input={input}
-          setInputValue={setInputAt<typeof input>(index)}
-          datasets={datasets}
-          vectorLayers={vectorLayers}
-          rasterLayers={rasterLayers}
-        />
-      ))}
-      <button
-        onClick={() =>
-          client.runWorkflow({
-            inputs: inputs.map((input) => ({
-              id: input.id,
-              value: {
-                type: input.type,
-                value: input.value,
-              } as WorkflowInputValue,
-            })),
-          })
-        }
-      >
-        Run workflow
-      </button>
-    </Dialog>
-  );
-};
-
-type WorkflowInputEditorProps<T extends UiWorkflowInput> = {
-  input: T;
-  setInputValue: <T extends UiWorkflowInput>(value: T["value"]) => void;
-  datasets: string[];
-  vectorLayers: LayerDescriptor[];
-  rasterLayers: LayerDescriptor[];
-};
-
-const WorkflowInputEditor = <T extends UiWorkflowInput>({
-  input,
-  setInputValue,
-  vectorLayers,
-  rasterLayers,
-}: WorkflowInputEditorProps<T>): ReactElement => {
-  switch (input.type) {
-    case "Float":
-    case "Int":
-      return (
-        <NumberInput
-          label={input.label}
-          binding={{
-            value: input.value,
-            setValue: setInputValue,
-          }}
-        />
-      );
-    case "String":
-      return (
-        <TextInput
-          label={input.label}
-          binding={{
-            value: input.value,
-            setValue: setInputValue<typeof input>,
-          }}
-        />
-      );
-    case "File":
-      return (
-        <div>
-          <OptionPicker
-            prompt="File"
-            emptyText="This should not be empty"
-            options={["Temp", "Custom"] as const}
-            selectedOption={input.value.type}
-            setOption={(option) =>
-              setInputValue(
-                option === "Temp"
-                  ? { type: option }
-                  : { type: option, value: null }
-              )
-            }
-          />
-          {input.value.type === "Custom" ? (
-            <SaveButton
-              prompt="File path"
-              onSave={(file) => setInputValue({ type: "Custom", value: file })}
-            />
-          ) : null}{" "}
-        </div>
-      );
-    case "Layer":
-      switch (input.layerType) {
-        case "Vector":
-          return (
-            <IndexedOptionPicker
-              prompt={input.label}
-              emptyText="There are no vector layers to select"
-              index={vectorLayers.findIndex(
-                (layer) =>
-                  layer.dataset === input.value.dataset &&
-                  layer.type === "Vector" &&
-                  layer.index === input.value.layer.index
-              )}
-              options={vectorLayers.map((layer) => layer.dataset_file)}
-              setIndex={(layer_index) =>
-                setInputValue({
-                  dataset: vectorLayers[layer_index].dataset,
-                  layer: {
-                    type: "Vector",
-                    index: vectorLayers[layer_index].index,
-                  },
-                })
-              }
-            />
-          );
-        case "Raster":
-          return (
-            <IndexedOptionPicker
-              prompt={input.label}
-              emptyText="There are no raster layers to select"
-              index={rasterLayers.findIndex(
-                (layer) =>
-                  layer.dataset === input.value.dataset &&
-                  layer.type === "Raster" &&
-                  layer.index === input.value.layer.index
-              )}
-              options={rasterLayers.map((layer) => layer.dataset_file)}
-              setIndex={(layer_index) =>
-                setInputValue({
-                  dataset: rasterLayers[layer_index].dataset,
-                  layer: {
-                    type: "Raster",
-                    index: rasterLayers[layer_index].index,
-                  },
-                })
-              }
-            />
-          );
-      }
-    case "Option":
-      return (
-        <OptionPicker
-          prompt={input.label}
-          emptyText="No options are available to pick"
-          selectedOption={input.value}
-          setOption={setInputValue}
-          options={input.options}
-        />
-      );
-    case "Flag":
-      return (
-        <Checkbox
-          label={input.label}
-          binding={{ value: input.value, setValue: setInputValue }}
-        />
-      );
-  }
-};
-
-const WorkflowInputTypeDiscriminantSelector = bindedSelectorFactory(
-  await client.getWorkflowInputTypes()
-);
-
-type Connection = { tool: string; parameter: string };
+import { Input as TextInput } from "./binded-input";
+import {
+  presetInputFromDiscriminant,
+  PresetInputTypeSelector,
+  PresetInputValueEditor,
+  ToolDialog,
+  ToolInputTypeDiscriminantSelector,
+  toolInputTypeFromDiscriminant,
+} from "./tools-screen";
 
 const AddWorkflowScreen = ({ toolList }: { toolList: ToolDescriptor[] }) => {
   const [label, setLabel] = useState("");
   const [inputs, setInputs] = useState<NewWorkflowInputDescriptor[]>([]);
   console.log(inputs);
-  const [tools, setTools] = useState<string[]>([]);
+  const [tools, setTools] = useState<NewToolCall[]>([]);
   const { open, setOpen } = useDialog();
   return (
     <Dialog open={open} setOpen={setOpen} modal={true} openText="Add workflow">
@@ -300,25 +34,57 @@ const AddWorkflowScreen = ({ toolList }: { toolList: ToolDescriptor[] }) => {
         label="Display name for workflow"
         binding={{ value: label, setValue: setLabel }}
       />
-      <ListOfInputs
-        tools={toolList.filter((tool) => tools.includes(tool.id))}
-        inputs={inputs}
-        setInputs={setInputs}
-      />
+      <ListOfInputs inputs={inputs} setInputs={setInputs} />
       <button
         onClick={() =>
           setInputs([
             ...inputs,
-            { label: "", value: { type: "Int" }, connections: [] },
+            {
+              label: "",
+              value: {
+                type: "Runtime",
+                value: { param_type: { type: "Int" }, optional: false },
+              },
+            },
           ])
         }
       >
         Add input
       </button>
       <ul>
-        {tools.map((id) => (
-          <li key={id}>{toolList.find((tool) => tool.id === id)?.label}</li>
-        ))}
+        {tools.map((toolCall, toolCallIndex) => {
+          const tool = toolList.find((tool) => tool.id === toolCall.tool)!;
+          return (
+            <li key={toolCall.tool + toolCallIndex}>
+              {tool.label}:
+              {tool.inputs.map((toolInput, toolInputIndex) => (
+                <div>
+                  <IndexedOptionPicker
+                    prompt={toolInput.label}
+                    options={inputs.map((input) => input.label)}
+                    index={toolCall.inputs[toolInputIndex].input}
+                    setIndex={(inputIndex) => {
+                      const connection = {
+                        parameter: toolCall.inputs[toolInputIndex].parameter,
+                        input: inputIndex,
+                      };
+                      const connections = toolCall.inputs.slice();
+                      connections[toolInputIndex] = connection;
+                      const toolCallReplacement = {
+                        tool: toolCall.tool,
+                        inputs: connections,
+                      };
+                      const toolCallReplacements = tools.slice();
+                      toolCallReplacements[toolCallIndex] = toolCallReplacement;
+                      setTools(toolCallReplacements);
+                    }}
+                    emptyText="No workflow inputs added yet, maybe add one?"
+                  />
+                </div>
+              ))}
+            </li>
+          );
+        })}
       </ul>
       <AddTool
         toolList={toolList}
@@ -340,7 +106,7 @@ const AddTool = ({
   addTool,
 }: {
   toolList: ToolDescriptor[];
-  addTool: (tool: string) => void;
+  addTool: (tool: NewToolCall) => void;
 }) => {
   const [tool, setTool] = useState<number | null>(null);
   const { open, setOpen } = useDialog();
@@ -358,7 +124,13 @@ const AddTool = ({
         onClick={() => {
           if (tool !== null) {
             setOpen(false);
-            addTool(toolList[tool].id);
+            addTool({
+              tool: toolList[tool].id,
+              inputs: toolList[tool].inputs.map((input) => ({
+                parameter: input.id,
+                input: 0,
+              })),
+            });
           }
         }}
       >
@@ -368,26 +140,9 @@ const AddTool = ({
   );
 };
 
-const getWorkflowInputTypeFromDescriminant = (
-  discriminant: WorkflowInputValueDescriptorDiscriminants
-): WorkflowInputValueDescriptor => {
-  switch (discriminant) {
-    case "Float":
-    case "Int":
-    case "String":
-    case "File":
-    case "Flag":
-      return { type: discriminant };
-    case "Layer":
-      return { type: discriminant, value: "Vector" };
-    case "Option":
-      return { type: discriminant, value: [] };
-  }
-};
-
 type WorkflowInputTypePickerProps = {
-  type: WorkflowInputValueDescriptor;
-  setType: (type: WorkflowInputValueDescriptor) => void;
+  type: ToolInputType;
+  setType: (type: ToolInputType) => void;
 };
 
 const WorkflowInputTypePicker = ({
@@ -396,12 +151,12 @@ const WorkflowInputTypePicker = ({
 }: WorkflowInputTypePickerProps) => {
   return (
     <div>
-      <WorkflowInputTypeDiscriminantSelector
+      <ToolInputTypeDiscriminantSelector
         prompt="Input type"
         binding={{
           value: type.type,
-          setValue: (discriminant) =>
-            setType(getWorkflowInputTypeFromDescriminant(discriminant)),
+          setValue: (discriminant: ToolInputTypeDiscriminants) =>
+            setType(toolInputTypeFromDiscriminant(discriminant)),
         }}
       />
     </div>
@@ -409,30 +164,16 @@ const WorkflowInputTypePicker = ({
 };
 
 const WorkflowInputDescriptorEditor = ({
-  tools,
   input,
   setInput,
 }: {
   input: NewWorkflowInputDescriptor;
   setInput: (input: NewWorkflowInputDescriptor) => void;
-  tools: ToolDescriptor[];
 }) => {
-  console.log(input);
-  const addConnection = (connection: Connection) => {
-    console.log("add connection called");
-    console.log(connection);
-    setInput({
-      label: input.label,
-      value: input.value,
-      connections: [...input.connections, connection],
-    });
-  };
-
   const setType = (value: NewWorkflowInputDescriptor["value"]) =>
-    setInput({ label: input.label, value, connections: input.connections });
+    setInput({ label: input.label, value });
 
-  const setLabel = (label: string) =>
-    setInput({ label, value: input.value, connections: input.connections });
+  const setLabel = (label: string) => setInput({ label, value: input.value });
 
   return (
     <div>
@@ -440,89 +181,45 @@ const WorkflowInputDescriptorEditor = ({
         label="Label"
         binding={{ value: input.label, setValue: setLabel }}
       />
-      <WorkflowInputTypePicker type={input.value} setType={setType} />
-      <div>
-        Inputs to:
-        <ul>
-          {input.connections.map((connection) => {
-            const tool = tools.find((tool) => tool.id === connection.tool);
-            const param = tool?.inputs.find(
-              (input) => input.id === connection.parameter
-            );
-            return (
-              <li key={connection.tool + ":" + connection.parameter}>
-                {tool?.label}: {param?.label}
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-      <WorkflowInputConnector tools={tools} addConnection={addConnection} />
+      {input.value.type === "Runtime" ? (
+        <WorkflowInputTypePicker
+          type={input.value.value.param_type}
+          setType={(type) =>
+            setType({
+              type: "Runtime",
+              value: { param_type: type, optional: false },
+            })
+          }
+        />
+      ) : (
+        <>
+          <PresetInputTypeSelector
+            prompt="Type of preset input"
+            binding={{
+              value: input.value.value.type,
+              setValue: (discriminant: ToolPresetParameterValueDiscriminants) =>
+                setType({
+                  type: "Preset",
+                  value: presetInputFromDiscriminant(discriminant),
+                }),
+            }}
+          />
+          <PresetInputValueEditor
+            input={input.value.value}
+            setInput={(value: typeof input.value.value) =>
+              setType({ type: "Preset", value })
+            }
+          />
+        </>
+      )}
     </div>
   );
 };
 
-const WorkflowInputConnector = ({
-  tools,
-  addConnection,
-}: {
-  tools: ToolDescriptor[];
-  addConnection: (connection: Connection) => void;
-}) => {
-  const { open, setOpen } = useDialog();
-  const [tool, setTool] = useState<number | null>(null);
-  const [parameter, setParameter] = useState<number | null>(null);
-  return (
-    <Dialog
-      modal={true}
-      openText="Add connection"
-      open={open}
-      setOpen={setOpen}
-    >
-      <IndexedOptionPicker
-        prompt="Tool"
-        emptyText="No tools added"
-        options={tools.map((tool) => tool.label)}
-        index={tool}
-        setIndex={(index) => {
-          setTool(index);
-          setParameter(null);
-        }}
-      />
-      {tool !== null ? (
-        <IndexedOptionPicker
-          prompt="Parameter for tool"
-          emptyText="No parameters for tool"
-          options={tools[tool].inputs.map((input) => input.label)}
-          index={parameter}
-          setIndex={setParameter}
-        />
-      ) : null}
-      <button
-        disabled={tool === null || parameter === null}
-        onClick={() => {
-          if (tool !== null && parameter !== null) {
-            addConnection({
-              tool: tools[tool].id,
-              parameter: tools[tool].inputs[parameter].id,
-            });
-            setTool(null);
-            setParameter(null);
-          }
-        }}
-      >
-        Add
-      </button>
-    </Dialog>
-  );
-};
-
 const ListOfInputs = ({
-  tools,
   inputs,
   setInputs,
 }: {
-  tools: ToolDescriptor[];
   inputs: NewWorkflowInputDescriptor[];
   setInputs: (inputs: NewWorkflowInputDescriptor[]) => void;
 }) => {
@@ -541,7 +238,6 @@ const ListOfInputs = ({
         <WorkflowInputDescriptorEditor
           input={input}
           setInput={getInputSetter(index)}
-          tools={tools}
         />
       ))}
     </div>
@@ -554,7 +250,11 @@ export const WorkflowScreen = ({ info }: { info: WorkflowsScreenInfo }) => {
       <AddWorkflowScreen toolList={info.tools} />
       <div>
         {info.workflows.map((workflow) => (
-          <RunWorkflowScreen workflow={workflow} layers={info.layers} />
+          <ToolDialog
+            tool={workflow}
+            layers={info.layers}
+            run={client.runWorkflow}
+          />
         ))}
       </div>
     </div>

@@ -40,7 +40,12 @@ export const ToolsScreen = ({ tools, layers }: ToolsScreenInfo) => {
       <ToolCreationDialog />
       <div>
         {tools.map((tool) => (
-          <ToolDialog key={tool.id} tool={tool} layers={layers} />
+          <ToolDialog
+            key={tool.id}
+            tool={tool}
+            layers={layers}
+            run={client.runTool}
+          />
         ))}
       </div>
     </div>
@@ -63,7 +68,7 @@ type ParameterDescriptor = { label: string; id: string } & (
     | { type: "Preset"; value: ToolPresetParameterValue }
   );
 
-const paramFromInput = (
+export const toolInputParamFromInput = (
   input: ToolRuntimeInputDescriptor
 ): ParameterDescriptor => {
   const optional = input.optional
@@ -139,12 +144,15 @@ type ToolDialogProps = {
   tool: ToolDescriptor;
 
   layers: LayerDescriptor[];
+  run: (id: string, params: ToolParameter[]) => void;
 };
 
-const ToolDialog = ({ tool, layers }: ToolDialogProps) => {
+export const ToolDialog = ({ tool, layers, run }: ToolDialogProps) => {
   const { open, setOpen } = useDialog();
 
-  const [params, setParams] = useState(() => tool.inputs.map(paramFromInput));
+  const [params, setParams] = useState(() =>
+    tool.inputs.map(toolInputParamFromInput)
+  );
 
   const setValueAt =
     <T,>(index: number) =>
@@ -210,7 +218,7 @@ const ToolDialog = ({ tool, layers }: ToolDialogProps) => {
       ))}
       <button
         onClick={() => {
-          client.runTool(tool.id, parametersFromUi(params));
+          run(tool.id, parametersFromUi(params));
           setOpen(false);
         }}
       >
@@ -225,12 +233,12 @@ const parametersFromUi = (params: ParameterDescriptor[]): ToolParameter[] => {
     .filter((param) => !(param.optional && !param.included))
     .map((param) => ({
       id: param.id,
-      value: ParameterValueFromDescriptor(param),
+      value: toolInputFromDescriptor(param),
     }));
 };
 
 // TODO: Do proper checking for validity here
-const ParameterValueFromDescriptor = (
+const toolInputFromDescriptor = (
   param: ParameterDescriptor
 ): ToolParameterValue =>
   ({ type: param.type, value: param.value } as ToolParameterValue);
@@ -463,11 +471,11 @@ export const ToolOutputsPopup = () => {
   );
 };
 
-const InputTypeDiscriminantSelector = bindedSelectorFactory(
+export const ToolInputTypeDiscriminantSelector = bindedSelectorFactory(
   await client.getToolInputTypes()
 );
 
-const inputTypeFromDiscriminant = (
+export const toolInputTypeFromDiscriminant = (
   discriminant: ToolInputTypeDiscriminants
 ): ToolInputType => {
   switch (discriminant) {
@@ -485,11 +493,11 @@ const inputTypeFromDiscriminant = (
   }
 };
 
-const PresetInputTypeSelector = bindedSelectorFactory(
+export const PresetInputTypeSelector = bindedSelectorFactory(
   await client.getToolPresetInputTypes()
 );
 
-const presetInputFromDiscriminant = (
+export const presetInputFromDiscriminant = (
   discriminant: ToolPresetParameterValueDiscriminants
 ): ToolPresetParameterValue => {
   switch (discriminant) {
@@ -681,14 +689,14 @@ const ToolInputCreator = ({
               setValue: (value) => setInput({ ...input, optional: value }),
             }}
           />
-          <InputTypeDiscriminantSelector
+          <ToolInputTypeDiscriminantSelector
             prompt="Type of input"
             binding={{
               value: input.param_type.type,
               setValue: (option) =>
                 setInput({
                   ...input,
-                  param_type: inputTypeFromDiscriminant(option),
+                  param_type: toolInputTypeFromDiscriminant(option),
                 }),
             }}
           />
@@ -775,7 +783,7 @@ type PresetInputValueEditorProps = {
   setInput: (input: ToolPresetParameterValue) => void;
 };
 
-const PresetInputValueEditor = ({
+export const PresetInputValueEditor = ({
   input,
   setInput,
 }: PresetInputValueEditorProps) => {

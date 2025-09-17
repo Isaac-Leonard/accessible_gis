@@ -283,13 +283,8 @@ export const commands = {
   async addWorkflow(workflow: NewWorkflow): Promise<void> {
     await TAURI_INVOKE("add_workflow", { workflow });
   },
-  async runWorkflow(workflow: RuntimeInputs): Promise<void> {
-    await TAURI_INVOKE("run_workflow", { workflow });
-  },
-  async getWorkflowInputTypes(): Promise<
-    WorkflowInputValueDescriptorDiscriminants[]
-  > {
-    return await TAURI_INVOKE("get_workflow_input_types");
+  async runWorkflow(id: string, workflow: WorkflowInput[]): Promise<void> {
+    await TAURI_INVOKE("run_workflow", { id, workflow });
   },
   async getAudioTypes(): Promise<AudioTypeDiscriminants[]> {
     return await TAURI_INVOKE("get_audio_types");
@@ -483,7 +478,6 @@ export type FieldType =
    * List of 64 bit integers
    */
   | "OFTInteger64List";
-export type FileValue = { type: "Temp" } | { type: "Custom"; value: string };
 /**
  * Just used so we can use the sort_by_key method for an iterator of floats
  * Implements the Ord trait using the f64::total_cmp method
@@ -708,6 +702,7 @@ export type MyShapeError =
   | "Other";
 export type MyUtf8Error = { valid_up_to: number; error_len: number | null };
 export type NewDatasetScreenData = { drivers: string[] };
+export type NewToolCall = { tool: string; inputs: NewWorkflowConnection[] };
 export type NewToolInput =
   | { type: "Preset"; value: ToolPresetParameterValue }
   | {
@@ -725,12 +720,12 @@ export type NewUserDefinedTool = {
 export type NewWorkflow = {
   label: string;
   inputs: NewWorkflowInputDescriptor[];
-  tools: string[];
+  tools: NewToolCall[];
 };
+export type NewWorkflowConnection = { parameter: string; input: number };
 export type NewWorkflowInputDescriptor = {
   label: string;
-  value: WorkflowInputValueDescriptor;
-  connections: WorkflowConnection[];
+  value: WorkflowInputDescriptorValue;
 };
 export type OpenDatasetError = { name: string; gdal_error: MyGdalError };
 export type OpenLineDescription = {
@@ -812,7 +807,6 @@ export type ReturnedToolOutput =
  * Serializable RGBA colour entry.
  */
 export type RgbaEntry = { r: number; g: number; b: number; a: number };
-export type RuntimeInputs = { inputs: WorkflowInput[] };
 export type SavedToolOutputAction = {
   tool: string;
   output: ToolOutput;
@@ -929,6 +923,20 @@ export type UiState = {
   errors: ApplicationError[];
   tool_outputs: SavedToolOutputAction[];
 };
+export type UiWorkflow = {
+  id: string;
+  label: string;
+  inputs: UiWorkflowInputDescriptor[];
+};
+/**
+ * Identical to `ToolRuntimeInputDescriptor ` for now
+ */
+export type UiWorkflowInputDescriptor = {
+  id: string;
+  label: string;
+  param_type: ToolInputType;
+  optional: boolean;
+};
 export type VectorScreenData = {
   field_schema: FieldSchema[];
   features: FeatureIdentifier[];
@@ -947,48 +955,17 @@ export type VectorScreenMetadata = {
   other: DatasetMetadata;
 };
 export type Waveform = "Sine" | "Square" | "Triangle" | "Sawtooth";
-export type Workflow = {
-  label: string;
-  inputs: WorkflowInputDescriptor[];
-  tools: string[];
+export type WorkflowInput = { id: string; value: ToolParameterValue };
+export type WorkflowInputDescriptorValue =
+  | { type: "Preset"; value: ToolPresetParameterValue }
+  | { type: "Runtime"; value: WorkflowInputRuntimeValueDescriptor };
+export type WorkflowInputRuntimeValueDescriptor = {
+  param_type: ToolInputType;
+  optional: boolean;
 };
-export type WorkflowConnection = { tool: string; parameter: string };
-export type WorkflowInput = { id: string; value: WorkflowInputValue };
-export type WorkflowInputDescriptor = {
-  id: string;
-  label: string;
-  value: WorkflowInputValueDescriptor;
-  connections: WorkflowConnection[];
-};
-export type WorkflowInputValue =
-  | { type: "Float"; value: number }
-  | { type: "Int"; value: number }
-  | { type: "String"; value: string }
-  | { type: "Option"; value: string }
-  | { type: "Flag"; value: boolean }
-  | { type: "File"; value: FileValue };
-export type WorkflowInputValueDescriptor =
-  | { type: "Float" }
-  | { type: "Int" }
-  | { type: "String" }
-  | { type: "Layer"; value: LayerIndexDiscriminants }
-  | { type: "Option"; value: string[] }
-  | { type: "Flag" }
-  | { type: "File" };
-/**
- * Auto-generated discriminant enum variants
- */
-export type WorkflowInputValueDescriptorDiscriminants =
-  | "Float"
-  | "Int"
-  | "String"
-  | "Layer"
-  | "Option"
-  | "Flag"
-  | "File";
 export type WorkflowsScreenInfo = {
   tools: ToolDescriptor[];
-  workflows: Workflow[];
+  workflows: UiWorkflow[];
   layers: LayerDescriptor[];
 };
 

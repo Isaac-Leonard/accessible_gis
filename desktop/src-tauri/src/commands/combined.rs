@@ -8,7 +8,7 @@ use crate::{
         AppState,
         gis::combined::StatefulLayerEnum,
         tools::{NewUserDefinedTool, SavedToolOutputAction, ToolParameter, UserDefinedTool},
-        workflows::{NewWorkflow, RuntimeInputs},
+        workflows::{NewWorkflow, WorkflowInput},
     },
 };
 
@@ -116,4 +116,4 @@ pub fn add_workflow(workflow: NewWorkflow, state: AppState) {}
 
 #[tauri::command]
 #[specta::specta]
-pub fn run_workflow(workflow: RuntimeInputs, state: AppState) {}
+pub fn run_workflow(id: Uuid, workflow: Vec<WorkflowInput>, state: AppState) {}

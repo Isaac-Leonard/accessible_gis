@@ -22,7 +22,7 @@ use crate::{
         },
         settings::{AudioSettings, GlobalSettings},
         tools::{SavedToolOutputAction, ToolRuntimeInputDescriptor},
-        workflows::Workflow,
+        workflows::UiWorkflow,
     },
     tools::shape_analysis::FloatWrapper,
 };
@@ -277,6 +277,6 @@ pub struct ToolDescriptor {
 #[derive(Clone, Default, Debug, Serialize, Deserialize, specta::Type)]
 pub struct WorkflowsScreenInfo {
     pub tools: Vec<ToolDescriptor>,
-    pub workflows: Vec<Workflow>,
+    pub workflows: Vec<UiWorkflow>,
     pub layers: Vec<LayerDescriptor>,
 }

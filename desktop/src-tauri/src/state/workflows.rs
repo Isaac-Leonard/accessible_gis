@@ -118,11 +118,6 @@ impl Workflow {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, specta::Type)]
-pub struct RuntimeInputs {
-    inputs: Vec<WorkflowInput>,
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
 pub struct WorkflowConnection {
     pub parameter: Uuid,
@@ -194,4 +189,20 @@ pub struct WorkflowInput {
 pub enum FileValue {
     Temp,
     Custom(PathBuf),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
+pub struct UiWorkflow {
+    id: Uuid,
+    label: String,
+    inputs: Vec<UiWorkflowInputDescriptor>,
+}
+
+/// Identical to `ToolRuntimeInputDescriptor ` for now
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
+pub struct UiWorkflowInputDescriptor {
+    id: Uuid,
+    label: String,
+    param_type: ToolInputType,
+    optional: bool,
 }
