@@ -9,7 +9,7 @@ import {
   ToolPresetParameterValueDiscriminants,
   WorkflowInputRuntimeValueDescriptor,
 } from "./bindings";
-import { IndexedOptionPicker } from "./option-picker";
+import { IndexedOptionPicker, OptionPicker } from "./option-picker";
 import { Dialog, useDialog } from "./dialog";
 import { client } from "./api";
 import { Checkbox, Input as TextInput } from "./binded-input";
@@ -229,6 +229,86 @@ const WorkflowInputDescriptorEditor = ({
               })
             }
           />
+          {input.value.value.param_type.type === "Layer" ? (
+            <OptionPicker
+              options={["Vector", "Raster"] as const}
+              selectedOption={input.value.value.param_type.options}
+              prompt="Layer type"
+              emptyText="This should not be empty"
+              setOption={(option) =>
+                setType({
+                  type: "Runtime",
+                  value: {
+                    param_type: { type: "Layer", options: option },
+                    optional: (
+                      input.value.value as WorkflowInputRuntimeValueDescriptor
+                    ).optional,
+                  },
+                })
+              }
+            />
+          ) : input.value.value.param_type.type === "Option" ? (
+            <div>
+              {input.value.value.param_type.options.map(
+                (option, option_index, options) => (
+                  <TextInput
+                    label={"Option " + (option_index + 1)}
+                    binding={{
+                      value: option,
+                      setValue: (option) =>
+                        setType({
+                          type: "Runtime",
+                          value: {
+                            param_type: {
+                              type: "Option",
+                              options: (() => {
+                                const newOptions = options.slice();
+                                newOptions[option_index] = option;
+                                return newOptions;
+                              })(),
+                            },
+                            optional: (
+                              input.value
+                                .value as WorkflowInputRuntimeValueDescriptor
+                            ).optional,
+                          },
+                        }),
+                    }}
+                  />
+                )
+              )}
+              <button
+                onClick={() => {
+                  setType({
+                    type: "Runtime",
+                    value: {
+                      param_type: {
+                        type: "Option",
+                        options: [
+                          ...(
+                            (
+                              input.value
+                                .value as WorkflowInputRuntimeValueDescriptor
+                            ).param_type as {
+                              type: "Option";
+                              options: string[];
+                            }
+                          ).options,
+                          "",
+                        ],
+                      },
+                      optional: (
+                        input.value.value as WorkflowInputRuntimeValueDescriptor
+                      ).optional,
+                    },
+                  });
+                }}
+                autofocus={true}
+              >
+                Add Option
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : (
         <>
