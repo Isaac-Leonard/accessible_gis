@@ -35,6 +35,7 @@ pub struct NewWorkflow {
 
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
 pub struct Workflow {
+    pub id: Uuid,
     pub label: String,
     pub inputs: Vec<WorkflowInputDescriptor>,
     pub tools: Vec<ToolCall>,
@@ -64,13 +65,14 @@ impl Workflow {
             })
             .collect();
         Self {
+            id: Uuid::new_v4(),
             label: workflow.label,
             inputs,
             tools,
         }
     }
 
-    fn run_workflow(
+    pub fn run_workflow(
         &self,
         inputs: Vec<WorkflowInput>,
         project: &mut Project,
@@ -115,6 +117,26 @@ impl Workflow {
             });
         }
         Ok(())
+    }
+
+    pub fn for_ui(&self) -> UiWorkflow {
+        UiWorkflow {
+            id: self.id,
+            label: self.label.clone(),
+            inputs: self
+                .inputs
+                .iter()
+                .filter_map(|input| {
+                    let value = input.value.try_as_runtime_ref()?;
+                    Some(UiWorkflowInputDescriptor {
+                        id: input.id,
+                        label: input.label.clone(),
+                        param_type: value.param_type.clone(),
+                        optional: value.optional,
+                    })
+                })
+                .collect(),
+        }
     }
 }
 

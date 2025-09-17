@@ -283,8 +283,8 @@ export const commands = {
   async addWorkflow(workflow: NewWorkflow): Promise<void> {
     await TAURI_INVOKE("add_workflow", { workflow });
   },
-  async runWorkflow(id: string, workflow: WorkflowInput[]): Promise<void> {
-    await TAURI_INVOKE("run_workflow", { id, workflow });
+  async runWorkflow(id: string, inputs: WorkflowInput[]): Promise<void> {
+    await TAURI_INVOKE("run_workflow", { id, inputs });
   },
   async getAudioTypes(): Promise<AudioTypeDiscriminants[]> {
     return await TAURI_INVOKE("get_audio_types");

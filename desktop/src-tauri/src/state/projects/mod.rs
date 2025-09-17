@@ -21,6 +21,7 @@ use super::{
     },
     settings::GlobalSettings,
     tools::{SavedToolOutputAction, Tool, UserDefinedTool, get_built_in_tools},
+    workflows::Workflow,
 };
 
 pub struct Project {
@@ -35,6 +36,7 @@ pub struct Project {
     pub announce_geometry_type: bool,
     pub tools: Vec<Box<dyn Tool>>,
     pub tool_outputs: Vec<SavedToolOutputAction>,
+    pub workflows: Vec<Workflow>,
 }
 
 impl Project {
@@ -52,6 +54,7 @@ impl Project {
             // TODO: Have a list of project tools and global tools
             tools: get_built_in_tools(),
             tool_outputs: Vec::new(),
+            workflows: Vec::new(),
         };
         project.save()?;
         Ok(project)
@@ -84,7 +87,7 @@ impl Project {
                 .iter()
                 .map(|ds| StoredDataset::WithInfo {
                     path: ds.dataset.file_name.clone(),
-                    layer_index: ds.layer_index.clone(),
+                    layer_index: ds.layer_index,
                     vector_info: ds.vector_info.clone(),
                     raster_info: ds.raster_info.clone(),
                 })
@@ -101,6 +104,7 @@ impl Project {
                 .filter_map(|tool| tool.as_user_defined_tool())
                 .collect(),
             tool_outputs: self.tool_outputs.clone(),
+            workflows: self.workflows.clone(),
         }
     }
 
@@ -134,6 +138,7 @@ impl Project {
             announce_geometry_type: project.announce_geometry_type,
             tools,
             tool_outputs: project.tool_outputs,
+            workflows: project.workflows,
         })
     }
 
@@ -234,6 +239,8 @@ pub struct StoredProject {
     tools: Vec<UserDefinedTool>,
     #[serde(default)]
     pub tool_outputs: Vec<SavedToolOutputAction>,
+    #[serde(default)]
+    pub workflows: Vec<Workflow>,
 }
 
 /// This just exists to use true as a default value for serde
@@ -260,7 +267,7 @@ fn load_dataset(
 ) -> Result<(), OpenDatasetError> {
     match dataset {
         StoredDataset::RawFile(path) => {
-            datasets.open(path, &settings)?;
+            datasets.open(path, settings)?;
         }
         StoredDataset::WithInfo {
             path,

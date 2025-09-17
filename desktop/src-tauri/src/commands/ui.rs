@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::{
     gdal_if::list_drivers,
-    state::{AppState, Screen},
+    state::{AppState, Screen, workflows::Workflow},
     ui::{
         NewDatasetScreenData, ProjectScreen, ToolsScreenInfo, TouchDeviceState, UiScreen, UiState,
         WorkflowsScreenInfo,
@@ -55,7 +55,7 @@ pub fn get_app_info(state: AppState) -> UiState {
                     .with_project_fallible(|project| {
                         Ok(WorkflowsScreenInfo {
                             tools: project.tools.iter().map(|tool| tool.for_ui()).collect(),
-                            workflows: Vec::new(),
+                            workflows: project.workflows.iter().map(Workflow::for_ui).collect(),
                             layers: project
                                 .datasets
                                 .get_all_layers()?

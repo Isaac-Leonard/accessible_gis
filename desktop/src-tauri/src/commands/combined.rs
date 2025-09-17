@@ -8,7 +8,7 @@ use crate::{
         AppState,
         gis::combined::StatefulLayerEnum,
         tools::{NewUserDefinedTool, SavedToolOutputAction, ToolParameter, UserDefinedTool},
-        workflows::{NewWorkflow, WorkflowInput},
+        workflows::{NewWorkflow, Workflow, WorkflowInput},
     },
 };
 
@@ -112,8 +112,20 @@ pub fn add_custom_tool(tool: NewUserDefinedTool, state: AppState) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn add_workflow(workflow: NewWorkflow, state: AppState) {}
+pub fn add_workflow(workflow: NewWorkflow, state: AppState) {
+    state.with_project(|project| project.workflows.push(Workflow::create(workflow)));
+}
 
 #[tauri::command]
 #[specta::specta]
-pub fn run_workflow(id: Uuid, workflow: Vec<WorkflowInput>, state: AppState) {}
+pub fn run_workflow(id: Uuid, inputs: Vec<WorkflowInput>, state: AppState) {
+    state.with_project_fallible(|project| {
+        project
+            .workflows
+            .iter()
+            .find(|workflow| workflow.id == id)
+            .ok_or_else(|| ErrorDetails::Other("Couldn't find project to run".to_string()))?
+            .clone()
+            .run_workflow(inputs, project)
+    });
+}
