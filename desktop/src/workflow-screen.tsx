@@ -7,11 +7,12 @@ import {
   ToolInputTypeDiscriminants,
   ToolInputType,
   ToolPresetParameterValueDiscriminants,
+  WorkflowInputRuntimeValueDescriptor,
 } from "./bindings";
 import { IndexedOptionPicker } from "./option-picker";
 import { Dialog, useDialog } from "./dialog";
 import { client } from "./api";
-import { Input as TextInput } from "./binded-input";
+import { Checkbox, Input as TextInput } from "./binded-input";
 import {
   presetInputFromDiscriminant,
   PresetInputTypeSelector,
@@ -198,15 +199,37 @@ const WorkflowInputDescriptorEditor = ({
         Preset value
       </button>
       {input.value.type === "Runtime" ? (
-        <WorkflowInputTypePicker
-          type={input.value.value.param_type}
-          setType={(type) =>
-            setType({
-              type: "Runtime",
-              value: { param_type: type, optional: false },
-            })
-          }
-        />
+        <div>
+          <Checkbox
+            label="Optional"
+            binding={{
+              value: input.value.value.optional,
+              setValue: (value) =>
+                setType({
+                  type: "Runtime",
+                  value: {
+                    ...(input.value
+                      .value as WorkflowInputRuntimeValueDescriptor),
+                    optional: value,
+                  },
+                }),
+            }}
+          />
+          <WorkflowInputTypePicker
+            type={input.value.value.param_type}
+            setType={(type) =>
+              setType({
+                type: "Runtime",
+                value: {
+                  param_type: type,
+                  optional: (
+                    input.value.value as WorkflowInputRuntimeValueDescriptor
+                  ).optional,
+                },
+              })
+            }
+          />
+        </div>
       ) : (
         <>
           <PresetInputTypeSelector
