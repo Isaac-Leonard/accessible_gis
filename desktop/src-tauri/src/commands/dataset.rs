@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use gdal::{Dataset, DatasetOptions, GdalOpenFlags};
 use serde::Serialize;
 
 use crate::{
@@ -9,33 +8,10 @@ use crate::{
     state::{AppState, Screen, gis::dataset::StatefulDataset},
 };
 
-use super::dataset_collection::NonEmptyDelegatorImplExt;
-
 #[tauri::command]
 #[specta::specta]
 pub fn edit_dataset(state: AppState) {
-    state.with_project_fallible(|project| {
-        project
-            .with_current_dataset_mut(|dataset, _| {
-                let editable_dataset = Dataset::open_ex(
-                    &dataset.dataset.file_name,
-                    DatasetOptions {
-                        open_flags: GdalOpenFlags::GDAL_OF_UPDATE,
-                        ..Default::default()
-                    },
-                )
-                .map_err(|err| {
-                    ErrorDetails::EditDatasetError(EditDatasetError::OpenError(OpenDatasetError {
-                        name: dataset.dataset.file_name.clone(),
-                        gdal_error: err.into(),
-                    }))
-                })?;
-                dataset.dataset.dataset = editable_dataset;
-                dataset.dataset.editable = true;
-                Ok(())
-            })
-            .expect("No dataset selected")
-    });
+    state.with_current_dataset_mut_fallible(|dataset, _| dataset.dataset.reopen_as_editable());
 }
 
 #[tauri::command]
@@ -80,4 +56,10 @@ pub fn load_dataset_multi(name: PathBuf, state: AppState) {
 pub enum EditDatasetError {
     OpenError(OpenDatasetError),
     SaveError(FlushCacheError),
+}
+
+impl From<EditDatasetError> for ErrorDetails {
+    fn from(value: EditDatasetError) -> Self {
+        Self::EditDatasetError(value)
+    }
 }

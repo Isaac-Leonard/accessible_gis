@@ -4,7 +4,8 @@ use std::{
 };
 
 use gdal::{
-    Dataset, DriverManager, Metadata, errors::GdalError, spatial_ref::SpatialRef, vector::Layer,
+    Dataset, DatasetOptions, DriverManager, GdalOpenFlags, Metadata, errors::GdalError,
+    spatial_ref::SpatialRef, vector::Layer,
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -17,11 +18,45 @@ use super::{LayerEnum, WrappedLayer, errors::MyGdalError, raster::WrappedRasterB
 #[derive(Debug)]
 pub struct WrappedDataset {
     pub file_name: PathBuf,
-    pub dataset: Dataset,
+    dataset: Dataset,
     pub editable: bool,
 }
 
 impl WrappedDataset {
+    pub fn new(file_name: PathBuf, dataset: Dataset) -> Self {
+        Self {
+            file_name,
+            dataset,
+            editable: false,
+        }
+    }
+
+    pub fn reopen_as_editable(&mut self) -> Result<(), ErrorDetails> {
+        let open_writable_options = DatasetOptions {
+            open_flags: GdalOpenFlags::GDAL_OF_UPDATE,
+            ..Default::default()
+        };
+
+        let editable_dataset =
+            Dataset::open_ex(&self.file_name, open_writable_options).map_err(|err| {
+                EditDatasetError::OpenError(OpenDatasetError {
+                    name: self.file_name.clone(),
+                    gdal_error: err.into(),
+                })
+            })?;
+        self.dataset = editable_dataset;
+        self.editable = true;
+        Ok(())
+    }
+
+    pub fn dataset(&self) -> &Dataset {
+        &self.dataset
+    }
+
+    pub fn dataset_mut(&mut self) -> &mut Dataset {
+        &mut self.dataset
+    }
+
     /// Gets all the metadata for the dataset and returns it indexed by domain and subindexed by metadata key
     pub fn get_metadata(&self) -> DatasetMetadata {
         let metadata = self
@@ -173,6 +208,10 @@ impl WrappedDataset {
             self.dataset.geo_transform().ok(),
             self.dataset.spatial_ref().ok(),
         ))
+    }
+
+    pub fn spatial_ref(&self) -> Result<SpatialRef, GdalError> {
+        self.dataset.spatial_ref()
     }
 
     pub fn set_spatial_ref(

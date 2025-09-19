@@ -50,7 +50,6 @@ pub fn set_srs(srs: Srs, state: AppState) {
     .unwrap();
     state.with_current_dataset_mut_fallible(|ds, _| {
         ds.dataset
-            .dataset
             .set_spatial_ref(&srs)
             .map_err(|err| ErrorDetails::Other(err.to_string()))
     });

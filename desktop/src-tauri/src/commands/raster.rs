@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, State};
 
 use crate::{
-    dataset_collection::NonEmptyDelegatorImpl,
     errors::ErrorDetails,
     gdal_if::{read_raster_data, read_raster_data_enum_as},
     geometry::Point,
@@ -230,30 +229,6 @@ pub fn get_value_at_point(point: Point, state: AppState) -> Option<f64> {
             }
         })
         .expect("Tried to get raster band and couldn't find it")
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn get_band_sizes(state: AppState) -> Vec<RasterSize> {
-    state
-        .with_project(|project| {
-            project
-                .datasets
-                .iter_mut()
-                .map(|wrapped| {
-                    let dataset = &wrapped.dataset;
-                    let (width, length) = dataset.dataset.raster_size();
-                    let bands = dataset.dataset.raster_count();
-
-                    RasterSize {
-                        width,
-                        length,
-                        bands,
-                    }
-                })
-                .collect()
-        })
-        .unwrap_or_default()
 }
 
 #[derive(Serialize, Deserialize, specta::Type)]

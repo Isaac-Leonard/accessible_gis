@@ -8,7 +8,6 @@ mod individual_settings;
 mod project;
 mod raster;
 mod settings;
-mod thiessen_polygons;
 mod touch_device;
 mod ui;
 mod vector;
@@ -29,7 +28,6 @@ pub use individual_settings::*;
 pub use project::*;
 pub use raster::*;
 pub use settings::*;
-pub use thiessen_polygons::*;
 pub use touch_device::*;
 pub use ui::*;
 pub use vector::*;
@@ -42,19 +40,14 @@ pub fn generate_handlers(s: impl AsRef<Path>) -> Builder {
         .commands(collect_commands![
             load_file,
             get_app_info,
-            get_band_sizes,
             get_value_at_point,
             get_point_of_max_value,
             get_point_of_min_value,
-            get_polygons_around_point,
             describe_line,
             describe_polygon,
             point_in_country,
             nearest_town,
-            theissen_polygons_calculation,
-            theissen_polygons,
             get_csv,
-            theissen_polygons_to_file,
             set_screen,
             set_layer_index,
             set_dataset_index,

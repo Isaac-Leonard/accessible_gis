@@ -1,8 +1,7 @@
 use tauri::Manager;
 
-use gdal::vector::LayerAccess;
 use geo::{
-    Area, ChamberlainDuquetteArea, Closest, ClosestPoint, Contains, GeodesicArea, GeodesicBearing,
+    ChamberlainDuquetteArea, Closest, ClosestPoint, GeodesicArea, GeodesicBearing,
     GeodesicDistance, GeodesicLength,
 };
 use geo_types::{LineString as GeoLineString, Point as GeoPoint, Polygon as GeoPolygon};
@@ -240,50 +239,6 @@ pub fn point_in_country(point: Point, state: AppState) -> Option<DistanceFromBoa
         name: country.get_field("ADMIN").unwrap(),
         distance,
     })
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn get_polygons_around_point(point: Point, layer: usize, state: AppState) -> Vec<PolygonInfo> {
-    state
-        .with_current_dataset_mut(|dataset, _| {
-            let srs = dataset
-                .dataset
-                .dataset
-                .spatial_ref()
-                .unwrap()
-                .to_wkt()
-                .unwrap();
-            let mut layer = dataset.dataset.get_vector(layer).unwrap();
-            let features = layer.layer_mut().features();
-            features
-                .flat_map(|feature| match feature.geometry() {
-                    Some(geometry) => match geometry.to_geo().unwrap() {
-                        geo_types::Geometry::Polygon(mut polygon) => {
-                            if polygon.contains(&GeoPoint::from(point)) {
-                                polygon
-                                    .transform_crs_to_crs(&srs, "UTM 32N (EPSG:25832)")
-                                    .unwrap();
-                                let area = polygon.unsigned_area();
-                                let fields = feature
-                                    .fields()
-                                    .map(|(name, value)| Field {
-                                        name,
-                                        value: value.into(),
-                                    })
-                                    .collect::<Vec<_>>();
-                                Some(PolygonInfo { area, fields })
-                            } else {
-                                None
-                            }
-                        }
-                        _ => None,
-                    },
-                    None => None,
-                })
-                .collect()
-        })
-        .unwrap_or_default()
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, specta::Type)]

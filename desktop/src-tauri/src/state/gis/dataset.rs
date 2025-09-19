@@ -30,11 +30,11 @@ pub struct StatefulDataset {
 
 impl StatefulDataset {
     pub fn new(dataset: WrappedDataset, settings: &GlobalSettings) -> Self {
-        let layer_count = dataset.dataset.layer_count();
-        let band_count = dataset.dataset.rasterbands().count();
+        let layer_count = dataset.dataset().layer_count();
+        let band_count = dataset.dataset().rasterbands().count();
 
         let layer_info = dataset
-            .dataset
+            .dataset()
             .layers()
             .map(|layer| StatefulVectorInfo {
                 selected_feature: layer.feature(0).map(|_| 0),
@@ -48,7 +48,7 @@ impl StatefulDataset {
             .collect_vec();
 
         let band_info = dataset
-            .dataset
+            .dataset()
             .rasterbands()
             .map(|_| StatefulRasterInfo {
                 audio_settings: settings.get_default_audio().clone(),
@@ -83,7 +83,7 @@ impl StatefulDataset {
     }
 
     pub fn layers_raw(&mut self) -> LayerIterator {
-        self.dataset.dataset.layers()
+        self.dataset.dataset().layers()
     }
 
     pub fn layers(&mut self) -> impl Iterator<Item = StatefulVectorLayer<'_>> {
@@ -94,8 +94,8 @@ impl StatefulDataset {
             .map(|(layer, info)| StatefulVectorLayer { layer, info })
     }
 
-    pub fn raster_bands(&mut self) -> impl Iterator<Item = gdal::errors::Result<RasterBand>> {
-        self.dataset.dataset.rasterbands()
+    pub fn raster_bands(&self) -> impl Iterator<Item = gdal::errors::Result<RasterBand>> {
+        self.dataset.dataset().rasterbands()
     }
 
     pub fn get_current_layer(&mut self) -> Option<StatefulLayerEnum> {

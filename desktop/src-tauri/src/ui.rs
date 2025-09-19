@@ -136,7 +136,7 @@ impl AppData {
             let layer_info = project
                 .with_current_dataset_mut(|ds, ds_index| match ds.layer_index {
                     Some(LayerIndex::Vector(index)) => {
-                        let feature = ds.get_current_feature();
+                        let feature = ds.get_current_feature().transpose().ok().flatten();
                         let mut layer = ds.get_vector(index).expect("Failed to get vector layer");
                         let primary_field_name = layer.info.primary_field_name.as_ref();
 
@@ -178,14 +178,14 @@ impl AppData {
                             .layer()
                             .spatial_ref()
                             .and_then(|x| x.to_wkt().ok());
-                        Ok(Some(LayerScreenInfo::Vector(VectorScreenData {
+                        Some(LayerScreenInfo::Vector(VectorScreenData {
                             name_field: primary_field_name.cloned(),
                             display: layer.info.display,
                             dataset_index: ds_index,
                             srs: srs.clone(),
                             field_schema: layer.layer.get_field_schema(),
                             features,
-                            feature: feature.transpose()?,
+                            feature,
                             layer_index: index,
                             sort_features_by: layer.info.sort_features_by.clone(),
                             editable: ds.dataset.editable,
@@ -193,12 +193,12 @@ impl AppData {
                                 srs,
                                 other: ds.dataset.get_metadata(),
                             },
-                        })))
+                        }))
                     }
                     Some(LayerIndex::Raster(index)) => {
                         let band = ds.get_raster(index).unwrap();
                         let (cols, rows) = band.band.band().size();
-                        Ok(Some(LayerScreenInfo::Raster(RasterScreenData {
+                        Some(LayerScreenInfo::Raster(RasterScreenData {
                             dataset_index: ds_index,
                             layer_index: index,
                             display: visible_raster_index
@@ -225,11 +225,10 @@ impl AppData {
                                     .map(|srs| srs.to_pretty_wkt().unwrap()),
                                 other: ds.dataset.get_metadata(),
                             },
-                        })))
+                        }))
                     }
-                    None => Ok(None),
+                    None => None,
                 })
-                .transpose()?
                 .flatten();
             let port = 80;
             Ok(ProjectScreenInfo {
