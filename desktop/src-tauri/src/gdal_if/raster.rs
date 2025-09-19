@@ -14,7 +14,7 @@ use crate::errors::ErrorDetails;
 use super::extra_implementations::TransformPoint;
 
 pub struct WrappedRasterBand<'a> {
-    pub band: RasterBand<'a>,
+    band: RasterBand<'a>,
     pub geo_transform: Option<GeoTransform>,
     pub srs: Option<SpatialRef>,
 }
@@ -30,6 +30,18 @@ impl<'a> std::fmt::Debug for WrappedRasterBand<'a> {
 }
 
 impl<'a> WrappedRasterBand<'a> {
+    pub fn new(
+        band: RasterBand<'a>,
+        geo_transform: Option<GeoTransform>,
+        srs: Option<SpatialRef>,
+    ) -> Self {
+        Self {
+            band,
+            geo_transform,
+            srs,
+        }
+    }
+
     pub fn point_to_wgs84(&self, point: Point) -> Option<Point> {
         let point = self.geo_transform?.apply(point.x(), point.y());
         let point = Point::from_xy(point.0, point.1);
@@ -44,6 +56,10 @@ impl<'a> WrappedRasterBand<'a> {
 
     pub fn band(&self) -> &RasterBand<'a> {
         &self.band
+    }
+
+    pub fn band_mut(&mut self) -> &RasterBand<'a> {
+        &mut self.band
     }
 
     pub fn get_bounds(&self) -> Option<[f64; 4]> {

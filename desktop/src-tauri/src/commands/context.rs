@@ -255,7 +255,7 @@ pub fn get_polygons_around_point(point: Point, layer: usize, state: AppState) ->
                 .to_wkt()
                 .unwrap();
             let mut layer = dataset.dataset.get_vector(layer).unwrap();
-            let features = layer.layer().features();
+            let features = layer.layer_mut().features();
             features
                 .flat_map(|feature| match feature.geometry() {
                     Some(geometry) => match geometry.to_geo().unwrap() {

@@ -36,7 +36,7 @@ async fn get_raster(state: Data<AppDataSync>) -> impl Responder {
         let band = dataset.get_raster(index).ok_or_else(|| {
             ErrorDetails::Other("Failed to get band for reprojected display raster".to_string())
         })?;
-        read_raster_data_enum(&band.band).ok_or_else(|| {
+        read_raster_data_enum(&band.band()).ok_or_else(|| {
             ErrorDetails::Other(
                 "Failed to read data for reprojected version of display raster".to_string(),
             )

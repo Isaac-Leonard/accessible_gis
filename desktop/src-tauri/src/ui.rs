@@ -141,12 +141,12 @@ impl AppData {
                         let primary_field_name = layer.info.primary_field_name.as_ref();
 
                         let features = match &layer.info.sort_features_by {
-                            SortOption::Default => layer.layer.layer.features().collect_vec(),
+                            SortOption::Default => layer.layer.layer_mut().features().collect_vec(),
                             SortOption::Field(field) => {
                                 let index = layer.layer.get_field_index(&field).unwrap();
                                 layer
                                     .layer
-                                    .layer
+                                    .layer_mut()
                                     .features()
                                     .sorted_by_key(|feature| {
                                         feature.field(index).unwrap().map(FieldValue::from)
@@ -155,7 +155,7 @@ impl AppData {
                             }
                             SortOption::Area => layer
                                 .layer
-                                .layer
+                                .layer_mut()
                                 .features()
                                 .sorted_by_key(|feature| {
                                     feature.geometry().map(|geom| FloatWrapper(geom.area()))
@@ -175,7 +175,7 @@ impl AppData {
                             .collect_vec();
                         let srs = layer
                             .layer
-                            .layer
+                            .layer()
                             .spatial_ref()
                             .and_then(|x| x.to_wkt().ok());
                         Ok(Some(LayerScreenInfo::Vector(VectorScreenData {

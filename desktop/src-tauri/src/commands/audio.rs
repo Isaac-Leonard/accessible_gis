@@ -12,14 +12,14 @@ use crate::{
 #[specta::specta]
 pub fn play_as_sound(state: AppState, audio: State<SyncSender<AudioMessage>>) {
     state.with_current_raster_band_fallible(|band| {
-        let StatisticsMinMax { min, max } =
-            band.band
-                .band
-                .compute_raster_min_max(false)
-                .map_err(|err| {
-                    ErrorDetails::Other(format!("Failed to ge min max for raster: {err:?}"))
-                })?;
-        let data = read_raster_data(&band.band.band)?;
+        let StatisticsMinMax { min, max } = band
+            .band
+            .band()
+            .compute_raster_min_max(false)
+            .map_err(|err| {
+                ErrorDetails::Other(format!("Failed to ge min max for raster: {err:?}"))
+            })?;
+        let data = read_raster_data(&band.band.band())?;
         audio
             .send(AudioMessage::PlayRaster(
                 data,
@@ -37,12 +37,12 @@ pub fn play_as_sound(state: AppState, audio: State<SyncSender<AudioMessage>>) {
 pub fn play_histogram(state: AppState, audio: State<SyncSender<AudioMessage>>) {
     state
         .with_current_raster_band(|band| {
-            let Ok(StatisticsMinMax { min, max }) = band.band.band.compute_raster_min_max(false)
+            let Ok(StatisticsMinMax { min, max }) = band.band.band().compute_raster_min_max(false)
             else {
                 eprint!("Failed to ge min max for raster");
                 return;
             };
-            let Ok(histogram) = band.band.band.histogram(min, max, 256, true, false) else {
+            let Ok(histogram) = band.band.band().histogram(min, max, 256, true, false) else {
                 eprint!("Failed to get histogram");
                 return;
             };

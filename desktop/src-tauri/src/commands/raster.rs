@@ -24,7 +24,7 @@ use super::dataset_collection::NonEmptyDelegatorImplExt;
 #[specta::specta]
 pub fn generate_counts_report(name: PathBuf, state: AppState) {
     let pixels = state
-        .with_current_raster_band_fallible(|band| read_raster_data(&band.band.band))
+        .with_current_raster_band_fallible(|band| read_raster_data(&band.band.band()))
         .unwrap();
     let counts = pixels
         .into_iter()
@@ -165,7 +165,7 @@ pub fn get_image_pixels(state: AppState) -> Result<Vec<u8>, String> {
 #[specta::specta]
 pub fn get_point_of_max_value(state: AppState) -> Option<Point> {
     state.with_current_raster_band_fallible(|band| {
-        let data = read_raster_data(&band.band.band)?;
+        let data = read_raster_data(&band.band.band())?;
         let data_iter = data.indexed_iter();
         match band.band.no_data_value() {
             Some(no_data_value) => itertools::Either::Left(data_iter.filter(move |x| {
@@ -183,7 +183,7 @@ pub fn get_point_of_max_value(state: AppState) -> Option<Point> {
 #[specta::specta]
 pub fn get_point_of_min_value(state: AppState) -> Option<Point> {
     state.with_current_raster_band_fallible(|band| {
-        let data = read_raster_data(&band.band.band)?;
+        let data = read_raster_data(&band.band.band())?;
         let data_iter = data.indexed_iter();
         match band.band.no_data_value() {
             Some(no_data_value) => itertools::Either::Left(data_iter.filter(move |x| {
@@ -216,7 +216,7 @@ pub fn get_value_at_point(point: Point, state: AppState) -> Option<f64> {
     state
         .with_current_raster_band(|band| {
             let val = read_raster_data_enum_as(
-                &band.band.band,
+                &band.band.band(),
                 (point.x.round() as isize, point.y.round() as isize),
                 (1, 1),
                 (1, 1),

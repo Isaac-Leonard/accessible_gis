@@ -11,7 +11,7 @@ use super::{dataset::Srs, field_schema::FieldSchema};
 
 #[derive(Debug)]
 pub struct WrappedLayer<'a> {
-    pub layer: Layer<'a>,
+    layer: Layer<'a>,
     pub index: usize,
 }
 
@@ -26,7 +26,15 @@ impl<'a> LayerExt for WrappedLayer<'a> {
 }
 
 impl<'a> WrappedLayer<'a> {
-    pub fn layer(&mut self) -> &mut Layer<'a> {
+    pub fn new(layer: Layer<'a>, index: usize) -> Self {
+        Self { layer, index }
+    }
+
+    pub fn layer(&self) -> &Layer<'a> {
+        &self.layer
+    }
+
+    pub fn layer_mut(&mut self) -> &mut Layer<'a> {
         &mut self.layer
     }
 

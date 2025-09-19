@@ -135,7 +135,7 @@ impl StatefulDataset {
         let layer = layer.as_vector()?;
         let feature = layer
             .layer
-            .layer
+            .layer()
             .feature(layer.info.selected_feature? as u64);
         feature.map(TryInto::try_into)
     }
