@@ -47,16 +47,8 @@ export const commands = {
   async setDatasetIndex(index: number): Promise<void> {
     await TAURI_INVOKE("set_dataset_index", { index });
   },
-  async setFeatureIndex(index: number): Promise<Result<null, string>> {
-    try {
-      return {
-        status: "ok",
-        data: await TAURI_INVOKE("set_feature_index", { index }),
-      };
-    } catch (e) {
-      if (e instanceof Error) throw e;
-      else return { status: "error", error: e as any };
-    }
+  async setFeatureIndex(index: number): Promise<void> {
+    await TAURI_INVOKE("set_feature_index", { index });
   },
   async createNewDataset(driverName: string, file: string): Promise<void> {
     await TAURI_INVOKE("create_new_dataset", { driverName, file });

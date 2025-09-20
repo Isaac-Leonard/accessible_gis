@@ -56,11 +56,9 @@ pub fn simplify_layer(tolerance: f64, name: String, state: AppState) {
 #[tauri::command]
 #[specta::specta]
 pub fn set_name_field(field: String, state: AppState) {
-    state
-        .with_current_vector_layer(|layer| {
-            layer.info.primary_field_name = Some(field);
-        })
-        .expect("Tried to edit nonexistant dataset");
+    state.with_current_vector_layer(|layer| {
+        layer.info.desktop_settings.primary_field_name = Some(field);
+    });
 }
 
 #[tauri::command]
@@ -124,10 +122,10 @@ pub fn add_field_to_schema(
 
 #[tauri::command]
 #[specta::specta]
-pub fn set_feature_index(index: usize, state: AppState) -> Result<(), String> {
-    state
-        .with_current_vector_layer(|layer| layer.info.selected_feature = Some(index))
-        .ok_or_else(|| "error".to_string())
+pub fn set_feature_index(index: usize, state: AppState) {
+    state.with_current_vector_layer(|layer| {
+        layer.info.desktop_settings.selected_feature = Some(index)
+    });
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -182,7 +180,7 @@ pub enum SortOption {
 #[tauri::command]
 #[specta::specta]
 pub fn sort_features_by(by: SortOption, state: AppState) {
-    state.with_current_vector_layer(|layer| layer.info.sort_features_by = by);
+    state.with_current_vector_layer(|layer| layer.info.desktop_settings.sort_features_by = by);
 }
 
 #[tauri::command]

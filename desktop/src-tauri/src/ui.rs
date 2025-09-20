@@ -138,9 +138,10 @@ impl AppData {
                     Some(LayerIndex::Vector(index)) => {
                         let feature = ds.get_current_feature().transpose().ok().flatten();
                         let mut layer = ds.get_vector(index).expect("Failed to get vector layer");
-                        let primary_field_name = layer.info.primary_field_name.as_ref();
+                        let primary_field_name =
+                            layer.info.desktop_settings.primary_field_name.as_ref();
 
-                        let features = match &layer.info.sort_features_by {
+                        let features = match &layer.info.desktop_settings.sort_features_by {
                             SortOption::Default => layer.layer.layer_mut().features().collect_vec(),
                             SortOption::Field(field) => {
                                 let index = layer.layer.get_field_index(&field).unwrap();
@@ -187,7 +188,7 @@ impl AppData {
                             features,
                             feature,
                             layer_index: index,
-                            sort_features_by: layer.info.sort_features_by.clone(),
+                            sort_features_by: layer.info.desktop_settings.sort_features_by.clone(),
                             editable: ds.dataset.editable,
                             metadata: VectorScreenMetadata {
                                 srs,

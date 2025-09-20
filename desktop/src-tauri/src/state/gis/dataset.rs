@@ -17,7 +17,9 @@ use super::{
     combined::StatefulLayerEnum,
     raster::{ImageType, RenderMethod, StatefulRasterBand, StatefulRasterInfo},
     shared::SharedInfo,
-    vector::{StatefulVectorInfo, StatefulVectorLayer},
+    vector::{
+        DesktopVectorOptions, StatefulVectorInfo, StatefulVectorLayer, TouchDeviceVectorOptions,
+    },
 };
 
 #[derive(Debug)]
@@ -37,13 +39,16 @@ impl StatefulDataset {
             .dataset()
             .layers()
             .map(|layer| StatefulVectorInfo {
-                selected_feature: layer.feature(0).map(|_| 0),
-                primary_field_name: get_default_field_name(&layer),
                 shared: SharedInfo {
                     name: dataset.file_name.clone(),
                 },
                 display: false,
-                sort_features_by: SortOption::Default,
+                desktop_settings: DesktopVectorOptions {
+                    selected_feature: layer.feature(0).map(|_| 0),
+                    primary_field_name: get_default_field_name(&layer),
+                    sort_features_by: SortOption::Default,
+                },
+                touch_device_settings: TouchDeviceVectorOptions {},
             })
             .collect_vec();
 
@@ -136,7 +141,7 @@ impl StatefulDataset {
         let feature = layer
             .layer
             .layer()
-            .feature(layer.info.selected_feature? as u64);
+            .feature(layer.info.desktop_settings.selected_feature? as u64);
         feature.map(TryInto::try_into)
     }
 }
