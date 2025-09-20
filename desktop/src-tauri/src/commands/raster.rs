@@ -1,4 +1,9 @@
-use std::{cmp::Ordering, path::PathBuf, process::Command};
+use std::{
+    cmp::Ordering,
+    fs::{read, write},
+    path::PathBuf,
+    process::Command,
+};
 
 use gdal::spatial_ref::{CoordTransform, SpatialRef};
 use itertools::Itertools;
@@ -164,7 +169,7 @@ pub fn get_image_pixels(state: AppState) -> Result<Vec<u8>, String> {
 #[specta::specta]
 pub fn get_point_of_max_value(state: AppState) -> Option<Point> {
     state.with_current_raster_band_fallible(|band| {
-        let data = read_raster_data(&band.band.band())?;
+        let data = read_raster_data(band.band.band())?;
         let data_iter = data.indexed_iter();
         match band.band.no_data_value() {
             Some(no_data_value) => itertools::Either::Left(data_iter.filter(move |x| {
@@ -182,7 +187,7 @@ pub fn get_point_of_max_value(state: AppState) -> Option<Point> {
 #[specta::specta]
 pub fn get_point_of_min_value(state: AppState) -> Option<Point> {
     state.with_current_raster_band_fallible(|band| {
-        let data = read_raster_data(&band.band.band())?;
+        let data = read_raster_data(band.band.band())?;
         let data_iter = data.indexed_iter();
         match band.band.no_data_value() {
             Some(no_data_value) => itertools::Either::Left(data_iter.filter(move |x| {
@@ -215,7 +220,7 @@ pub fn get_value_at_point(point: Point, state: AppState) -> Option<f64> {
     state
         .with_current_raster_band(|band| {
             let val = read_raster_data_enum_as(
-                &band.band.band(),
+                band.band.band(),
                 (point.x.round() as isize, point.y.round() as isize),
                 (1, 1),
                 (1, 1),
@@ -278,4 +283,29 @@ pub fn focus_dataset(state: AppState, device: State<TouchDevice>) {
 #[specta::specta]
 pub fn set_audio_table(table: Option<AudioTable>, state: AppState) {
     state.with_current_raster_band(|band| band.info.audio_table = table);
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn save_audio_table(path: PathBuf, state: AppState) {
+    state.with_current_raster_band_fallible(|band| {
+        write(
+            path,
+            serde_json::to_string_pretty(&band.info.audio_table)
+                .map_err(|err| ErrorDetails::SerdeError(err.to_string()))?,
+        )
+        .map_err(|err| ErrorDetails::IoError(err.to_string()))
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn load_audio_table(path: PathBuf, state: AppState) {
+    state.with_current_raster_band_fallible(|band| {
+        band.info.audio_table = serde_json::from_slice(
+            &read(path).map_err(|err| ErrorDetails::IoError(err.to_string()))?,
+        )
+        .map_err(|err| ErrorDetails::SerdeError(err.to_string()))?;
+        Ok(())
+    });
 }

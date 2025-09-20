@@ -15,7 +15,7 @@ import { client } from "./api";
 import { ReprojectionDialog } from "./reprojection-dialog";
 import { DemMethodsDialog } from "./dem_methods";
 import { ClassificationDialog } from "./classification";
-import { SaveButton } from "./save-button";
+import { LoadButton, SaveButton } from "./save-button";
 import { RenderMethodsSelector } from "./render_methods_selector";
 import { Dialog, useDialog } from "./dialog";
 import { AudioSettingsScreen } from "./settings-screen";
@@ -90,8 +90,8 @@ const RasterNavigatorInner = ({ layer }: { layer: RasterScreenData }) => {
       ) : (
         ""
       )}
-      <AudioTableEditor
-        table={layer.audio_table}
+      <AudioTableManager
+        audioTable={layer.audio_table}
         colourTable={layer.colour_table}
       />
       <PixelExplorer layer={layer} />
@@ -295,39 +295,97 @@ export const GdalMetadataViewer = ({
   </div>
 );
 
-const EscSounds = await client.getEscSounds();
-
-type AudioTableEditorProps = {
-  table: AudioTable | null;
+type AudioTableManagerProps = {
+  audioTable: AudioTable | null;
   colourTable: ColourTable | null;
 };
 
-const AudioTableEditor = ({ table, colourTable }: AudioTableEditorProps) => {
-  const [audioTable, setAudioTable] = useState(table);
-  useEffect(() => {
-    setAudioTable(table);
-  }, [table]);
+const AudioTableManager = ({
+  audioTable,
+  colourTable,
+}: AudioTableManagerProps) => {
   const { open, setOpen } = useDialog();
+  const { open: openEditor, setOpen: setOpenEditor } = useDialog();
+  const createAudioTable = () => {
+    client.setAudioTable({
+      entries: colourTable
+        ? colourTable.entries.map(() =>
+            getDefaultAudioTypeFromDiscriminant("Frequency")
+          )
+        : [],
+      other: { type: "Silence" },
+    });
+    setOpenEditor(true);
+  };
+
   return (
     <Dialog
       modal={true}
       open={open}
       setOpen={setOpen}
-      openText={table === null ? "Create audio table" : "Audio table"}
-      onOpen={() => {
-        if (audioTable === null) {
-          setAudioTable({
-            entries: colourTable
-              ? colourTable.entries.map(() =>
-                  getDefaultAudioTypeFromDiscriminant("Frequency")
-                )
-              : [],
-            other: { type: "Silence" },
-          });
-        }
-      }}
+      openText="Audio table manager"
     >
-      <h3>Audio table</h3>
+      <h2>Audio Table Manager</h2>
+      {audioTable === null ? (
+        <>
+          <button onClick={createAudioTable}>Create Audio table</button>
+          <LoadButton
+            text="Load audio table from file"
+            onLoad={client.loadAudioTable}
+          />
+        </>
+      ) : (
+        <>
+          <Dialog
+            modal={true}
+            open={openEditor}
+            setOpen={setOpenEditor}
+            openText="Edit"
+          >
+            <AudioTableEditor
+              audioTable={audioTable}
+              colourTable={colourTable}
+              onSave={(newTable) => {
+                client.setAudioTable(newTable);
+                setOpenEditor(false);
+              }}
+            />
+          </Dialog>
+          <SaveButton text="Export" onSave={client.saveAudioTable} />
+          <button
+            onClick={() => {
+              if (confirm("Are you sure you want to delete this audio table?"))
+                client.setAudioTable(null);
+            }}
+          >
+            Delete audio table
+          </button>
+        </>
+      )}
+    </Dialog>
+  );
+};
+
+const EscSounds = await client.getEscSounds();
+
+type AudioTableEditorProps = {
+  audioTable: AudioTable;
+  colourTable: ColourTable | null;
+  onSave: (table: AudioTable) => void;
+};
+
+const AudioTableEditor = ({
+  audioTable: initialTable,
+  colourTable,
+  onSave,
+}: AudioTableEditorProps) => {
+  const [audioTable, setAudioTable] = useState(initialTable);
+  useEffect(() => {
+    setAudioTable(initialTable);
+  }, [audioTable]);
+  return (
+    <div>
+      <h3>Edit Audio table</h3>
       <div>
         Default sound / sound for unknown pixel values:
         <AudioTypeInput
@@ -336,12 +394,11 @@ const AudioTableEditor = ({ table, colourTable }: AudioTableEditorProps) => {
             getDefaultAudioTypeFromDiscriminant("Frequency")
           }
           setAudioType={(audioType) =>
-            setAudioTable({ other: audioType, entries: audioTable!.entries })
+            setAudioTable({ other: audioType, entries: audioTable.entries })
           }
         />
       </div>
       <ul>
-        {" "}
         {audioTable?.entries.map((entry, index) => (
           <li>
             {index}:
@@ -369,25 +426,8 @@ const AudioTableEditor = ({ table, colourTable }: AudioTableEditorProps) => {
       >
         Add entry
       </button>
-      <button
-        onClick={() => {
-          client.setAudioTable(audioTable);
-          setOpen(false);
-        }}
-      >
-        Save
-      </button>
-      <button
-        onClick={() => {
-          if (confirm("Are you sure you want to delete this audio table?")) {
-            client.setAudioTable(null);
-            setOpen(false);
-          }
-        }}
-      >
-        Delete audio table
-      </button>{" "}
-    </Dialog>
+      <button onClick={() => onSave(audioTable)}>Save</button>
+    </div>
   );
 };
 

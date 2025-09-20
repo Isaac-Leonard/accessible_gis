@@ -9,9 +9,6 @@ export const commands = {
   async getAppInfo(): Promise<UiState> {
     return await TAURI_INVOKE("get_app_info");
   },
-  async getBandSizes(): Promise<RasterSize[]> {
-    return await TAURI_INVOKE("get_band_sizes");
-  },
   async getValueAtPoint(point: Point): Promise<number | null> {
     return await TAURI_INVOKE("get_value_at_point", { point });
   },
@@ -20,12 +17,6 @@ export const commands = {
   },
   async getPointOfMinValue(): Promise<Point | null> {
     return await TAURI_INVOKE("get_point_of_min_value");
-  },
-  async getPolygonsAroundPoint(
-    point: Point,
-    layer: number
-  ): Promise<PolygonInfo[]> {
-    return await TAURI_INVOKE("get_polygons_around_point", { point, layer });
   },
   async describeLine(
     line: LineString,
@@ -44,27 +35,8 @@ export const commands = {
   async nearestTown(point: Point): Promise<DistanceFromBoarder | null> {
     return await TAURI_INVOKE("nearest_town", { point });
   },
-  async theissenPolygonsCalculation(
-    records: ThiessenPolygonRecord[],
-    srs: string
-  ): Promise<number[]> {
-    return await TAURI_INVOKE("theissen_polygons_calculation", {
-      records,
-      srs,
-    });
-  },
-  async theissenPolygons(points: MultiPoint, srs: string): Promise<Polygon[]> {
-    return await TAURI_INVOKE("theissen_polygons", { points, srs });
-  },
   async getCsv(file: string): Promise<string[][]> {
     return await TAURI_INVOKE("get_csv", { file });
-  },
-  async theissenPolygonsToFile(
-    points: MultiPoint,
-    srs: string,
-    file: string
-  ): Promise<void> {
-    await TAURI_INVOKE("theissen_polygons_to_file", { points, srs, file });
   },
   async setScreen(screen: Screen): Promise<void> {
     await TAURI_INVOKE("set_screen", { screen });
@@ -294,6 +266,12 @@ export const commands = {
   },
   async getEscSounds(): Promise<{ [key in string]: IndexedEscSound[] }> {
     return await TAURI_INVOKE("get_esc_sounds");
+  },
+  async saveAudioTable(path: string): Promise<void> {
+    await TAURI_INVOKE("save_audio_table", { path });
+  },
+  async loadAudioTable(path: string): Promise<void> {
+    await TAURI_INVOKE("load_audio_table", { path });
   },
 };
 
@@ -743,7 +721,6 @@ export type OpenLineDescription = {
 export type Output = { stdout: string; stderr: string; status: number | null };
 export type Point = { x: number; y: number };
 export type Polygon = { exterior: LineString; interior: LineString[] };
-export type PolygonInfo = { area: number; fields: Field[] };
 export type ProjectScreen =
   | ({ type: "Project" } & ProjectScreenInfo)
   | { type: "NotLoaded" };
@@ -785,7 +762,6 @@ export type RasterScreenMetadata = {
   srs: string | null;
   other: DatasetMetadata;
 };
-export type RasterSize = { width: number; length: number; bands: number };
 export type RenderMethod =
   /**
    * Displays the raw values of each cell on the screen
@@ -830,12 +806,6 @@ export type Srs =
   | { type: "Wkt"; value: string }
   | { type: "Esri"; value: string }
   | { type: "Epsg"; value: number };
-export type ThiessenPolygonRecord = {
-  point: Point;
-  file: string;
-  start_line: number;
-  column: number;
-};
 export type ToolDescriptor = {
   label: string;
   inputs: ToolRuntimeInputDescriptor[];

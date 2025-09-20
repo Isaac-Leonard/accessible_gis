@@ -119,10 +119,9 @@ impl AppDataSync {
         self.with_fallible(|state| state.with_current_layer_mut(f))
     }
 
-    pub fn with_current_raster_band_fallible<T, E, F>(&self, f: F) -> Option<T>
+    pub fn with_current_raster_band_fallible<T, F>(&self, f: F) -> Option<T>
     where
-        F: FnOnce(&mut StatefulRasterBand) -> Result<T, E>,
-        E: Into<ErrorDetails>,
+        F: FnOnce(&mut StatefulRasterBand) -> Result<T, ErrorDetails>,
     {
         self.with_fallible(|state| state.with_current_raster_band(f))
     }
