@@ -2,10 +2,9 @@ use actix_files::{self as fs};
 use actix_web::{
     App, Error, HttpRequest, HttpResponse, HttpServer, Responder, get,
     http::header::ContentType,
-    web::{self, Data, Json, Path, PayloadConfig},
+    web::{self, Data, Path, PayloadConfig},
 };
 use itertools::Itertools;
-use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tauri::{AppHandle, Manager, path::BaseDirectory};
 use tokio::task::spawn_local;
@@ -18,48 +17,6 @@ use crate::{
     web_socket::ws_handle,
 };
 
-#[get("/get_raster")]
-async fn get_raster(state: Data<AppDataSync>) -> impl Responder {
-    eprintln!("get_raster called");
-    let Some(data) = state.with_project_fallible(|project| {
-        let band_to_display = project
-            .get_raster_to_display()
-            .ok_or_else(|| ErrorDetails::Other("No raster to display".to_string()))?;
-        let index = band_to_display.get_index();
-        let dataset = band_to_display
-            .info
-            .wgs84_reprojected_file
-            .as_mut()
-            .ok_or_else(|| {
-                ErrorDetails::Other("No reprojected dataset for display raster".to_string())
-            })?;
-        let band = dataset.get_raster(index).ok_or_else(|| {
-            ErrorDetails::Other("Failed to get band for reprojected display raster".to_string())
-        })?;
-        read_raster_data_enum(&band.band()).ok_or_else(|| {
-            ErrorDetails::Other(
-                "Failed to read data for reprojected version of display raster".to_string(),
-            )
-        })
-    }) else {
-        return HttpResponse::NotFound().finish();
-    };
-    let bytes = data
-        .into_f64_vec()
-        .into_iter()
-        .flat_map(|x| x.to_le_bytes())
-        .collect_vec();
-    eprintln!("Sending {}Mb to touch device", bytes.len() / 1024 / 1024);
-    HttpResponse::Ok().body(bytes)
-}
-
-#[derive(Serialize, Deserialize, specta::Type)]
-pub struct ImageSize {
-    pub width: usize,
-    pub height: usize,
-    pub bands: Option<usize>,
-}
-
 pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
     HttpServer::new(move || {
         App::new()
@@ -69,8 +26,6 @@ pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
             .service(get_raster)
             .service(get_image)
             .service(get_audio)
-            .service(get_info)
-            .service(get_ocr)
             .service(get_vector)
             .service(web::resource("/ws").route(web::get().to(ws)))
             .service(
@@ -90,6 +45,19 @@ pub async fn run_server(state: AppDataSync, app_handle: AppHandle) {
     .run()
     .await
     .unwrap();
+}
+
+/// Handshake and start WebSocket handler with heartbeats.
+async fn ws(
+    req: HttpRequest,
+    stream: web::Payload,
+    app_handle: web::Data<AppHandle>,
+) -> Result<HttpResponse, Error> {
+    let (res, session, msg_stream) = actix_ws::handle(&req, stream)?;
+
+    // spawn websocket handler (and don't await it) so that the response is returned immediately
+    spawn_local(ws_handle((**app_handle).clone(), session, msg_stream));
+    Ok(res)
 }
 
 #[get("/get_vector")]
@@ -131,35 +99,39 @@ async fn get_vector(app: Data<AppHandle>) -> impl Responder {
     }
 }
 
-/// Handshake and start WebSocket handler with heartbeats.
-async fn ws(
-    req: HttpRequest,
-    stream: web::Payload,
-    app_handle: web::Data<AppHandle>,
-) -> Result<HttpResponse, Error> {
-    let (res, session, msg_stream) = actix_ws::handle(&req, stream)?;
-
-    // spawn websocket handler (and don't await it) so that the response is returned immediately
-    spawn_local(ws_handle((**app_handle).clone(), session, msg_stream));
-    Ok(res)
-}
-
-#[get("/get_info")]
-async fn get_info(state: Data<AppDataSync>) -> impl Responder {
-    Json(state.with_lock(|state| {
-        state.with_project(|project| {
-            project
-                .get_raster_to_display()
-                .map(|raster| raster.info.render)
-        })?
-    }))
-}
-
-#[get("/get_ocr")]
-async fn get_ocr(state: Data<AppDataSync>) -> impl Responder {
-    Json(state.with_lock(|state| {
-        state.with_project(|project| Some(project.get_raster_to_display()?.info.render))
-    }))
+#[get("/get_raster")]
+async fn get_raster(state: Data<AppDataSync>) -> impl Responder {
+    eprintln!("get_raster called");
+    let Some(data) = state.with_project_fallible(|project| {
+        let band_to_display = project
+            .get_raster_to_display()
+            .ok_or_else(|| ErrorDetails::Other("No raster to display".to_string()))?;
+        let index = band_to_display.get_index();
+        let dataset = band_to_display
+            .info
+            .wgs84_reprojected_file
+            .as_mut()
+            .ok_or_else(|| {
+                ErrorDetails::Other("No reprojected dataset for display raster".to_string())
+            })?;
+        let band = dataset.get_raster(index).ok_or_else(|| {
+            ErrorDetails::Other("Failed to get band for reprojected display raster".to_string())
+        })?;
+        read_raster_data_enum(&band.band()).ok_or_else(|| {
+            ErrorDetails::Other(
+                "Failed to read data for reprojected version of display raster".to_string(),
+            )
+        })
+    }) else {
+        return HttpResponse::NotFound().finish();
+    };
+    let bytes = data
+        .into_f64_vec()
+        .into_iter()
+        .flat_map(|x| x.to_le_bytes())
+        .collect_vec();
+    eprintln!("Sending {}Mb to touch device", bytes.len() / 1024 / 1024);
+    HttpResponse::Ok().body(bytes)
 }
 
 #[get("/get_image")]
@@ -173,7 +145,6 @@ async fn get_image(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Respo
                 .get_raster_to_display()
                 .map(|raster| dbg!(raster.reproject(&raster_name, Srs::Epsg(4326))))
         });
-        eprintln!("{:?}", output);
     });
     fs::NamedFile::open_async(raster_name).await
 }
