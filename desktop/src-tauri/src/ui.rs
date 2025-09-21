@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use gdal::vector::LayerAccess;
+use gdal::vector::{Feature, LayerAccess};
 use itertools::Itertools;
 use local_ip_address::local_ip;
 use serde::{Deserialize, Serialize};
@@ -141,29 +141,28 @@ impl AppData {
                         let primary_field_name =
                             layer.info.desktop_settings.primary_field_name.as_ref();
 
-                        let features = match &layer.info.desktop_settings.sort_features_by {
-                            SortOption::Default => layer.layer.layer_mut().features().collect_vec(),
-                            SortOption::Field(field) => {
-                                let index = layer.layer.get_field_index(&field).unwrap();
-                                layer
-                                    .layer
-                                    .layer_mut()
-                                    .features()
-                                    .sorted_by_key(|feature| {
-                                        feature.field(index).unwrap().map(FieldValue::from)
+                        let sort_fn: Box<dyn Fn(&Feature) -> SortKey> =
+                            match &layer.info.desktop_settings.sort_features_by {
+                                SortOption::Default => Box::new(|_| SortKey::Default),
+                                SortOption::Field(field) => {
+                                    let index = layer.layer.get_field_index(field).unwrap();
+                                    Box::new(move |feature| {
+                                        SortKey::Field(
+                                            feature.field(index).unwrap().map(FieldValue::from),
+                                        )
                                     })
-                                    .collect_vec()
-                            }
-                            SortOption::Area => layer
-                                .layer
-                                .layer_mut()
-                                .features()
-                                .sorted_by_key(|feature| {
-                                    feature.geometry().map(|geom| FloatWrapper(geom.area()))
-                                })
-                                .collect_vec(),
-                        };
-                        let features = features
+                                }
+                                SortOption::Area => Box::new(|feature| {
+                                    let area =
+                                        feature.geometry().map(|geom| FloatWrapper(geom.area()));
+                                    SortKey::Area(area)
+                                }),
+                            };
+                        let features = layer
+                            .layer
+                            .layer_mut()
+                            .features()
+                            .sorted_by_key(sort_fn)
                             .into_iter()
                             .map(move |feature| FeatureIdentifier {
                                 name: primary_field_name
@@ -244,6 +243,13 @@ impl AppData {
             })
         })
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum SortKey {
+    Default,
+    Field(Option<FieldValue>),
+    Area(Option<FloatWrapper>),
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, specta::Type)]
