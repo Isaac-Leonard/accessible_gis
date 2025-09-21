@@ -133,22 +133,8 @@ pub fn set_display_raster(
 
 #[tauri::command]
 #[specta::specta]
-pub fn set_current_audio_settings(
-    settings: AudioSettings,
-    state: AppState,
-    device: State<TouchDevice>,
-) {
-    state.with_project_fallible::<(), _>(|project| {
-        let Some(_) = project.with_current_raster_band(|band| {
-            band.info.audio_settings = settings.clone();
-        }) else {
-            return Err(ErrorDetails::Other(
-                "Tried to work on non selected raster band".to_string(),
-            ));
-        };
-        device.send(AppMessage::Gis(project.get_touch_device_settings()));
-        Ok(())
-    });
+pub fn set_current_audio_settings(settings: AudioSettings, state: AppState) {
+    state.with_current_raster_band(|band| band.info.audio_settings = settings);
 }
 
 #[tauri::command]

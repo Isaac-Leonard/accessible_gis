@@ -62,12 +62,8 @@ async fn ws(
 
 #[get("/get_vector")]
 async fn get_vector(app: Data<AppHandle>) -> impl Responder {
-    std::fs::create_dir_all(app.path().temp_dir().unwrap()).unwrap();
     eprintln!("get_vector called");
-    let json_name = app
-        .path()
-        .resolve("vector.json", BaseDirectory::Temp)
-        .unwrap();
+    let json_name = get_random_temp_path(&app, "geojson");
     let state = app.state::<AppDataSync>();
     let succeeded = state
         .with_project_fallible(|project| {
@@ -90,7 +86,7 @@ async fn get_vector(app: Data<AppHandle>) -> impl Responder {
         let data = std::fs::read(json_name).unwrap();
         HttpResponse::Ok()
             .content_type(ContentType::json())
-            .body(String::from_utf8_lossy(&data).to_string())
+            .body(data)
     } else {
         // Send empty array there is no vector layer
         HttpResponse::Ok().json(json! ({
@@ -117,7 +113,7 @@ async fn get_raster(state: Data<AppDataSync>) -> impl Responder {
         let band = dataset.get_raster(index).ok_or_else(|| {
             ErrorDetails::Other("Failed to get band for reprojected display raster".to_string())
         })?;
-        read_raster_data_enum(&band.band()).ok_or_else(|| {
+        read_raster_data_enum(band.band()).ok_or_else(|| {
             ErrorDetails::Other(
                 "Failed to read data for reprojected version of display raster".to_string(),
             )
@@ -140,7 +136,7 @@ async fn get_image(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Respo
     // Deliberately ignore the result as it is almost certain to get an error as most paths should be unique.
     let _ = std::fs::remove_file(&raster_name);
     state.with_lock(|state| {
-        let output = state.with_project(|project| {
+        let _output = state.with_project(|project| {
             project
                 .get_raster_to_display()
                 .map(|raster| dbg!(raster.reproject(&raster_name, Srs::Epsg(4326))))

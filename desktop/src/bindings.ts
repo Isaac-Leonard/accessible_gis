@@ -53,19 +53,8 @@ export const commands = {
   async createNewDataset(driverName: string, file: string): Promise<void> {
     await TAURI_INVOKE("create_new_dataset", { driverName, file });
   },
-  async addFieldToSchema(
-    name: string,
-    fieldType: FieldType
-  ): Promise<Result<null, string>> {
-    try {
-      return {
-        status: "ok",
-        data: await TAURI_INVOKE("add_field_to_schema", { name, fieldType }),
-      };
-    } catch (e) {
-      if (e instanceof Error) throw e;
-      else return { status: "error", error: e as any };
-    }
+  async addFieldToSchema(name: string, fieldType: FieldType): Promise<void> {
+    await TAURI_INVOKE("add_field_to_schema", { name, fieldType });
   },
   async editDataset(): Promise<void> {
     await TAURI_INVOKE("edit_dataset");
@@ -168,8 +157,8 @@ export const commands = {
   async focusDataset(): Promise<void> {
     await TAURI_INVOKE("focus_dataset");
   },
-  async setPreferedDisplayFields(fields: string[]): Promise<void> {
-    await TAURI_INVOKE("set_prefered_display_fields", { fields });
+  async setPreferedDisplayField(field: string): Promise<void> {
+    await TAURI_INVOKE("set_prefered_display_field", { field });
   },
   async focusBox(bounds: [number, number, number, number]): Promise<void> {
     await TAURI_INVOKE("focus_box", { bounds });
@@ -720,7 +709,6 @@ export type ProjectScreenInfo = {
   layers: LayerDescriptor[];
   layer_info: LayerScreenInfo | null;
   ip: string;
-  prefered_display_fields: string[];
 };
 export type RasterGraphSettings = {
   /**
@@ -866,17 +854,13 @@ export type ToolsScreenInfo = {
   tools: ToolDescriptor[];
   layers: LayerDescriptor[];
 };
-export type TouchDeviceState = {
-  use_labels: boolean;
-  announce_leaving: boolean;
-  announce_geometry_type: boolean;
-};
+export type TouchDeviceState = Record<string, never>;
 export type UiScreen =
   | ({ name: "Project" } & ProjectScreen)
   | { name: "ThiessenPolygons" }
   | ({ name: "NewDataset" } & NewDatasetScreenData)
   | ({ name: "Settings" } & GlobalSettings)
-  | ({ name: "TouchDevice" } & TouchDeviceState)
+  | { name: "TouchDevice" }
   | { name: "Errors" }
   | ({ name: "Tools" } & ToolsScreenInfo)
   | ({ name: "Workflows" } & WorkflowsScreenInfo);
@@ -911,6 +895,7 @@ export type VectorScreenData = {
   name_field: string | null;
   sort_features_by: SortOption;
   metadata: VectorScreenMetadata;
+  prefered_display_field: string | null;
 };
 export type VectorScreenMetadata = {
   srs: string | null;

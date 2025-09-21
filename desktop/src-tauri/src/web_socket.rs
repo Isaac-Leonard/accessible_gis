@@ -20,7 +20,10 @@ use tokio::{
 use crate::{
     commands::{AppDataSync, MessageEvent},
     errors::ErrorDetails,
-    state::gis::raster::{RasterMetadata, RenderMethod},
+    state::gis::{
+        raster::{RasterMetadata, RenderMethod},
+        vector::TouchDeviceVectorOptions,
+    },
 };
 
 /// How often heartbeat pings are sent
@@ -47,8 +50,10 @@ pub async fn ws_handle(
 
     // Ensure the device has the right settings for the current data on start
     app.state::<AppDataSync>().with_project_fallible(|project| {
-        device_sender.send(AppMessage::Gis(project.get_touch_device_settings()));
-        device_sender.send(AppMessage::FetchVector);
+        for layer in project.get_vectors_for_display() {
+            device_sender.send(AppMessage::FetchVector(layer.get_touch_device_info()));
+        }
+
         let band_to_display = project.get_raster_to_display();
         if let Some(mut band) = band_to_display {
             device_sender.send(AppMessage::FetchRaster(dbg!(
@@ -139,11 +144,17 @@ pub async fn ws_handle(
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "type", content = "data")]
 pub enum AppMessage {
-    Gis(GisMessage),
     FocusRaster,
     FocusBox([f64; 4]),
     FetchRaster(RasterDisplayInfo),
-    FetchVector,
+    FetchVector(VectorInfo),
+    UpdateVector(VectorInfo),
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct VectorInfo {
+    pub name: String,
+    pub settings: TouchDeviceVectorOptions,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -151,18 +162,6 @@ pub struct RasterDisplayInfo {
     #[serde(rename = "type")]
     pub kind: RenderMethod,
     pub metadata: RasterMetadata,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct GisMessage {
-    pub raster: RasterMessage,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct RasterMessage {
-    pub min_freq: f64,
-    pub max_freq: f64,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

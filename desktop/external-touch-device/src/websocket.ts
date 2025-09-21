@@ -4,10 +4,10 @@ import { VectorSettings } from "touch-device";
 import {
   AudioTable,
   AudioType,
-  RasterAudioSettings,
   RasterMetadata,
   RasterOptions,
 } from "touch-device/src/raster";
+import { VectorInfo } from "touch-device/src/vector-manager";
 import { ZodType, z } from "zod";
 
 const host = window.location.host;
@@ -101,14 +101,12 @@ export class WsConnection {
 }
 
 export type AppMessage =
-  | { type: "Gis"; data: GisMessage }
   | { type: "FocusBox"; data: BBox }
   | { type: "FetchRaster"; data: RasterOptions }
-  | { type: "FetchVector" };
+  | { type: "FetchVector"; data: VectorInfo }
+  | { type: "UpdateVector"; data: VectorInfo };
 
 export type ImageMessage = { ocr: boolean };
-
-export type GisMessage = { vector: VectorSettings };
 
 export const AudioTypeParser: ZodType<AudioType> = z.discriminatedUnion(
   "type",
@@ -154,29 +152,21 @@ const RasterOptionsParser: ZodType<RasterOptions> = z.union([
   z.object({ type: z.literal("Image"), metadata: RasterMetadataParser }),
 ]);
 
-const RasterAudioSettingsParser: ZodType<RasterAudioSettings> = z.object({
-  minFreq: z.number(),
-  maxFreq: z.number(),
-});
-
-const vectorSettingsParser = z.object({
-  preferedKeys: z.string().array(),
+const vectorSettingsParser: ZodType<VectorSettings> = z.object({
+  preferedLabel: z.string().nullable(),
   useLabels: z.boolean(),
   announceLeaving: z.boolean(),
   announceGeometryType: z.boolean(),
 });
 
-const GisParser: ZodType<GisMessage> = z.object({
-  vector: vectorSettingsParser,
-  raster: RasterAudioSettingsParser,
+const VectorInfoParser: ZodType<VectorInfo> = z.object({
+  name: z.string(),
+  settings: vectorSettingsParser,
 });
 
 const messageParser: ZodType<AppMessage> = z.union([
-  z.object({ type: z.literal("Gis"), data: GisParser }),
-  z.object({
-    type: z.literal("FocusBox"),
-    data: geoJsonParsers.bBox,
-  }),
+  z.object({ type: z.literal("FocusBox"), data: geoJsonParsers.bBox }),
   z.object({ type: z.literal("FetchRaster"), data: RasterOptionsParser }),
-  z.object({ type: z.literal("FetchVector") }),
+  z.object({ type: z.literal("FetchVector"), data: VectorInfoParser }),
+  z.object({ type: z.literal("UpdateVector"), data: VectorInfoParser }),
 ]);

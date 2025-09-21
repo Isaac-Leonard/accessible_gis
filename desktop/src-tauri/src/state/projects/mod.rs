@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use crate::{
     errors::{ApplicationError, ErrorDetails},
     gdal_if::{LayerIndex, OpenDatasetError, Srs, WrappedDataset},
-    web_socket::{GisMessage, RasterMessage},
 };
 
 use super::{
@@ -154,21 +153,6 @@ impl Project {
         F: FnOnce(&mut StatefulDataset) -> Result<WrappedDataset, ErrorDetails>,
     {
         self.datasets.create_from_current_dataset(f, settings)
-    }
-
-    /// Gets all of the data needed to update the touch devices configuration
-    /// Note that names of enums and structs are still not finalised as the end result is not yet clear
-    pub fn get_touch_device_settings(&mut self) -> GisMessage {
-        let settings = match self.get_raster_to_display() {
-            Some(band) => &band.info.audio_settings,
-            None => self.settings.get_default_audio(),
-        };
-        GisMessage {
-            raster: RasterMessage {
-                min_freq: settings.min_freq,
-                max_freq: settings.max_freq,
-            },
-        }
     }
 
     pub fn with_current_raster_band<T, F>(&mut self, f: F) -> Option<T>

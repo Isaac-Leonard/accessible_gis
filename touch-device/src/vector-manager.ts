@@ -1,42 +1,37 @@
 import * as turf from "@turf/turf";
-import { Feature, GeoJsonProperties, Polygon, Position } from "geojson";
+import {
+  Feature,
+  FeatureCollection,
+  GeoJsonProperties,
+  Polygon,
+  Position,
+} from "geojson";
 import { CoordinateManager } from "./coordinate-manager.js";
 import { getCanvas } from "./canvas-manager.js";
 import { speak } from "./speach.js";
 
 export type VectorSettings = {
-  preferedKeys: string[];
+  preferedLabel: string | null;
   useLabels: boolean;
   announceLeaving: boolean;
   announceGeometryType: boolean;
 };
 
-export class VectorManager {
-  radius = 5;
-
+class Layer {
   previousFeatures: Feature[] = [];
-
+  radius = 5;
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
 
   constructor(
-    private features: Feature[],
-    private settings: VectorSettings,
+    public name: string,
+    public features: FeatureCollection,
+    public settings: VectorSettings,
     private coordinateManager: CoordinateManager
   ) {
     const { canvas, ctx } = getCanvas();
     this.canvas = canvas;
     this.ctx = ctx;
-  }
-
-  setSettings(settings: VectorSettings) {
-    this.settings = settings;
-  }
-
-  setFeatures(features: Feature[]) {
-    this.features = features;
-    this.previousFeatures = [];
-    this.render();
   }
 
   drawPoint(p: Position) {
@@ -66,7 +61,7 @@ export class VectorManager {
     this.ctx.fillStyle = "#ffffff";
     this.ctx.strokeStyle = "#ffffff";
     this.ctx.lineWidth = 2;
-    this.features.forEach(({ geometry, properties }) => {
+    this.features.features.forEach(({ geometry, properties }) => {
       switch (geometry.type) {
         case "Point":
           this.drawPoint(geometry.coordinates);
@@ -104,11 +99,11 @@ export class VectorManager {
     });
   }
 
-  speakFeatures(coords: [number, number]) {
+  speakFeatures(coords: [number, number]): string {
     let foundFeatures: Feature[] = [];
     const kilometres = { units: "kilometres" } as const;
     const geodesic = { method: "geodesic" } as const;
-    for (let feature of this.features) {
+    for (let feature of this.features.features) {
       const { geometry } = feature;
       switch (geometry.type) {
         case "Point":
@@ -200,12 +195,9 @@ export class VectorManager {
         })
         .join();
     }
-    console.log(text);
-    // Speaking empty text while moving affectively makes any speach while moving impossible.
-    if (text.length > 1) {
-      speak(text);
-    }
     this.previousFeatures = foundFeatures;
+    console.log(text);
+    return text;
   }
 
   getPreferedNameForFeature(properties: { [name: string]: unknown } | null) {
@@ -213,9 +205,9 @@ export class VectorManager {
       return null;
     }
     return Object.entries(properties).reduce((previous, current) => {
-      if (this.settings.preferedKeys.includes(previous[0])) {
+      if (this.settings.preferedLabel === previous[0]) {
         return previous;
-      } else if (this.settings.preferedKeys.includes(current[0])) {
+      } else if (this.settings.preferedLabel === current[0]) {
         return current;
       } else if (typeof previous[1] === "string") {
         return previous;
@@ -247,5 +239,49 @@ export class VectorManager {
     this.ctx.font = "20px sans-serif";
     this.ctx.fillText(label, labelPoint[0], labelPoint[1]);
     this.ctx.restore();
+  }
+}
+
+export type VectorInfo = { name: string; settings: VectorSettings };
+
+export class VectorManager {
+  layers: Layer[] = [];
+
+  constructor(private coordinateManager: CoordinateManager) {}
+
+  render() {
+    this.layers.forEach((layer) => layer.render());
+  }
+
+  createLayer(features: FeatureCollection, { name, settings }: VectorInfo) {
+    const layer = new Layer(name, features, settings, this.coordinateManager);
+    this.layers.push(layer);
+  }
+
+  updateSettingsForLayer({ name, settings }: VectorInfo) {
+    let layer = this.layers.find((layer) => layer.name === name);
+    if (typeof layer !== "undefined") {
+      layer.settings = settings;
+    }
+    this.render();
+  }
+
+  removeLayer(name: string) {
+    const index = this.layers.findIndex((layer) => layer.name === name);
+    if (index !== -1) {
+      this.layers.splice(index, 1);
+    }
+  }
+
+  speakFeatures(coords: [number, number]) {
+    const text = this.layers
+      .map((layer) => layer.speakFeatures(coords).trim())
+      .join("\n")
+      .trim();
+
+    // Make sure there's actually text to speak so we don't interupt current speach with nothing
+    if (text.length > 0) {
+      speak(text);
+    }
   }
 }

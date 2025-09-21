@@ -1,10 +1,14 @@
-use std::process::{Command, Output};
+use std::{
+    hash::{DefaultHasher, Hash, Hasher},
+    process::{Command, Output},
+};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     commands::SortOption,
     gdal_if::{Srs, WrappedLayer},
+    web_socket::VectorInfo,
 };
 
 use super::shared::SharedInfo;
@@ -60,5 +64,16 @@ impl<'a> StatefulVectorLayer<'a> {
         command.arg("-t_srs").arg(&srs.to_wkt().unwrap());
         command.arg(output_name).arg(&self.info.shared.name);
         command.output()
+    }
+
+    pub fn get_touch_device_info(&self) -> VectorInfo {
+        let mut hasher = DefaultHasher::new();
+        self.info.shared.name.hash(&mut hasher);
+        self.layer.index.hash(&mut hasher);
+        let hash = format!("{:x}", hasher.finish());
+        VectorInfo {
+            name: hash,
+            settings: self.info.touch_device_settings.clone(),
+        }
     }
 }

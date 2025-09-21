@@ -103,3 +103,13 @@ export const featureCollection: Z.ZodType<FeatureCollection<Geometry | null>> =
     type: Z.literal("FeatureCollection"),
     features: feature.array(),
   });
+
+export const featureCollectionNonNull: Z.ZodEffects<
+  typeof featureCollection,
+  FeatureCollection
+> = featureCollection.transform(({ features, ...rest }) => ({
+  features: features.filter(
+    (feature): feature is Feature<Geometry> => feature.geometry !== null
+  ),
+  ...rest,
+}));

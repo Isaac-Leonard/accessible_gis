@@ -12,7 +12,6 @@ import { client } from "./api";
 import { OpenDatasetDialog } from "./open-screen";
 import { Dialog, useDialog } from "./dialog";
 import { newProject, openFile } from "./files";
-import { LayerScreenContext } from "./context";
 
 export const MainScreen = ({ state }: { state: ProjectScreen }) => {
   return state.type === "NotLoaded" ? (
@@ -31,9 +30,7 @@ export const MainScreen = ({ state }: { state: ProjectScreen }) => {
       </button>
     </div>
   ) : (
-    <LayerScreenContext.Provider value={state}>
-      <LoadedProjectScreen state={state} />
-    </LayerScreenContext.Provider>
+    <LoadedProjectScreen state={state} />
   );
 };
 

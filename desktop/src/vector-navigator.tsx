@@ -8,14 +8,13 @@ import {
 import { GeometryViewer } from "./geometry";
 import { OptionPicker } from "./option-picker";
 import { FeatureCreator } from "./feature-creator";
-import { useContext, useState } from "preact/hooks";
+import { useState } from "preact/hooks";
 import { client } from "./api";
 import { Dialog, useDialog } from "./dialog";
 import { ReprojectionDialog } from "./reprojection-dialog";
 import { FeaturePicker } from "./feature-picker";
 import { FeatureCoppierDialog } from "./feature-copier";
 import { LayerSimplifierDialog } from "./layer_simplifier";
-import { LayerScreenContext } from "./context";
 import { GdalMetadataViewer } from "./raster-navigator";
 
 type VectorLayerProp = {
@@ -57,13 +56,10 @@ export const VectorNavigator = ({ layer }: VectorLayerProp) => {
 
 export type FieldsTableProps = {
   fields: Field[];
+  preferedDisplayField: string | null;
 };
 
-function FieldsTable({ fields }: FieldsTableProps) {
-  const { prefered_display_fields } = useContext(LayerScreenContext);
-  const setAsPreferedDisplayField = (field: string) =>
-    client.setPreferedDisplayFields([field, ...prefered_display_fields]);
-
+function FieldsTable({ fields, preferedDisplayField }: FieldsTableProps) {
   return (
     <table>
       <thead>
@@ -81,10 +77,12 @@ function FieldsTable({ fields }: FieldsTableProps) {
               <FieldValueViewer field={field} />
             </td>
             <td>
-              {prefered_display_fields.includes(field.name) ? (
+              {preferedDisplayField === field.name ? (
                 <span>Displayed</span>
               ) : (
-                <button onClick={() => setAsPreferedDisplayField(field.name)}>
+                <button
+                  onClick={() => client.setPreferedDisplayField(field.name)}
+                >
                   Use as prefered display field
                 </button>
               )}

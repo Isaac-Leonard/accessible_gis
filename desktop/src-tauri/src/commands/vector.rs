@@ -15,8 +15,6 @@ use crate::{
     web_socket::{AppMessage, TouchDevice},
 };
 
-use super::dataset_collection::NonEmptyDelegatorImplExt;
-
 #[tauri::command]
 #[specta::specta]
 pub fn copy_features(features: Vec<usize>, name: &str, state: AppState) {
@@ -105,21 +103,14 @@ pub fn add_feature_to_layer(feature: FeatureInfo, state: AppState) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn add_field_to_schema(
-    name: String,
-    field_type: FieldType,
-    state: AppState,
-) -> Result<(), String> {
-    state
-        .with_current_vector_layer(move |layer| {
-            layer
-                .layer
-                .layer()
-                .create_defn_fields(&[(&name, field_type as u32)])
-                .inspect_err(|e| eprintln!("{:?}", e))
-                .map_err(|_| "Failed to add fields to schema".to_string())
-        })
-        .ok_or_else(|| "Tried to add field to schema when state is uninitialised".to_string())?
+pub fn add_field_to_schema(name: String, field_type: FieldType, state: AppState) {
+    state.with_current_vector_layer_fallible(move |layer| {
+        layer
+            .layer
+            .layer()
+            .create_defn_fields(&[(&name, field_type as u32)])
+            .map_err(|err| ErrorDetails::Other(format!("Failed to add fields to schema: {err:?}")))
+    });
 }
 
 #[tauri::command]
@@ -152,7 +143,7 @@ pub fn set_display_vector(state: AppState, touch_device: State<TouchDevice>) {
     state
         .with_current_vector_layer(|layer| {
             layer.info.display = true;
-            touch_device.send(AppMessage::FetchVector)
+            touch_device.send(AppMessage::FetchVector(layer.get_touch_device_info()));
         })
         .expect("No vector found when trying to set display");
 }
@@ -160,11 +151,9 @@ pub fn set_display_vector(state: AppState, touch_device: State<TouchDevice>) {
 #[tauri::command]
 #[specta::specta]
 pub fn set_prefered_display_field(field: String, state: AppState, device: State<TouchDevice>) {
-    state.with_project(|project| {
-        project.with_current_vector_layer(|layer| {
-            layer.info.touch_device_settings.prefered_display_field = Some(field)
-        });
-        device.send(AppMessage::Gis(project.get_touch_device_settings()));
+    state.with_current_vector_layer(|layer| {
+        layer.info.touch_device_settings.prefered_display_field = Some(field);
+        device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
     });
 }
 

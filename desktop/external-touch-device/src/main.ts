@@ -1,4 +1,4 @@
-import { Feature } from "geojson";
+import { FeatureCollection } from "geojson";
 import {
   VectorManager,
   geoJsonParsers,
@@ -8,7 +8,7 @@ import {
   GestureManager,
   RasterManager,
 } from "touch-device";
-import { AppMessage, GisMessage, WsConnection } from "./websocket";
+import { AppMessage, WsConnection } from "./websocket";
 
 const root = document.getElementById("image");
 
@@ -27,21 +27,11 @@ const createButton = () => {
   return btn;
 };
 
-const defaultSettings: GisMessage = {
-  vector: {
-    preferedKeys: [],
-    useLabels: false,
-    announceLeaving: true,
-    announceGeometryType: true,
-  },
-};
-
 class GisManager {
   // Required variables
   raster: RasterManager;
 
   coordinateManager = new CoordinateManager();
-  settings: GisMessage = defaultSettings;
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   gestureManager: GestureManager;
@@ -52,11 +42,7 @@ class GisManager {
     const { canvas, ctx } = getCanvas();
     this.canvas = canvas;
     this.ctx = ctx;
-    this.vectorManager = new VectorManager(
-      [],
-      this.settings.vector,
-      this.coordinateManager
-    );
+    this.vectorManager = new VectorManager(this.coordinateManager);
     this.raster = new RasterManager(this.coordinateManager);
     this.gestureManager = new GestureManager(this.canvas);
     this.connection = new WsConnection();
@@ -166,24 +152,28 @@ class GisManager {
 
   async wsMessageHandler(msg: AppMessage) {
     try {
-      if (msg?.type === "Gis") {
-        this.settings = msg.data;
-        this.vectorManager.setSettings(msg.data.vector);
-        this.render();
-        // speak("Updated settings");
-      } else if (msg.type === "FocusBox") {
-        speak("Focusing bounding box");
-        this.coordinateManager.focusScreen(
-          [msg.data[0], msg.data[3]],
-          [msg.data[2], msg.data[1]]
-        );
-        this.render();
-      } else if (msg.type === "FetchRaster") {
-        await this.raster.updateImage(msg.data);
-        this.render();
-      } else if (msg.type === "FetchVector") {
-        await this.getVectors();
-        this.render();
+      switch (msg.type) {
+        case "FocusBox":
+          speak("Focusing bounding box");
+          this.coordinateManager.focusScreen(
+            [msg.data[0], msg.data[3]],
+            [msg.data[2], msg.data[1]]
+          );
+          this.render();
+          break;
+        case "FetchRaster":
+          await this.raster.updateImage(msg.data);
+          this.render();
+          break;
+        case "FetchVector":
+          const features = await this.getVectorLayer(msg.data.name);
+          this.vectorManager.createLayer(features, msg.data);
+          this.render();
+          break;
+        case "UpdateVector":
+          this.vectorManager.updateSettingsForLayer(msg.data);
+          this.render();
+          break;
       }
     } catch (e) {
       this.connection.sendError(
@@ -194,24 +184,12 @@ class GisManager {
     }
   }
 
-  async getVectors() {
-    try {
-      const res = await fetch("get_vector");
-      const geojson = await res
-        .json()
-        .then((x) => geoJsonParsers.featureCollection.parse(x));
-      const features = geojson.features.filter(
-        (nullableFeature): nullableFeature is Feature =>
-          nullableFeature.geometry !== null
-      );
-      this.vectorManager.setFeatures(features);
-    } catch (e) {
-      speak(`Something went wrong with fetching vector data: ${e}`);
-      console.log(e);
-      this.connection.sendError(
-        `Something went wrong with fetching vector data: ${e}`
-      );
-    }
+  async getVectorLayer(name: string): Promise<FeatureCollection> {
+    const res = await fetch(`get_vector/${name}`);
+    const geojson = await res
+      .json()
+      .then((x) => geoJsonParsers.featureCollectionNonNull.parse(x));
+    return geojson;
   }
 
   render() {
