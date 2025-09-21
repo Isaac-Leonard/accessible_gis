@@ -84,7 +84,7 @@ pub fn generate_handlers(s: impl AsRef<Path>) -> Builder {
             set_current_render_method,
             set_current_audio_settings,
             focus_dataset,
-            set_prefered_display_fields,
+            set_prefered_display_field,
             focus_box,
             classify_landforms,
             mark_error_read,

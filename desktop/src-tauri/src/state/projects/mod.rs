@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     errors::{ApplicationError, ErrorDetails},
     gdal_if::{LayerIndex, OpenDatasetError, Srs, WrappedDataset},
-    web_socket::{GisMessage, RasterMessage, VectorMessage},
+    web_socket::{GisMessage, RasterMessage},
 };
 
 use super::{
@@ -29,11 +29,7 @@ pub struct Project {
     pub srs: Srs,
     pub datasets: DatasetCollection,
     pub settings: GlobalSettings,
-    pub prefered_display_fields: Vec<String>,
     pub raster_to_display: Option<RasterIndex>,
-    pub use_labels: bool,
-    pub announce_leaving: bool,
-    pub announce_geometry_type: bool,
     pub tools: Vec<Box<dyn Tool>>,
     pub tool_outputs: Vec<SavedToolOutputAction>,
     pub workflows: Vec<Workflow>,
@@ -47,10 +43,6 @@ impl Project {
             settings: settings.clone(),
             datasets: DatasetCollection::Empty,
             raster_to_display: None,
-            prefered_display_fields: vec![],
-            use_labels: false,
-            announce_geometry_type: true,
-            announce_leaving: true,
             // TODO: Have a list of project tools and global tools
             tools: get_built_in_tools(),
             tool_outputs: Vec::new(),
@@ -93,11 +85,7 @@ impl Project {
                 })
                 .collect(),
             settings: self.settings.clone(),
-            prefered_display_fields: self.prefered_display_fields.clone(),
             raster_to_display: self.raster_to_display,
-            use_labels: self.use_labels,
-            announce_leaving: self.announce_leaving,
-            announce_geometry_type: self.announce_geometry_type,
             tools: self
                 .tools
                 .iter()
@@ -131,11 +119,7 @@ impl Project {
             srs: project.srs,
             datasets,
             settings: project.settings.clone(),
-            prefered_display_fields: project.prefered_display_fields.clone(),
             raster_to_display: project.raster_to_display,
-            use_labels: project.use_labels,
-            announce_leaving: project.announce_leaving,
-            announce_geometry_type: project.announce_geometry_type,
             tools,
             tool_outputs: project.tool_outputs,
             workflows: project.workflows,
@@ -184,12 +168,6 @@ impl Project {
                 min_freq: settings.min_freq,
                 max_freq: settings.max_freq,
             },
-            vector: VectorMessage {
-                prefered_keys: self.prefered_display_fields.clone(),
-                use_labels: self.use_labels,
-                announce_leaving: self.announce_leaving,
-                announce_geometry_type: self.announce_geometry_type,
-            },
         }
     }
 
@@ -227,25 +205,13 @@ pub struct StoredProject {
     pub srs: Srs,
     pub datasets: Vec<StoredDataset>,
     pub settings: GlobalSettings,
-    pub prefered_display_fields: Vec<String>,
     pub raster_to_display: Option<RasterIndex>,
-    #[serde(default)]
-    pub use_labels: bool,
-    #[serde(default = "get_true")]
-    pub announce_leaving: bool,
-    #[serde(default = "get_true")]
-    pub announce_geometry_type: bool,
     #[serde(default)]
     tools: Vec<UserDefinedTool>,
     #[serde(default)]
     pub tool_outputs: Vec<SavedToolOutputAction>,
     #[serde(default)]
     pub workflows: Vec<Workflow>,
-}
-
-/// This just exists to use true as a default value for serde
-fn get_true() -> bool {
-    true
 }
 
 #[derive(Debug, Deserialize, Serialize)]

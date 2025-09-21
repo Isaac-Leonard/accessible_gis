@@ -15,6 +15,8 @@ use crate::{
     web_socket::{AppMessage, TouchDevice},
 };
 
+use super::dataset_collection::NonEmptyDelegatorImplExt;
+
 #[tauri::command]
 #[specta::specta]
 pub fn copy_features(features: Vec<usize>, name: &str, state: AppState) {
@@ -157,13 +159,11 @@ pub fn set_display_vector(state: AppState, touch_device: State<TouchDevice>) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn set_prefered_display_fields(
-    fields: Vec<String>,
-    state: AppState,
-    device: State<TouchDevice>,
-) {
+pub fn set_prefered_display_field(field: String, state: AppState, device: State<TouchDevice>) {
     state.with_project(|project| {
-        project.prefered_display_fields = fields;
+        project.with_current_vector_layer(|layer| {
+            layer.info.touch_device_settings.prefered_display_field = Some(field)
+        });
         device.send(AppMessage::Gis(project.get_touch_device_settings()));
     });
 }

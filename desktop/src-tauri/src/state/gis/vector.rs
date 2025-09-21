@@ -28,8 +28,24 @@ pub struct DesktopVectorOptions {
     pub sort_features_by: SortOption,
 }
 
-#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct TouchDeviceVectorOptions {}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TouchDeviceVectorOptions {
+    pub prefered_display_field: Option<String>,
+    pub use_labels: bool,
+    pub announce_leaving: bool,
+    pub announce_geometry_type: bool,
+}
+
+impl Default for TouchDeviceVectorOptions {
+    fn default() -> Self {
+        Self {
+            prefered_display_field: None,
+            use_labels: false,
+            announce_leaving: true,
+            announce_geometry_type: false,
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct StatefulVectorLayer<'a> {

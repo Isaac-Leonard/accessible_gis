@@ -156,7 +156,6 @@ pub struct RasterDisplayInfo {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GisMessage {
     pub raster: RasterMessage,
-    pub vector: VectorMessage,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -164,15 +163,6 @@ pub struct GisMessage {
 pub struct RasterMessage {
     pub min_freq: f64,
     pub max_freq: f64,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct VectorMessage {
-    pub prefered_keys: Vec<String>,
-    pub use_labels: bool,
-    pub announce_leaving: bool,
-    pub announce_geometry_type: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

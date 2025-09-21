@@ -5,6 +5,8 @@ use crate::{
     web_socket::{AppMessage, TouchDevice},
 };
 
+use super::dataset_collection::NonEmptyDelegatorImplExt;
+
 #[tauri::command]
 #[specta::specta]
 pub fn focus_box(bounds: [f64; 4], device: State<TouchDevice>) {
@@ -15,7 +17,10 @@ pub fn focus_box(bounds: [f64; 4], device: State<TouchDevice>) {
 #[specta::specta]
 pub fn toggle_labels(state: AppState, device: State<TouchDevice>) {
     state.with_project(|project| {
-        project.use_labels = !project.use_labels;
+        project.with_current_vector_layer(|layer| {
+            layer.info.touch_device_settings.use_labels =
+                !layer.info.touch_device_settings.use_labels
+        });
         device.send(AppMessage::Gis(project.get_touch_device_settings()))
     });
 }
@@ -23,12 +28,12 @@ pub fn toggle_labels(state: AppState, device: State<TouchDevice>) {
 #[tauri::command]
 #[specta::specta]
 pub fn toggle_announce_leaving(state: AppState, device: State<TouchDevice>) {
-    println!("Here");
     state.with_project(|project| {
-        project.announce_leaving = !project.announce_leaving;
-        println!("toggled");
+        project.with_current_vector_layer(|layer| {
+            layer.info.touch_device_settings.announce_leaving =
+                !layer.info.touch_device_settings.announce_leaving
+        });
         device.send(AppMessage::Gis(project.get_touch_device_settings()));
-        println!("sent");
     });
 }
 
@@ -36,7 +41,10 @@ pub fn toggle_announce_leaving(state: AppState, device: State<TouchDevice>) {
 #[specta::specta]
 pub fn toggle_announce_geometry_types(state: AppState, device: State<TouchDevice>) {
     state.with_project(|project| {
-        project.announce_geometry_type = !project.announce_geometry_type;
+        project.with_current_vector_layer(|layer| {
+            layer.info.touch_device_settings.announce_geometry_type =
+                !layer.info.touch_device_settings.announce_geometry_type;
+        });
         device.send(AppMessage::Gis(project.get_touch_device_settings()))
     });
 }

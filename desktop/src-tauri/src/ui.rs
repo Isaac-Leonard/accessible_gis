@@ -65,7 +65,6 @@ pub struct ProjectScreenInfo {
     pub layers: Vec<LayerDescriptor>,
     pub layer_info: Option<LayerScreenInfo>,
     pub ip: String,
-    prefered_display_fields: Vec<String>,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, specta::Type)]
@@ -88,6 +87,7 @@ pub struct VectorScreenData {
     pub name_field: Option<String>,
     pub sort_features_by: SortOption,
     pub metadata: VectorScreenMetadata,
+    pub prefered_display_field: Option<String>,
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -188,6 +188,11 @@ impl AppData {
                             feature,
                             layer_index: index,
                             sort_features_by: layer.info.desktop_settings.sort_features_by.clone(),
+                            prefered_display_field: layer
+                                .info
+                                .touch_device_settings
+                                .prefered_display_field
+                                .clone(),
                             editable: ds.dataset.editable,
                             metadata: VectorScreenMetadata {
                                 srs,
@@ -239,7 +244,6 @@ impl AppData {
                     .unwrap_or_else(|e| {
                         format!("Unable to get local IP address, got error: {}", e)
                     }),
-                prefered_display_fields: project.prefered_display_fields.clone(),
             })
         })
     }
@@ -261,11 +265,7 @@ pub struct LayerDescriptor {
 }
 
 #[derive(Clone, Default, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
-pub struct TouchDeviceState {
-    pub use_labels: bool,
-    pub announce_leaving: bool,
-    pub announce_geometry_type: bool,
-}
+pub struct TouchDeviceState {}
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, specta::Type)]
 pub struct ToolsScreenInfo {

@@ -66,15 +66,7 @@ pub fn get_app_info(state: AppState) -> UiState {
                     })
                     .unwrap_or_default(),
             ),
-            Screen::TouchDevice => UiScreen::TouchDevice(
-                state
-                    .with_project(|project| TouchDeviceState {
-                        use_labels: project.use_labels,
-                        announce_leaving: project.announce_leaving,
-                        announce_geometry_type: project.announce_geometry_type,
-                    })
-                    .unwrap_or_default(),
-            ),
+            Screen::TouchDevice => UiScreen::TouchDevice(TouchDeviceState {}),
             Screen::Errors => UiScreen::Errors,
         },
         errors: state.errors.to_vec(),

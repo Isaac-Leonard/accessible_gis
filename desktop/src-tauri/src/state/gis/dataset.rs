@@ -48,7 +48,7 @@ impl StatefulDataset {
                     primary_field_name: get_default_field_name(&layer),
                     sort_features_by: SortOption::Default,
                 },
-                touch_device_settings: TouchDeviceVectorOptions {},
+                touch_device_settings: TouchDeviceVectorOptions::default(),
             })
             .collect_vec();
 
