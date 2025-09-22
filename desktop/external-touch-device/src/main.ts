@@ -174,6 +174,10 @@ class GisManager {
           this.vectorManager.updateSettingsForLayer(msg.data);
           this.render();
           break;
+        case "RemoveVector":
+          this.vectorManager.removeLayer(msg.data);
+          this.render();
+          break;
       }
     } catch (e) {
       this.connection.sendError(

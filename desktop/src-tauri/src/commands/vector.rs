@@ -142,8 +142,14 @@ pub fn set_layer_index(index: LayerIndex, state: AppState) {
 pub fn set_display_vector(state: AppState, touch_device: State<TouchDevice>) {
     state
         .with_current_vector_layer(|layer| {
-            layer.info.display = true;
-            touch_device.send(AppMessage::FetchVector(layer.get_touch_device_info()));
+            layer.info.display = !layer.info.display;
+            if layer.info.display {
+                touch_device.send(AppMessage::FetchVector(layer.get_touch_device_info()));
+            } else {
+                touch_device.send(AppMessage::RemoveVector(
+                    layer.get_touch_device_layer_name(),
+                ));
+            }
         })
         .expect("No vector found when trying to set display");
 }

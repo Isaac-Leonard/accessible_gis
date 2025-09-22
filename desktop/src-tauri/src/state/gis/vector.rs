@@ -82,13 +82,16 @@ impl<'a> StatefulVectorLayer<'a> {
         command.output()
     }
 
-    pub fn get_touch_device_info(&self) -> VectorInfo {
+    pub fn get_touch_device_layer_name(&self) -> String {
         let mut hasher = DefaultHasher::new();
         self.info.shared.name.hash(&mut hasher);
         self.layer.index.hash(&mut hasher);
-        let hash = format!("{:x}", hasher.finish());
+        format!("{:x}", hasher.finish())
+    }
+
+    pub fn get_touch_device_info(&self) -> VectorInfo {
         VectorInfo {
-            name: hash,
+            name: self.get_touch_device_layer_name(),
             settings: self.info.touch_device_settings.clone(),
         }
     }

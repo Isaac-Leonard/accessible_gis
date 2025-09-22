@@ -149,6 +149,7 @@ pub enum AppMessage {
     FetchRaster(RasterDisplayInfo),
     FetchVector(VectorInfo),
     UpdateVector(VectorInfo),
+    RemoveVector(String),
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

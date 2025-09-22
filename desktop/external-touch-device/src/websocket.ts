@@ -108,7 +108,8 @@ export type AppMessage =
   | { type: "FocusBox"; data: BBox }
   | { type: "FetchRaster"; data: RasterOptions }
   | { type: "FetchVector"; data: VectorInfo }
-  | { type: "UpdateVector"; data: VectorInfo };
+  | { type: "UpdateVector"; data: VectorInfo }
+  | { type: "RemoveVector"; data: string };
 
 export type ImageMessage = { ocr: boolean };
 
@@ -184,4 +185,5 @@ const messageParser: ZodType<AppMessage> = z.union([
   z.object({ type: z.literal("FetchRaster"), data: RasterOptionsParser }),
   z.object({ type: z.literal("FetchVector"), data: VectorInfoParser }),
   z.object({ type: z.literal("UpdateVector"), data: VectorInfoParser }),
+  z.object({ type: z.literal("RemoveVector"), data: z.string() }),
 ]);
