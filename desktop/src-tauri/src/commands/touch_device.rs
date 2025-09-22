@@ -15,7 +15,8 @@ pub fn focus_box(bounds: [f64; 4], device: State<TouchDevice>) {
 #[specta::specta]
 pub fn toggle_labels(state: AppState, device: State<TouchDevice>) {
     state.with_current_vector_layer(|layer| {
-        layer.info.touch_device_settings.use_labels = !layer.info.touch_device_settings.use_labels;
+        layer.info.touch_device_settings.visual.use_labels =
+            !layer.info.touch_device_settings.visual.use_labels;
         device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
     });
 }
@@ -24,8 +25,8 @@ pub fn toggle_labels(state: AppState, device: State<TouchDevice>) {
 #[specta::specta]
 pub fn toggle_announce_leaving(state: AppState, device: State<TouchDevice>) {
     state.with_current_vector_layer(|layer| {
-        layer.info.touch_device_settings.announce_leaving =
-            !layer.info.touch_device_settings.announce_leaving;
+        layer.info.touch_device_settings.audio.announce_leaving =
+            !layer.info.touch_device_settings.audio.announce_leaving;
         device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
     });
 }
@@ -34,8 +35,15 @@ pub fn toggle_announce_leaving(state: AppState, device: State<TouchDevice>) {
 #[specta::specta]
 pub fn toggle_announce_geometry_types(state: AppState, device: State<TouchDevice>) {
     state.with_current_vector_layer(|layer| {
-        layer.info.touch_device_settings.announce_geometry_type =
-            !layer.info.touch_device_settings.announce_geometry_type;
+        layer
+            .info
+            .touch_device_settings
+            .audio
+            .announce_geometry_type = !layer
+            .info
+            .touch_device_settings
+            .audio
+            .announce_geometry_type;
         device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
     });
 }

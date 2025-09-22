@@ -11,10 +11,19 @@ import { getCanvas } from "./canvas-manager.js";
 import { speak } from "./speach.js";
 
 export type VectorSettings = {
-  preferedLabel: string | null;
-  useLabels: boolean;
-  announceLeaving: boolean;
-  announceGeometryType: boolean;
+  audio: TouchDeviceAudioVectorOptions;
+  visual: TouchDeviceVisualVectorOptions;
+};
+
+export type TouchDeviceVisualVectorOptions = {
+  prefered_label_field: string | null;
+  use_labels: boolean;
+};
+
+export type TouchDeviceAudioVectorOptions = {
+  prefered_label_field: string | null;
+  announce_leaving: boolean;
+  announce_geometry_type: boolean;
 };
 
 class Layer {
@@ -166,7 +175,7 @@ class Layer {
       .map((feature) => {
         const { geometry, properties } = feature;
         const name = this.getPreferedNameForFeature(properties);
-        if (this.settings.announceGeometryType) {
+        if (this.settings.audio.announce_geometry_type) {
           switch (geometry.type) {
             case "Point":
             case "MultiPoint":
@@ -185,7 +194,7 @@ class Layer {
       })
       .join();
 
-    if (this.settings.announceLeaving) {
+    if (this.settings.audio.announce_leaving) {
       text += "\n";
       text += leftFeatures
         .map((feature) => {
@@ -204,10 +213,11 @@ class Layer {
     if (properties === null) {
       return null;
     }
+    const fieldName = this.settings.audio.prefered_label_field;
     return Object.entries(properties).reduce((previous, current) => {
-      if (this.settings.preferedLabel === previous[0]) {
+      if (fieldName === previous[0]) {
         return previous;
-      } else if (this.settings.preferedLabel === current[0]) {
+      } else if (fieldName === current[0]) {
         return current;
       } else if (typeof previous[1] === "string") {
         return previous;
@@ -220,7 +230,7 @@ class Layer {
   }
 
   labelPolygon(polygon: Feature<Polygon, GeoJsonProperties>) {
-    if (!this.settings.useLabels) {
+    if (!this.settings.visual.use_labels) {
       return;
     }
     const label = `${this.getPreferedNameForFeature(polygon.properties)}`;

@@ -191,7 +191,8 @@ impl AppData {
                             prefered_display_field: layer
                                 .info
                                 .touch_device_settings
-                                .prefered_display_field
+                                .audio
+                                .prefered_label_field
                                 .clone(),
                             editable: ds.dataset.editable,
                             metadata: VectorScreenMetadata {

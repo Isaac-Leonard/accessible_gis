@@ -7,7 +7,11 @@ import {
   RasterMetadata,
   RasterOptions,
 } from "touch-device/src/raster";
-import { VectorInfo } from "touch-device/src/vector-manager";
+import {
+  TouchDeviceAudioVectorOptions,
+  TouchDeviceVisualVectorOptions,
+  VectorInfo,
+} from "touch-device/src/vector-manager";
 import { ZodType, z } from "zod";
 
 const host = window.location.host;
@@ -152,11 +156,22 @@ const RasterOptionsParser: ZodType<RasterOptions> = z.union([
   z.object({ type: z.literal("Image"), metadata: RasterMetadataParser }),
 ]);
 
-const vectorSettingsParser: ZodType<VectorSettings> = z.object({
-  preferedLabel: z.string().nullable(),
-  useLabels: z.boolean(),
-  announceLeaving: z.boolean(),
-  announceGeometryType: z.boolean(),
+export const touchDeviceVisualVectorOptionsParser: ZodType<TouchDeviceVisualVectorOptions> =
+  z.object({
+    prefered_label_field: z.string().nullable(),
+    use_labels: z.boolean(),
+  });
+
+export const touchDeviceAudioVectorOptionsParser: ZodType<TouchDeviceAudioVectorOptions> =
+  z.object({
+    prefered_label_field: z.string().nullable(),
+    announce_leaving: z.boolean(),
+    announce_geometry_type: z.boolean(),
+  });
+
+export const vectorSettingsParser: ZodType<VectorSettings> = z.object({
+  audio: touchDeviceAudioVectorOptionsParser,
+  visual: touchDeviceVisualVectorOptionsParser,
 });
 
 const VectorInfoParser: ZodType<VectorInfo> = z.object({

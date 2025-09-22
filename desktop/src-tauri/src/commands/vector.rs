@@ -152,7 +152,8 @@ pub fn set_display_vector(state: AppState, touch_device: State<TouchDevice>) {
 #[specta::specta]
 pub fn set_prefered_display_field(field: String, state: AppState, device: State<TouchDevice>) {
     state.with_current_vector_layer(|layer| {
-        layer.info.touch_device_settings.prefered_display_field = Some(field);
+        layer.info.touch_device_settings.visual.prefered_label_field = Some(field.clone());
+        layer.info.touch_device_settings.audio.prefered_label_field = Some(field);
         device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
     });
 }

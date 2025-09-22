@@ -34,8 +34,19 @@ pub struct DesktopVectorOptions {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TouchDeviceVectorOptions {
-    pub prefered_display_field: Option<String>,
+    pub audio: TouchDeviceAudioVectorOptions,
+    pub visual: TouchDeviceVisualVectorOptions,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TouchDeviceVisualVectorOptions {
+    pub prefered_label_field: Option<String>,
     pub use_labels: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TouchDeviceAudioVectorOptions {
+    pub prefered_label_field: Option<String>,
     pub announce_leaving: bool,
     pub announce_geometry_type: bool,
 }
@@ -43,10 +54,15 @@ pub struct TouchDeviceVectorOptions {
 impl Default for TouchDeviceVectorOptions {
     fn default() -> Self {
         Self {
-            prefered_display_field: None,
-            use_labels: false,
-            announce_leaving: true,
-            announce_geometry_type: false,
+            audio: TouchDeviceAudioVectorOptions {
+                prefered_label_field: None,
+                announce_leaving: true,
+                announce_geometry_type: false,
+            },
+            visual: TouchDeviceVisualVectorOptions {
+                prefered_label_field: None,
+                use_labels: false,
+            },
         }
     }
 }
