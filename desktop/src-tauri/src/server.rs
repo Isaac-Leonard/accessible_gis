@@ -1,8 +1,6 @@
 use actix_files::{self as fs};
 use actix_web::{
-    App, Error, HttpRequest, HttpResponse, HttpServer, Responder, get,
-    http::header::ContentType,
-    mime,
+    App, Error, HttpRequest, HttpResponse, HttpServer, Responder, get, mime,
     web::{self, Data, Path, PayloadConfig},
 };
 use itertools::Itertools;
