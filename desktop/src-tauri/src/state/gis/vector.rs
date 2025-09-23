@@ -13,7 +13,7 @@ use crate::{
 
 use super::shared::SharedInfo;
 
-#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct StatefulVectorInfo {
     pub shared: SharedInfo,
     pub display: bool,
@@ -23,7 +23,7 @@ pub struct StatefulVectorInfo {
     pub touch_device_settings: TouchDeviceVectorOptions,
 }
 
-#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct DesktopVectorOptions {
     /// The index of each user selected feature for each layer of the dataset
     pub selected_feature: Option<usize>,
@@ -32,19 +32,19 @@ pub struct DesktopVectorOptions {
     pub sort_features_by: SortOption,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct TouchDeviceVectorOptions {
     pub audio: TouchDeviceAudioVectorOptions,
     pub visual: TouchDeviceVisualVectorOptions,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct TouchDeviceVisualVectorOptions {
     pub prefered_label_field: Option<String>,
     pub use_labels: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct TouchDeviceAudioVectorOptions {
     pub prefered_label_field: Option<String>,
     pub announce_leaving: bool,

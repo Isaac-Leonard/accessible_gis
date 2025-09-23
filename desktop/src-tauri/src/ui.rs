@@ -19,6 +19,7 @@ use crate::{
         gis::{
             combined::RasterIndex,
             raster::{AudioTable, RenderMethod},
+            vector::StatefulVectorInfo,
         },
         settings::{AudioSettings, GlobalSettings},
         tools::{SavedToolOutputAction, ToolRuntimeInputDescriptor},
@@ -83,11 +84,8 @@ pub struct VectorScreenData {
     pub editable: bool,
     pub layer_index: usize,
     pub dataset_index: usize,
-    pub display: bool,
-    pub name_field: Option<String>,
-    pub sort_features_by: SortOption,
     pub metadata: VectorScreenMetadata,
-    pub prefered_display_field: Option<String>,
+    info: StatefulVectorInfo,
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
@@ -179,21 +177,13 @@ impl AppData {
                             .spatial_ref()
                             .and_then(|x| x.to_wkt().ok());
                         Some(LayerScreenInfo::Vector(VectorScreenData {
-                            name_field: primary_field_name.cloned(),
-                            display: layer.info.display,
+                            info: layer.info.clone(),
                             dataset_index: ds_index,
                             srs: srs.clone(),
                             field_schema: layer.layer.get_field_schema(),
                             features,
                             feature,
                             layer_index: index,
-                            sort_features_by: layer.info.desktop_settings.sort_features_by.clone(),
-                            prefered_display_field: layer
-                                .info
-                                .touch_device_settings
-                                .audio
-                                .prefered_label_field
-                                .clone(),
                             editable: ds.dataset.editable,
                             metadata: VectorScreenMetadata {
                                 srs,

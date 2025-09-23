@@ -38,28 +38,32 @@ export const VectorNavigator = ({ layer }: VectorLayerProp) => {
         View Landform Description
       </button>
       {layer.editable ? <DatasetEditor layer={layer} /> : <EditDatasetButton />}
-      {layer.display ? (
+      {layer.info.display ? (
         <>
           <div>Displayed</div>
           <button onClick={client.focusDataset}>Focus Layer</button>
           <button
             onClick={() => client.toggleLabels()}
             role="switch"
-            aria-checked={layer.use_labels}
+            aria-checked={layer.info.touch_device_settings?.visual.use_labels}
           >
             Toggle Auto Labels
           </button>
           <button
             onClick={() => client.toggleAnnounceLeaving()}
             role="switch"
-            aria-checked={layer.announce_leaving}
+            aria-checked={
+              layer.info.touch_device_settings?.audio.announce_leaving
+            }
           >
             Toggle announcements when leaving polygons
           </button>
           <button
             onClick={() => client.toggleAnnounceGeometryTypes()}
             role="switch"
-            aria-checked={layer.announce_geometry_type}
+            aria-checked={
+              layer.info.touch_device_settings?.audio.announce_geometry_type
+            }
           >
             Toggle announcing types of geometries
           </button>
@@ -235,7 +239,9 @@ const CurrentFeatureViewer = ({ info, layer }: CurrentFeatureViewerProps) => {
       >
         <FieldsTable
           fields={info.fields}
-          preferedDisplayField={layer.prefered_display_field}
+          preferedDisplayField={
+            layer.info.touch_device_settings!.audio.prefered_label_field
+          }
         />
       </Dialog>
     </div>
@@ -255,7 +261,7 @@ type NameFieldPickerProps = {
 };
 
 const NameFieldPicker = ({ layer }: NameFieldPickerProps) => {
-  const { name_field } = layer;
+  const name_field = layer.info.desktop_settings!.primary_field_name;
   const field_names = layer.field_schema.map((field) => field.name);
   return (
     <div>
@@ -352,7 +358,7 @@ const DatasetEditor = ({ layer }: VectorLayerProp) => {
 };
 
 const FeatureSorter = ({ layer }: NameFieldPickerProps) => {
-  const { name_field } = layer;
+  const name_field = layer.info.desktop_settings!.primary_field_name;
   const field_names = layer.field_schema.map((field) => field.name);
   const options = ["Default", "Field", "Area"] as const;
 
@@ -369,14 +375,16 @@ const FeatureSorter = ({ layer }: NameFieldPickerProps) => {
       <OptionPicker
         prompt="Sort features by"
         options={options}
-        selectedOption={layer.sort_features_by.option}
+        selectedOption={layer.info.desktop_settings!.sort_features_by.option}
         setOption={setOption}
         emptyText="This should not be empty"
       />
-      {layer.sort_features_by.option === "Field" ? (
+      {layer.info.desktop_settings!.sort_features_by.option === "Field" ? (
         <OptionPicker
           options={field_names}
-          selectedOption={layer.sort_features_by.settings}
+          selectedOption={
+            layer.info.desktop_settings!.sort_features_by.settings
+          }
           setOption={(field) => {
             client.sortFeaturesBy({ option: "Field", settings: field });
           }}

@@ -355,6 +355,17 @@ export type DemClassificationError =
   | { type: "MajorityFilter"; error: string }
   | { type: "LabelLandForms"; error: string }
   | { type: "FailToRun"; error: string };
+export type DesktopVectorOptions = {
+  /**
+   * The index of each user selected feature for each layer of the dataset
+   */
+  selected_feature: number | null;
+  /**
+   * The name of the field used to identify features
+   */
+  primary_field_name: string | null;
+  sort_features_by: SortOption;
+};
 export type DistanceFromBoarder = { name: string; distance: number };
 export type Duration = { secs: number; nanos: number };
 export type EditDatasetError =
@@ -777,6 +788,10 @@ export type Screen =
   | "Workflows"
   | "TouchDevice"
   | "Errors";
+/**
+ * Currently just a place holder for future data
+ */
+export type SharedInfo = { name: string };
 export type SortOption =
   | { option: "Default" }
   | { option: "Field"; settings: string }
@@ -786,6 +801,12 @@ export type Srs =
   | { type: "Wkt"; value: string }
   | { type: "Esri"; value: string }
   | { type: "Epsg"; value: number };
+export type StatefulVectorInfo = {
+  shared: SharedInfo;
+  display: boolean;
+  desktop_settings?: DesktopVectorOptions;
+  touch_device_settings?: TouchDeviceVectorOptions;
+};
 export type ToolDescriptor = {
   label: string;
   inputs: ToolRuntimeInputDescriptor[];
@@ -854,7 +875,20 @@ export type ToolsScreenInfo = {
   tools: ToolDescriptor[];
   layers: LayerDescriptor[];
 };
+export type TouchDeviceAudioVectorOptions = {
+  prefered_label_field: string | null;
+  announce_leaving: boolean;
+  announce_geometry_type: boolean;
+};
 export type TouchDeviceState = Record<string, never>;
+export type TouchDeviceVectorOptions = {
+  audio: TouchDeviceAudioVectorOptions;
+  visual: TouchDeviceVisualVectorOptions;
+};
+export type TouchDeviceVisualVectorOptions = {
+  prefered_label_field: string | null;
+  use_labels: boolean;
+};
 export type UiScreen =
   | ({ name: "Project" } & ProjectScreen)
   | { name: "ThiessenPolygons" }
@@ -891,11 +925,8 @@ export type VectorScreenData = {
   editable: boolean;
   layer_index: number;
   dataset_index: number;
-  display: boolean;
-  name_field: string | null;
-  sort_features_by: SortOption;
   metadata: VectorScreenMetadata;
-  prefered_display_field: string | null;
+  info: StatefulVectorInfo;
 };
 export type VectorScreenMetadata = {
   srs: string | null;
