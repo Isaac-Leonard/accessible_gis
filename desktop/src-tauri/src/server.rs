@@ -2,10 +2,10 @@ use actix_files::{self as fs};
 use actix_web::{
     App, Error, HttpRequest, HttpResponse, HttpServer, Responder, get,
     http::header::ContentType,
+    mime,
     web::{self, Data, Path, PayloadConfig},
 };
 use itertools::Itertools;
-use serde_json::json;
 use tauri::{AppHandle, Manager, path::BaseDirectory};
 use tokio::task::spawn_local;
 
@@ -60,39 +60,40 @@ async fn ws(
     Ok(res)
 }
 
-#[get("/get_vector")]
-async fn get_vector(app: Data<AppHandle>) -> impl Responder {
-    eprintln!("get_vector called");
+#[get("/get_vector/{name}")]
+async fn get_vector(
+    name: Path<String>,
+    app: Data<AppHandle>,
+    req: HttpRequest,
+) -> Result<HttpResponse, Error> {
+    eprintln!("get_vector called: {name}");
+
     let json_name = get_random_temp_path(&app, "geojson");
     let state = app.state::<AppDataSync>();
-    let succeeded = state
-        .with_project_fallible(|project| {
-            let layers = project.get_vectors_for_display();
-            let layer_names = layers
-                .into_iter()
-                .map(|layer| layer.info.shared.name.clone())
-                .dedup()
-                .collect_vec();
-            if layer_names.is_empty() {
-                return Ok(false);
-            }
 
-            let output = merge_layers(layer_names, true, Srs::Epsg(4326), &json_name, true)?;
-            eprintln!("{output:?}");
-            Ok(true)
-        })
-        .is_some_and(|b| b);
-    if succeeded {
-        let data = std::fs::read(json_name).unwrap();
-        HttpResponse::Ok()
-            .content_type(ContentType::json())
-            .body(data)
-    } else {
-        // Send empty array there is no vector layer
-        HttpResponse::Ok().json(json! ({
-            "type":"FeatureCollection", "features":[]
-        }))
+    let found_layer = state.with_project_fallible(|project| {
+        let layers = project.get_vectors_for_display();
+        layers
+            .into_iter()
+            .find(|layer| layer.get_touch_device_layer_name() == *name)
+            .map(|layer| layer.info.shared.name.clone())
+            .ok_or_else(|| {
+                ErrorDetails::Other("Could not find vector layer for touch device".to_string())
+            })
+    });
+
+    if let Some(layer_name) = found_layer {
+        if let Err(err) = merge_layers(vec![layer_name], true, Srs::Epsg(4326), &json_name, true) {
+            state.with_lock(|state| state.errors.push(err.into()));
+            return Ok(HttpResponse::InternalServerError().finish());
+        }
     }
+
+    Ok(fs::NamedFile::open_async(&json_name)
+        .await?
+        .set_content_type(mime::APPLICATION_JSON)
+        .disable_content_disposition()
+        .into_response(&req))
 }
 
 #[get("/get_raster")]
