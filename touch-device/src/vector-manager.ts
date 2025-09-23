@@ -18,7 +18,166 @@ export type VectorSettings = {
 export type TouchDeviceVisualVectorOptions = {
   prefered_label_field: string | null;
   use_labels: boolean;
+  vector_line_colour: CssColour;
 };
+
+export type CssColour =
+  | { type: "Named"; value: NamedColour }
+  | { type: "Raw"; value: string }
+  | { type: "Hex"; value: HexColour }
+  | { type: "Rgb"; value: RgbColour };
+
+export type NamedColour =
+  | "AliceBlue"
+  | "AntiqueWhite"
+  | "Aqua"
+  | "Aquamarine"
+  | "Azure"
+  | "Beige"
+  | "Bisque"
+  | "Black"
+  | "BlanchedAlmond"
+  | "Blue"
+  | "BlueViolet"
+  | "Brown"
+  | "BurlyWood"
+  | "CadetBlue"
+  | "Chartreuse"
+  | "Chocolate"
+  | "Coral"
+  | "CornflowerBlue"
+  | "Cornsilk"
+  | "Crimson"
+  | "Cyan"
+  | "DarkBlue"
+  | "DarkCyan"
+  | "DarkGoldenrod"
+  | "DarkGray"
+  | "DarkGreen"
+  | "DarkGrey"
+  | "DarkKhaki"
+  | "DarkMagenta"
+  | "DarkOliveGreen"
+  | "DarkOrange"
+  | "DarkOrchid"
+  | "DarkRed"
+  | "DarkSalmon"
+  | "DarkSeaGreen"
+  | "DarkSlateBlue"
+  | "DarkSlateGray"
+  | "DarkSlateGrey"
+  | "DarkTurquoise"
+  | "DarkViolet"
+  | "DeepPink"
+  | "DeepSkyBlue"
+  | "DimGray"
+  | "DodgerBlue"
+  | "FireBrick"
+  | "FloralWhite"
+  | "ForestGreen"
+  | "Fuchsia"
+  | "Gainsboro"
+  | "GhostWhite"
+  | "Gold"
+  | "Goldenrod"
+  | "Gray"
+  | "Green"
+  | "GreenYellow"
+  | "Grey"
+  | "Honeydew"
+  | "HotPink"
+  | "IndianRed"
+  | "Indigo"
+  | "Ivory"
+  | "Khaki"
+  | "Lavender"
+  | "LavenderBlush"
+  | "LawnGreen"
+  | "LemonChiffon"
+  | "LightBlue"
+  | "LightCoral"
+  | "LightCyan"
+  | "LightGoldenrodYellow"
+  | "LightGray"
+  | "LightGreen"
+  | "LightGrey"
+  | "LightPink"
+  | "LightSalmon"
+  | "LightSeaGreen"
+  | "LightSkyBlue"
+  | "LightSlateGray"
+  | "LightSlateGrey"
+  | "LightSteelBlue"
+  | "LightYellow"
+  | "Lime"
+  | "LimeGreen"
+  | "Linen"
+  | "Magenta"
+  | "Maroon"
+  | "MediumAquamarine"
+  | "MediumBlue"
+  | "MediumOrchid"
+  | "MediumPurple"
+  | "MediumSeaGreen"
+  | "MediumSlateBlue"
+  | "MediumSpringGreen"
+  | "MediumTurquoise"
+  | "MediumVioletRed"
+  | "MidnightBlue"
+  | "MintCream"
+  | "MistyRose"
+  | "Moccasin"
+  | "NavajoWhite"
+  | "Navy"
+  | "OldLace"
+  | "Olive"
+  | "OliveDrab"
+  | "Orange"
+  | "OrangeRed"
+  | "Orchid"
+  | "PaleGoldenrod"
+  | "PaleGreen"
+  | "PaleTurquoise"
+  | "PaleVioletRed"
+  | "PapayaWhip"
+  | "PeachPuff"
+  | "Peru"
+  | "Pink"
+  | "Plum"
+  | "PowderBlue"
+  | "Purple"
+  | "Rebeccapurple"
+  | "Red"
+  | "RosyBrown"
+  | "RoyalBlue"
+  | "SaddleBrown"
+  | "Salmon"
+  | "SandyBrown"
+  | "SeaGreen"
+  | "Seashell"
+  | "Sienna"
+  | "Silver"
+  | "SkyBlue"
+  | "SlateBlue"
+  | "SlateGray"
+  | "SlateGrey"
+  | "Snow"
+  | "SpringGreen"
+  | "SteelBlue"
+  | "Tan"
+  | "Teal"
+  | "Thistle"
+  | "Tomato"
+  | "Turquoise"
+  | "Violet"
+  | "Wheat"
+  | "White"
+  | "WhiteSmoke"
+  | "Yellow"
+  | "YellowGreen";
+
+export type RgbColour = [number, number, number];
+export type HexColour = string;
 
 export type TouchDeviceAudioVectorOptions = {
   prefered_label_field: string | null;
@@ -68,7 +227,9 @@ class Layer {
 
   render() {
     this.ctx.fillStyle = "#ffffff";
-    this.ctx.strokeStyle = "#ffffff";
+    this.ctx.strokeStyle = colourToString(
+      this.settings.visual.vector_line_colour
+    );
     this.ctx.lineWidth = 2;
     this.features.features.forEach(({ geometry, properties }) => {
       switch (geometry.type) {
@@ -295,3 +456,16 @@ export class VectorManager {
     }
   }
 }
+
+const colourToString = (colour: CssColour): string => {
+  switch (colour.type) {
+    case "Named":
+      return colour.value;
+    case "Raw":
+      return colour.value;
+    case "Hex":
+      return `#${colour.value}`;
+    case "Rgb":
+      return `rgb(${colour.value[0]} ${colour.value[1]} ${colour.value[2]})`;
+  }
+};

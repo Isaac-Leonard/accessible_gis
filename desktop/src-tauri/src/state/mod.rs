@@ -1,3 +1,4 @@
+pub mod colours;
 pub mod dataset_collection;
 pub mod gis;
 mod loaded;

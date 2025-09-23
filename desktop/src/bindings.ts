@@ -340,6 +340,11 @@ export type CreationError = {
   driver: string;
   gdal_error: MyGdalError;
 };
+export type CssColour =
+  | { type: "Named"; value: NamedColour }
+  | { type: "Raw"; value: string }
+  | { type: "Hex"; value: HexColour }
+  | { type: "Rgb"; value: RgbColour };
 export type DatasetCreationError =
   | { CreationError: CreationError }
   | { DriverError: MissingDriverError }
@@ -476,6 +481,7 @@ export type GlobalSettings = {
  * Serializable grayscale colour entry.
  */
 export type GrayEntry = { g: number };
+export type HexColour = string;
 export type HistogramSettings = {
   /**
    * The length the histogram should play for in milliseconds
@@ -671,6 +677,154 @@ export type MyShapeError =
   | "Overflow"
   | "Other";
 export type MyUtf8Error = { valid_up_to: number; error_len: number | null };
+export type NamedColour =
+  | "AliceBlue"
+  | "AntiqueWhite"
+  | "Aqua"
+  | "Aquamarine"
+  | "Azure"
+  | "Beige"
+  | "Bisque"
+  | "Black"
+  | "BlanchedAlmond"
+  | "Blue"
+  | "BlueViolet"
+  | "Brown"
+  | "BurlyWood"
+  | "CadetBlue"
+  | "Chartreuse"
+  | "Chocolate"
+  | "Coral"
+  | "CornflowerBlue"
+  | "Cornsilk"
+  | "Crimson"
+  | "Cyan"
+  | "DarkBlue"
+  | "DarkCyan"
+  | "DarkGoldenrod"
+  | "DarkGray"
+  | "DarkGreen"
+  | "DarkGrey"
+  | "DarkKhaki"
+  | "DarkMagenta"
+  | "DarkOliveGreen"
+  | "DarkOrange"
+  | "DarkOrchid"
+  | "DarkRed"
+  | "DarkSalmon"
+  | "DarkSeaGreen"
+  | "DarkSlateBlue"
+  | "DarkSlateGray"
+  | "DarkSlateGrey"
+  | "DarkTurquoise"
+  | "DarkViolet"
+  | "DeepPink"
+  | "DeepSkyBlue"
+  | "DimGray"
+  | "DodgerBlue"
+  | "FireBrick"
+  | "FloralWhite"
+  | "ForestGreen"
+  | "Fuchsia"
+  | "Gainsboro"
+  | "GhostWhite"
+  | "Gold"
+  | "Goldenrod"
+  | "Gray"
+  | "Green"
+  | "GreenYellow"
+  | "Grey"
+  | "Honeydew"
+  | "HotPink"
+  | "IndianRed"
+  | "Indigo"
+  | "Ivory"
+  | "Khaki"
+  | "Lavender"
+  | "LavenderBlush"
+  | "LawnGreen"
+  | "LemonChiffon"
+  | "LightBlue"
+  | "LightCoral"
+  | "LightCyan"
+  | "LightGoldenrodYellow"
+  | "LightGray"
+  | "LightGreen"
+  | "LightGrey"
+  | "LightPink"
+  | "LightSalmon"
+  | "LightSeaGreen"
+  | "LightSkyBlue"
+  | "LightSlateGray"
+  | "LightSlateGrey"
+  | "LightSteelBlue"
+  | "LightYellow"
+  | "Lime"
+  | "LimeGreen"
+  | "Linen"
+  | "Magenta"
+  | "Maroon"
+  | "MediumAquamarine"
+  | "MediumBlue"
+  | "MediumOrchid"
+  | "MediumPurple"
+  | "MediumSeaGreen"
+  | "MediumSlateBlue"
+  | "MediumSpringGreen"
+  | "MediumTurquoise"
+  | "MediumVioletRed"
+  | "MidnightBlue"
+  | "MintCream"
+  | "MistyRose"
+  | "Moccasin"
+  | "NavajoWhite"
+  | "Navy"
+  | "OldLace"
+  | "Olive"
+  | "OliveDrab"
+  | "Orange"
+  | "OrangeRed"
+  | "Orchid"
+  | "PaleGoldenrod"
+  | "PaleGreen"
+  | "PaleTurquoise"
+  | "PaleVioletRed"
+  | "PapayaWhip"
+  | "PeachPuff"
+  | "Peru"
+  | "Pink"
+  | "Plum"
+  | "PowderBlue"
+  | "Purple"
+  | "Rebeccapurple"
+  | "Red"
+  | "RosyBrown"
+  | "RoyalBlue"
+  | "SaddleBrown"
+  | "Salmon"
+  | "SandyBrown"
+  | "SeaGreen"
+  | "Seashell"
+  | "Sienna"
+  | "Silver"
+  | "SkyBlue"
+  | "SlateBlue"
+  | "SlateGray"
+  | "SlateGrey"
+  | "Snow"
+  | "SpringGreen"
+  | "SteelBlue"
+  | "Tan"
+  | "Teal"
+  | "Thistle"
+  | "Tomato"
+  | "Turquoise"
+  | "Violet"
+  | "Wheat"
+  | "White"
+  | "WhiteSmoke"
+  | "Yellow"
+  | "YellowGreen";
 export type NewDatasetScreenData = { drivers: string[] };
 export type NewToolCall = { tool: string; inputs: NewWorkflowConnection[] };
 export type NewToolInput =
@@ -770,6 +924,7 @@ export type ReturnedToolOutput =
   | { type: "Command"; value: Output }
   | { type: "String"; value: string }
   | { type: "File"; value: string };
+export type RgbColour = [number, number, number];
 /**
  * Serializable RGBA colour entry.
  */
@@ -888,6 +1043,7 @@ export type TouchDeviceVectorOptions = {
 export type TouchDeviceVisualVectorOptions = {
   prefered_label_field: string | null;
   use_labels: boolean;
+  vector_line_colour: CssColour;
 };
 export type UiScreen =
   | ({ name: "Project" } & ProjectScreen)

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     commands::SortOption,
     gdal_if::{Srs, WrappedLayer},
+    state::colours::{CssColour, NamedColour},
     web_socket::VectorInfo,
 };
 
@@ -42,6 +43,7 @@ pub struct TouchDeviceVectorOptions {
 pub struct TouchDeviceVisualVectorOptions {
     pub prefered_label_field: Option<String>,
     pub use_labels: bool,
+    vector_line_colour: CssColour,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
@@ -62,6 +64,7 @@ impl Default for TouchDeviceVectorOptions {
             visual: TouchDeviceVisualVectorOptions {
                 prefered_label_field: None,
                 use_labels: false,
+                vector_line_colour: CssColour::Named(NamedColour::White),
             },
         }
     }
