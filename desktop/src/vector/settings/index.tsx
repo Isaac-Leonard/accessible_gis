@@ -1,12 +1,16 @@
 import { client } from "../../api";
+import { Input, NumberInput } from "../../binded-input";
 import {
+  CssColour,
+  CssColourDiscriminants,
   DesktopVectorOptions,
+  RgbColour,
   SortOption,
   TouchDeviceVectorOptions,
   VectorScreenData,
 } from "../../bindings";
 import { Dialog, useDialog } from "../../dialog";
-import { OptionPicker } from "../../option-picker";
+import { bindedSelectorFactory, OptionPicker } from "../../option-picker";
 
 type LayerSettingsDialogProps = {
   layer: VectorScreenData;
@@ -144,5 +148,115 @@ const TouchDeviceSettings = ({ settings }: TouchDeviceSettingsProps) => (
     >
       Toggle Auto Labels
     </button>
+    <ColourPicker
+      prompt="Colour for vector outlines"
+      colour={settings.visual.vector_line_colour}
+      onDone={client.setVectorLineColour}
+    />
   </div>
 );
+
+const CssColourTypePicker = bindedSelectorFactory(
+  await client.getCssColourTypes()
+);
+
+const colourFromDiscriminant = (
+  discriminant: CssColourDiscriminants
+): CssColour => {
+  switch (discriminant) {
+    case "Named":
+      return { type: discriminant, value: "White" };
+    case "Raw":
+      return { type: discriminant, value: "" };
+    case "Hex":
+      return { type: discriminant, value: "ffffff" };
+    case "Rgb":
+      return { type: discriminant, value: [256, 256, 256] };
+  }
+};
+
+const NamedColourPicker = bindedSelectorFactory(await client.getNamedColours());
+
+type ColourPickerProps = {
+  prompt: string;
+  colour: CssColour;
+  onDone: (colour: CssColour) => void;
+};
+
+const ColourPicker = ({ colour, prompt, onDone }: ColourPickerProps) => {
+  return (
+    <div>
+      {prompt}:
+      <CssColourTypePicker
+        prompt="Colour type"
+        binding={{
+          value: colour.type,
+          setValue: (type) => onDone(colourFromDiscriminant(type)),
+        }}
+      />
+      {colour.type === "Named" ? (
+        <NamedColourPicker
+          prompt="Name of colour"
+          binding={{
+            value: colour.value,
+            setValue: (value) => onDone({ type: "Named", value }),
+          }}
+        />
+      ) : colour.type === "Raw" ? (
+        <Input
+          label="Raw CSS colour input"
+          binding={{
+            value: colour.value,
+            setValue: (value) => onDone({ type: "Raw", value }),
+          }}
+        />
+      ) : colour.type === "Hex" ? (
+        <Input
+          label="Hex value"
+          binding={{
+            value: colour.value,
+            setValue: (value) => onDone({ type: "Hex", value }),
+          }}
+        />
+      ) : (
+        <RgbColourEditor
+          colour={colour.value}
+          onDone={(colour) => onDone({ type: "Rgb", value: colour })}
+        />
+      )}
+    </div>
+  );
+};
+
+type RgbColourEditorProps = {
+  colour: RgbColour;
+  onDone: (colour: RgbColour) => void;
+};
+
+const RgbColourEditor = ({
+  colour: [red, green, blue],
+  onDone,
+}: RgbColourEditorProps) => {
+  return (
+    <div>
+      <NumberInput
+        label="Red"
+        binding={{ value: red, setValue: (red) => onDone([red, green, blue]) }}
+      />
+      <NumberInput
+        label="Green"
+        binding={{
+          value: green,
+          setValue: (green) => onDone([red, green, blue]),
+        }}
+      />
+      <NumberInput
+        label="Blue"
+        binding={{
+          value: blue,
+          setValue: (blue) => onDone([red, green, blue]),
+        }}
+      />
+    </div>
+  );
+};

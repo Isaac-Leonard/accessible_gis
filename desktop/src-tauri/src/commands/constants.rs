@@ -8,6 +8,7 @@ use crate::{
     audio::Waveform,
     state::{
         AppState,
+        colours::{CssColourDiscriminants, NamedColour},
         gis::raster::{AudioTypeDiscriminants, EscSound, RenderMethod},
         settings::AudioIndicator,
         tools::{ToolInputTypeDiscriminants, ToolPresetParameterValueDiscriminants},
@@ -72,4 +73,16 @@ pub struct IndexedEscSound {
     index: usize,
     #[serde(flatten)]
     sound: EscSound,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_css_colour_types() -> Vec<CssColourDiscriminants> {
+    CssColourDiscriminants::iter().collect_vec()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_named_colours() -> Vec<NamedColour> {
+    NamedColour::iter().collect_vec()
 }

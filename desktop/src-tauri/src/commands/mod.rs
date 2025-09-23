@@ -109,6 +109,9 @@ pub fn generate_handlers(s: impl AsRef<Path>) -> Builder {
             get_esc_sounds,
             save_audio_table,
             load_audio_table,
+            set_vector_line_colour,
+            get_css_colour_types,
+            get_named_colours,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds

@@ -254,6 +254,15 @@ export const commands = {
   async loadAudioTable(path: string): Promise<void> {
     await TAURI_INVOKE("load_audio_table", { path });
   },
+  async setVectorLineColour(colour: CssColour): Promise<void> {
+    await TAURI_INVOKE("set_vector_line_colour", { colour });
+  },
+  async getCssColourTypes(): Promise<CssColourDiscriminants[]> {
+    return await TAURI_INVOKE("get_css_colour_types");
+  },
+  async getNamedColours(): Promise<NamedColour[]> {
+    return await TAURI_INVOKE("get_named_colours");
+  },
 };
 
 /** user-defined events **/
@@ -345,6 +354,10 @@ export type CssColour =
   | { type: "Raw"; value: string }
   | { type: "Hex"; value: HexColour }
   | { type: "Rgb"; value: RgbColour };
+/**
+ * Auto-generated discriminant enum variants
+ */
+export type CssColourDiscriminants = "Named" | "Raw" | "Hex" | "Rgb";
 export type DatasetCreationError =
   | { CreationError: CreationError }
   | { DriverError: MissingDriverError }

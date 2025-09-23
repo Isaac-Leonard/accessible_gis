@@ -1,7 +1,7 @@
 use tauri::State;
 
 use crate::{
-    state::AppState,
+    state::{AppState, colours::CssColour},
     web_socket::{AppMessage, TouchDevice},
 };
 
@@ -44,6 +44,15 @@ pub fn toggle_announce_geometry_types(state: AppState, device: State<TouchDevice
             .touch_device_settings
             .audio
             .announce_geometry_type;
+        device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_vector_line_colour(colour: CssColour, state: AppState, device: State<TouchDevice>) {
+    state.with_current_vector_layer(|layer| {
+        layer.info.touch_device_settings.visual.vector_line_colour = colour;
         device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
     });
 }

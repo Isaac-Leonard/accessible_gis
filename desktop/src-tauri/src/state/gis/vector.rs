@@ -43,7 +43,7 @@ pub struct TouchDeviceVectorOptions {
 pub struct TouchDeviceVisualVectorOptions {
     pub prefered_label_field: Option<String>,
     pub use_labels: bool,
-    vector_line_colour: CssColour,
+    pub vector_line_colour: CssColour,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
