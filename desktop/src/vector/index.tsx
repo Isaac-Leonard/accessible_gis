@@ -4,18 +4,18 @@ import {
   FieldType,
   VectorScreenData,
   VectorScreenMetadata,
-} from "./bindings";
-import { GeometryViewer } from "./geometry";
-import { OptionPicker } from "./option-picker";
-import { FeatureCreator } from "./feature-creator";
+} from "../bindings";
+import { GeometryViewer } from "../geometry";
+import { OptionPicker } from "../option-picker";
+import { FeatureCreator } from "../feature-creator";
 import { useState } from "preact/hooks";
-import { client } from "./api";
-import { Dialog, useDialog } from "./dialog";
-import { ReprojectionDialog } from "./reprojection-dialog";
-import { FeaturePicker } from "./feature-picker";
-import { FeatureCoppierDialog } from "./feature-copier";
-import { LayerSimplifierDialog } from "./layer_simplifier";
-import { GdalMetadataViewer } from "./raster-navigator";
+import { client } from "../api";
+import { Dialog, useDialog } from "../dialog";
+import { ReprojectionDialog } from "../reprojection-dialog";
+import { FeaturePicker } from "../feature-picker";
+import { FeatureCoppierDialog } from "../feature-copier";
+import { LayerSimplifierDialog } from "../layer_simplifier";
+import { GdalMetadataViewer } from "../raster-navigator";
 
 type VectorLayerProp = {
   layer: VectorScreenData;
@@ -42,6 +42,27 @@ export const VectorNavigator = ({ layer }: VectorLayerProp) => {
         <>
           <div>Displayed</div>
           <button onClick={client.focusDataset}>Focus Layer</button>
+          <button
+            onClick={() => client.toggleLabels()}
+            role="switch"
+            aria-checked={layer.use_labels}
+          >
+            Toggle Auto Labels
+          </button>
+          <button
+            onClick={() => client.toggleAnnounceLeaving()}
+            role="switch"
+            aria-checked={layer.announce_leaving}
+          >
+            Toggle announcements when leaving polygons
+          </button>
+          <button
+            onClick={() => client.toggleAnnounceGeometryTypes()}
+            role="switch"
+            aria-checked={layer.announce_geometry_type}
+          >
+            Toggle announcing types of geometries
+          </button>
         </>
       ) : (
         <button onClick={client.setDisplayVector}>Show on screen</button>
@@ -186,10 +207,10 @@ function FieldValueViewer({ field }: { field: Field }) {
 
 type CurrentFeatureViewerProps = {
   info: FeatureInfo;
-  srs: string | null;
+  layer: VectorScreenData;
 };
 
-const CurrentFeatureViewer = ({ info, srs }: CurrentFeatureViewerProps) => {
+const CurrentFeatureViewer = ({ info, layer }: CurrentFeatureViewerProps) => {
   const { open: pointsOpen, setOpen: setPointsOpen } = useDialog();
   const { open: fieldsOpen, setOpen: setFieldsOpen } = useDialog();
   return (
@@ -201,7 +222,7 @@ const CurrentFeatureViewer = ({ info, srs }: CurrentFeatureViewerProps) => {
         openText="Examine points"
       >
         {info.geometry !== null ? (
-          <GeometryViewer geometry={info.geometry} srs={srs} />
+          <GeometryViewer geometry={info.geometry} srs={layer.srs} />
         ) : (
           <div>No Geometry</div>
         )}
@@ -212,7 +233,10 @@ const CurrentFeatureViewer = ({ info, srs }: CurrentFeatureViewerProps) => {
         setOpen={setFieldsOpen}
         openText="Open fields table"
       >
-        <FieldsTable fields={info.fields} />
+        <FieldsTable
+          fields={info.fields}
+          preferedDisplayField={layer.prefered_display_field}
+        />
       </Dialog>
     </div>
   );
@@ -220,7 +244,7 @@ const CurrentFeatureViewer = ({ info, srs }: CurrentFeatureViewerProps) => {
 
 const FeatureViewer = ({ layer }: VectorLayerProp) => {
   return layer.feature !== null ? (
-    <CurrentFeatureViewer info={layer.feature} srs={layer.srs} />
+    <CurrentFeatureViewer info={layer.feature} layer={layer} />
   ) : (
     <div>This layer has no features yet, maybe create some?</div>
   );

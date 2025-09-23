@@ -1,4 +1,4 @@
-import { VectorNavigator } from "./vector-navigator";
+import { VectorNavigator } from "./vector/";
 import { RasterNavigator } from "./raster-navigator";
 import {
   DatasetLayerIndex,
