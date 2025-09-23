@@ -56,3 +56,14 @@ pub fn set_vector_line_colour(colour: CssColour, state: AppState, device: State<
         device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
     });
 }
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_background_colour(colour: CssColour, state: AppState, device: State<TouchDevice>) {
+    state.with_project(|project| {
+        project.touch_device_settings.background_colour = colour;
+        device.send(AppMessage::UpdateGeneralSettings(
+            project.touch_device_settings.clone(),
+        ))
+    });
+}

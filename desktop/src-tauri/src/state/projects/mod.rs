@@ -20,6 +20,7 @@ use super::{
     },
     settings::GlobalSettings,
     tools::{SavedToolOutputAction, Tool, UserDefinedTool, get_built_in_tools},
+    touch_device::TouchDeviceSettings,
     workflows::Workflow,
 };
 
@@ -32,6 +33,7 @@ pub struct Project {
     pub tools: Vec<Box<dyn Tool>>,
     pub tool_outputs: Vec<SavedToolOutputAction>,
     pub workflows: Vec<Workflow>,
+    pub touch_device_settings: TouchDeviceSettings,
 }
 
 impl Project {
@@ -46,6 +48,7 @@ impl Project {
             tools: get_built_in_tools(),
             tool_outputs: Vec::new(),
             workflows: Vec::new(),
+            touch_device_settings: TouchDeviceSettings::default(),
         };
         project.save()?;
         Ok(project)
@@ -92,6 +95,7 @@ impl Project {
                 .collect(),
             tool_outputs: self.tool_outputs.clone(),
             workflows: self.workflows.clone(),
+            touch_device_settings: self.touch_device_settings.clone(),
         }
     }
 
@@ -122,6 +126,7 @@ impl Project {
             tools,
             tool_outputs: project.tool_outputs,
             workflows: project.workflows,
+            touch_device_settings: project.touch_device_settings.clone(),
         })
     }
 
@@ -196,6 +201,8 @@ pub struct StoredProject {
     pub tool_outputs: Vec<SavedToolOutputAction>,
     #[serde(default)]
     pub workflows: Vec<Workflow>,
+    #[serde(default)]
+    pub touch_device_settings: TouchDeviceSettings,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

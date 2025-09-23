@@ -20,9 +20,12 @@ use tokio::{
 use crate::{
     commands::{AppDataSync, MessageEvent},
     errors::ErrorDetails,
-    state::gis::{
-        raster::{RasterMetadata, RenderMethod},
-        vector::TouchDeviceVectorOptions,
+    state::{
+        gis::{
+            raster::{RasterMetadata, RenderMethod},
+            vector::TouchDeviceVectorOptions,
+        },
+        touch_device::TouchDeviceSettings,
     },
 };
 
@@ -150,6 +153,7 @@ pub enum AppMessage {
     FetchVector(VectorInfo),
     UpdateVector(VectorInfo),
     RemoveVector(String),
+    UpdateGeneralSettings(TouchDeviceSettings),
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

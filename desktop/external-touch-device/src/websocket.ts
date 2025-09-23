@@ -112,9 +112,10 @@ export type AppMessage =
   | { type: "FetchRaster"; data: RasterOptions }
   | { type: "FetchVector"; data: VectorInfo }
   | { type: "UpdateVector"; data: VectorInfo }
-  | { type: "RemoveVector"; data: string };
+  | { type: "RemoveVector"; data: string }
+  | { type: "UpdateGeneralSettings"; data: GeneralSettings };
 
-export type ImageMessage = { ocr: boolean };
+export type GeneralSettings = { background_colour: CssColour };
 
 export const AudioTypeParser: ZodType<AudioType> = z.discriminatedUnion(
   "type",
@@ -347,10 +348,18 @@ const VectorInfoParser: ZodType<VectorInfo> = z.object({
   settings: vectorSettingsParser,
 });
 
+const GeneralSettingsParser: ZodType<GeneralSettings> = z.object({
+  background_colour: CssColourParser,
+});
+
 const messageParser: ZodType<AppMessage> = z.union([
   z.object({ type: z.literal("FocusBox"), data: geoJsonParsers.bBox }),
   z.object({ type: z.literal("FetchRaster"), data: RasterOptionsParser }),
   z.object({ type: z.literal("FetchVector"), data: VectorInfoParser }),
   z.object({ type: z.literal("UpdateVector"), data: VectorInfoParser }),
   z.object({ type: z.literal("RemoveVector"), data: z.string() }),
+  z.object({
+    type: z.literal("UpdateGeneralSettings"),
+    data: GeneralSettingsParser,
+  }),
 ]);

@@ -6,6 +6,7 @@ mod preloaded;
 pub mod projects;
 pub mod settings;
 pub mod tools;
+pub mod touch_device;
 pub mod workflows;
 
 use std::sync::{Arc, Mutex};

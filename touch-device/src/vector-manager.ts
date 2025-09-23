@@ -457,7 +457,7 @@ export class VectorManager {
   }
 }
 
-const colourToString = (colour: CssColour): string => {
+export const colourToString = (colour: CssColour): string => {
   switch (colour.type) {
     case "Named":
       return colour.value;

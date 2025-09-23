@@ -8,7 +8,8 @@ import {
   GestureManager,
   RasterManager,
 } from "touch-device";
-import { AppMessage, WsConnection } from "./websocket";
+import { AppMessage, GeneralSettings, WsConnection } from "./websocket";
+import { colourToString } from "touch-device/src/vector-manager";
 
 const root = document.getElementById("image");
 
@@ -37,6 +38,10 @@ class GisManager {
   gestureManager: GestureManager;
   connection: WsConnection;
   vectorManager: VectorManager;
+  settings: GeneralSettings = {
+    background_colour: { type: "Named", value: "Black" },
+  };
+
   // Initial configuration
   constructor() {
     const { canvas, ctx } = getCanvas();
@@ -178,6 +183,10 @@ class GisManager {
           this.vectorManager.removeLayer(msg.data);
           this.render();
           break;
+        case "UpdateGeneralSettings":
+          this.settings = msg.data;
+          this.render();
+          break;
       }
     } catch (e) {
       this.connection.sendError(
@@ -197,7 +206,7 @@ class GisManager {
   }
 
   render() {
-    this.ctx.fillStyle = "#000000";
+    this.ctx.fillStyle = colourToString(this.settings.background_colour);
     this.ctx.strokeStyle = "#ffffff";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     this.raster.render();

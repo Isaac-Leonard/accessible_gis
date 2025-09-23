@@ -23,6 +23,7 @@ use crate::{
         },
         settings::{AudioSettings, GlobalSettings},
         tools::{SavedToolOutputAction, ToolRuntimeInputDescriptor},
+        touch_device::TouchDeviceSettings,
         workflows::UiWorkflow,
     },
     tools::shape_analysis::FloatWrapper,
@@ -256,7 +257,9 @@ pub struct LayerDescriptor {
 }
 
 #[derive(Clone, Default, Deserialize, Serialize, PartialEq, Debug, specta::Type)]
-pub struct TouchDeviceState {}
+pub struct TouchDeviceState {
+    pub settings: TouchDeviceSettings,
+}
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, specta::Type)]
 pub struct ToolsScreenInfo {

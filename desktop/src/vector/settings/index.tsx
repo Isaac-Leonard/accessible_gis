@@ -183,7 +183,7 @@ type ColourPickerProps = {
   onDone: (colour: CssColour) => void;
 };
 
-const ColourPicker = ({ colour, prompt, onDone }: ColourPickerProps) => {
+export const ColourPicker = ({ colour, prompt, onDone }: ColourPickerProps) => {
   return (
     <div>
       {prompt}:

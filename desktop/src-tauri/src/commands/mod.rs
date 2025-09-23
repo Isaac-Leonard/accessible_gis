@@ -110,6 +110,7 @@ pub fn generate_handlers(s: impl AsRef<Path>) -> Builder {
             save_audio_table,
             load_audio_table,
             set_vector_line_colour,
+            set_background_colour,
             get_css_colour_types,
             get_named_colours,
         ])

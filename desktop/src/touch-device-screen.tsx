@@ -3,8 +3,10 @@ import { client } from "./api";
 import { Dialog, useDialog } from "./dialog";
 import { NumberInput, useBindedObjectProperties } from "./binded-input";
 import { Ref } from "preact";
+import { ColourPicker } from "./vector/settings";
+import { TouchDeviceState } from "./bindings";
 
-export const TouchDeviceScreen = () => {
+export const TouchDeviceScreen = ({ state }: { state: TouchDeviceState }) => {
   const { open, setOpen, innerRef } = useDialog<HTMLInputElement>();
   return (
     <div>
@@ -16,6 +18,12 @@ export const TouchDeviceScreen = () => {
       >
         <FocusBoxScreen onClose={() => setOpen(false)} innerRef={innerRef} />
       </Dialog>
+      <h3>Settings</h3>
+      <ColourPicker
+        prompt="Background colour"
+        colour={state.settings.background_colour}
+        onDone={client.setBackgroundColour}
+      />
     </div>
   );
 };

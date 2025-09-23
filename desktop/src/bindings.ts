@@ -257,6 +257,9 @@ export const commands = {
   async setVectorLineColour(colour: CssColour): Promise<void> {
     await TAURI_INVOKE("set_vector_line_colour", { colour });
   },
+  async setBackgroundColour(colour: CssColour): Promise<void> {
+    await TAURI_INVOKE("set_background_colour", { colour });
+  },
   async getCssColourTypes(): Promise<CssColourDiscriminants[]> {
     return await TAURI_INVOKE("get_css_colour_types");
   },
@@ -1048,7 +1051,8 @@ export type TouchDeviceAudioVectorOptions = {
   announce_leaving: boolean;
   announce_geometry_type: boolean;
 };
-export type TouchDeviceState = Record<string, never>;
+export type TouchDeviceSettings = { background_colour: CssColour };
+export type TouchDeviceState = { settings: TouchDeviceSettings };
 export type TouchDeviceVectorOptions = {
   audio: TouchDeviceAudioVectorOptions;
   visual: TouchDeviceVisualVectorOptions;
@@ -1063,7 +1067,7 @@ export type UiScreen =
   | { name: "ThiessenPolygons" }
   | ({ name: "NewDataset" } & NewDatasetScreenData)
   | ({ name: "Settings" } & GlobalSettings)
-  | { name: "TouchDevice" }
+  | ({ name: "TouchDevice" } & TouchDeviceState)
   | { name: "Errors" }
   | ({ name: "Tools" } & ToolsScreenInfo)
   | ({ name: "Workflows" } & WorkflowsScreenInfo);
