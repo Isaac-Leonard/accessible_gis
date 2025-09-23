@@ -1,4 +1,4 @@
-import { LineString } from "./bindings";
+import { LineString } from "../bindings";
 
 export const PointsTableView = ({ line }: { line: LineString }) => {
   return (

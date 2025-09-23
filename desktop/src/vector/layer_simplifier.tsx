@@ -1,7 +1,7 @@
 import { useSignal } from "@preact/signals";
-import { SaveButton } from "./save-button";
-import { client } from "./api";
-import { Dialog, useDialog } from "./dialog";
+import { SaveButton } from "../save-button";
+import { client } from "../api";
+import { Dialog, useDialog } from "../dialog";
 import { H, Section } from "react-headings";
 
 export const LayerSimplifier = () => {

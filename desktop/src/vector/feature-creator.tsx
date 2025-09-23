@@ -13,8 +13,8 @@ import {
   MultiPolygon,
   Point,
   Polygon,
-} from "./bindings";
-import { OptionPicker } from "./option-picker";
+} from "../bindings";
+import { OptionPicker } from "../option-picker";
 import { Ref } from "preact";
 
 export const FeatureCreator = ({

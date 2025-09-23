@@ -1,6 +1,6 @@
 import { message } from "@tauri-apps/plugin-dialog";
 import { PointsTableView } from "./points-table";
-import { Polygon, commands } from "./bindings";
+import { Polygon, commands } from "../bindings";
 import { useEffect, useState } from "preact/hooks";
 import { useSignal } from "@preact/signals";
 

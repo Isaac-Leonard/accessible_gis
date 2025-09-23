@@ -1,6 +1,6 @@
 import { LineStringView } from "./linestring";
 import { PolygonViewer } from "./polygons";
-import { Geometry, Line } from "./bindings";
+import { Geometry, Line } from "../bindings";
 
 export function GeometryViewer({
   geometry,

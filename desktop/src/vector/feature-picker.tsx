@@ -1,6 +1,6 @@
-import { client } from "./api";
-import { VectorScreenData } from "./bindings";
-import { IndexedOptionPicker } from "./option-picker";
+import { client } from "../api";
+import { VectorScreenData } from "../bindings";
+import { IndexedOptionPicker } from "../option-picker";
 
 type FeaturePickerProps = {
   layer: VectorScreenData;

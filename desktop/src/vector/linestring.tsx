@@ -1,7 +1,7 @@
 import { message } from "@tauri-apps/plugin-dialog";
-import { LineDescription, LineString, commands } from "./bindings";
+import { LineDescription, LineString, commands } from "../bindings";
 import { PointsTableView } from "./points-table";
-import { useDrawer, Drawer } from "./drawer";
+import { useDrawer, Drawer } from "../drawer";
 import { useEffect, useState } from "preact/hooks";
 
 export const LineStringView = ({

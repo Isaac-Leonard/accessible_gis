@@ -1,8 +1,8 @@
 import { useState } from "preact/hooks";
-import { FeatureIdentifier, VectorScreenData } from "./bindings";
-import { SaveButton } from "./save-button";
-import { client } from "./api";
-import { Dialog, useDialog } from "./dialog";
+import { FeatureIdentifier, VectorScreenData } from "../bindings";
+import { SaveButton } from "../save-button";
+import { client } from "../api";
+import { Dialog, useDialog } from "../dialog";
 import { H, Section } from "react-headings";
 
 export const FeatureCoppier = ({ layer }: { layer: VectorScreenData }) => {

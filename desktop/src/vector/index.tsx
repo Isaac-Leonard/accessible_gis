@@ -5,16 +5,16 @@ import {
   VectorScreenData,
   VectorScreenMetadata,
 } from "../bindings";
-import { GeometryViewer } from "../geometry";
+import { GeometryViewer } from "./geometry";
 import { OptionPicker } from "../option-picker";
-import { FeatureCreator } from "../feature-creator";
+import { FeatureCreator } from "./feature-creator";
 import { useState } from "preact/hooks";
 import { client } from "../api";
 import { Dialog, useDialog } from "../dialog";
 import { ReprojectionDialog } from "../reprojection-dialog";
-import { FeaturePicker } from "../feature-picker";
-import { FeatureCoppierDialog } from "../feature-copier";
-import { LayerSimplifierDialog } from "../layer_simplifier";
+import { FeaturePicker } from "./feature-picker";
+import { FeatureCoppierDialog } from "./feature-copier";
+import { LayerSimplifierDialog } from "./layer_simplifier";
 import { GdalMetadataViewer } from "../raster-navigator";
 
 type VectorLayerProp = {
