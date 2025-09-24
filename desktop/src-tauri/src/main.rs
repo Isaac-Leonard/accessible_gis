@@ -12,6 +12,7 @@ mod server;
 mod state;
 mod tools;
 mod ui;
+mod utils;
 mod web_socket;
 
 use commands::web_socket::TouchDevice;
