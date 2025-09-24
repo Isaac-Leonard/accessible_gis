@@ -1,11 +1,11 @@
 import "./App.css";
 import { Router } from "./router";
-import { client, state } from "./api";
-import { load, newProject } from "./files";
+import { client } from "./api";
+import { load, openFile } from "./files";
 import { ErrorsPopup } from "./errors-screen";
 import { ToolOutputsPopup } from "./tools-screen";
 
-const globalKeyHandler = (e: KeyboardEvent) => {
+const globalKeyHandler = async (e: KeyboardEvent) => {
   if (e.metaKey) {
     switch (e.key) {
       case "o":
@@ -14,7 +14,10 @@ const globalKeyHandler = (e: KeyboardEvent) => {
         break;
       case "n":
         e.preventDefault();
-        newProject();
+        let file = await openFile("Project location");
+        if (file) {
+          client.createProject(file);
+        }
         break;
       case "s":
         e.preventDefault();
