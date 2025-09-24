@@ -238,7 +238,8 @@ class Layer {
       this.settings.visual.vector_line_colour
     );
     this.ctx.lineWidth = 2;
-    this.features.features.forEach(({ geometry, properties }) => {
+    // Draw the outlines of each vector
+    this.features.features.forEach(({ geometry }) => {
       switch (geometry.type) {
         case "Point":
           this.drawPoint(geometry.coordinates);
@@ -248,7 +249,6 @@ class Layer {
           return;
         case "Polygon":
           geometry.coordinates.forEach((ring) => this.drawLine(ring));
-          this.labelPolygon({ type: "Feature", properties, geometry });
           return;
         case "MultiPoint":
           geometry.coordinates.forEach((p) => this.drawPoint(p));
@@ -260,6 +260,18 @@ class Layer {
           geometry.coordinates.forEach((poly) =>
             poly.forEach((ring) => this.drawLine(ring))
           );
+          return;
+      }
+    });
+
+    // Draw labels over the top of the map
+    this.features.features.forEach(({ geometry, properties }) => {
+      switch (geometry.type) {
+        case "Polygon":
+          this.labelPolygon({ type: "Feature", properties, geometry });
+          return;
+        case "MultiPolygon":
+          // Only put the label in the largest polygon to not clutter the map
           let largestArea = 0;
           let largestPolygon;
           for (let poly of geometry.coordinates) {
@@ -271,6 +283,9 @@ class Layer {
             }
           }
           this.labelPolygon(largestPolygon!);
+          return;
+        default:
+          // We don't label lines or points yet
           return;
       }
     });
