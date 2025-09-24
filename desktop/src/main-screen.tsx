@@ -11,24 +11,11 @@ import { IndexedOptionPicker } from "./option-picker";
 import { client } from "./api";
 import { OpenDatasetDialog } from "./open-screen";
 import { Dialog, useDialog } from "./dialog";
-import { newProject, openFile } from "./files";
+import { LoadButton, SaveButton } from "./save-button";
 
 export const MainScreen = ({ state }: { state: ProjectScreen }) => {
   return state.type === "NotLoaded" ? (
-    <div>
-      <button onClick={newProject}>New Project</button>
-      <button
-        onClick={() =>
-          openFile("Load project from where").then((file) => {
-            if (file !== null) {
-              client.loadProject(file);
-            }
-          })
-        }
-      >
-        Open Project
-      </button>
-    </div>
+    <ProjectActions />
   ) : (
     <LoadedProjectScreen state={state} />
   );
@@ -85,8 +72,19 @@ export const LoadedProjectScreen = ({
     }
   };
 
+  // Variables for project actions Popup
+  const { open, setOpen } = useDialog();
+
   return (
     <div className="container" onKeyDown={keyHandler}>
+      <Dialog
+        modal={true}
+        open={open}
+        setOpen={setOpen}
+        openText="Project actions"
+      >
+        <ProjectActions onAction={() => setOpen(false)} />
+      </Dialog>
       <OpenDatasetDialog />
       <IpDialog ip={state.ip} />
       <LayerSelector
@@ -169,5 +167,34 @@ const LayerView = ({ layer }: { layer: LayerScreenInfo | null }) => {
     <CurrentLayerView layer={layer} />
   ) : (
     <div>No layers selected</div>
+  );
+};
+
+// onAction is here so we can close the dialog this is in when a project is already loaded
+const ProjectActions = ({ onAction }: { onAction?: () => void }) => {
+  const newProject = (name: string) => {
+    client.createProject(name);
+    onAction?.();
+  };
+
+  const loadProject = (file: string) => {
+    client.loadProject(file);
+    onAction?.();
+  };
+
+  return (
+    <div>
+      <SaveButton
+        text="New Project"
+        onSave={newProject}
+        prompt="Project location"
+        defaultPath="accessible_gis_project.json"
+      />
+      <LoadButton
+        prompt="Load project from where"
+        onLoad={loadProject}
+        text="              Open Project"
+      />
+    </div>
   );
 };

@@ -33,13 +33,3 @@ export async function loadMulti() {
     await client.loadDatasetMulti(file);
   }
 }
-
-export const newProject = () =>
-  save({
-    title: "Project location",
-    defaultPath: "accessible_gis_project.json",
-  }).then((name) => {
-    if (name !== null) {
-      return client.createProject(name);
-    }
-  });

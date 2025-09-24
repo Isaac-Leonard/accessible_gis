@@ -6,6 +6,7 @@ type SaveButtonProps = {
   onSave: (name: string) => void;
   prompt?: string;
   filters?: DialogFilter[];
+  defaultPath?: string;
 };
 
 export const SaveButton = ({
@@ -13,12 +14,13 @@ export const SaveButton = ({
   text,
   prompt,
   filters,
+  defaultPath,
 }: SaveButtonProps) => {
   if (typeof text !== "string") {
     text = "Save";
   }
   const clickHandler = async () => {
-    const name = await save({ title: prompt, filters });
+    const name = await save({ title: prompt, filters, defaultPath });
     if (name !== null) {
       onSave(name);
     }
