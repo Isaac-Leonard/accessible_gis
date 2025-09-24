@@ -131,6 +131,7 @@ fn wbt() -> Command {
 
 pub fn get_sieve_filter_tool() -> UserDefinedTool {
     static TOOL: LazyLock<UserDefinedTool> = LazyLock::new(|| UserDefinedTool {
+        built_in: true,
         label: "Sieve filter".to_string(),
         inputs: vec![
             ToolInputDescriptor::Preset(ToolPresetParameterValue::String("-st".to_string())),

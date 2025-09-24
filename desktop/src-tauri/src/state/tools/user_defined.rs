@@ -26,11 +26,14 @@ pub struct UserDefinedTool {
     pub command: String,
     pub output_actions: ToolOutputAction,
     pub id: Uuid,
+    #[serde(default)]
+    pub built_in: bool,
 }
 
 impl From<NewUserDefinedTool> for UserDefinedTool {
     fn from(value: NewUserDefinedTool) -> Self {
         Self {
+            built_in: false,
             label: value.label,
             inputs: value.inputs.into_iter().map_into().collect(),
             command: value.command,
@@ -76,7 +79,11 @@ impl Tool for UserDefinedTool {
     }
 
     fn as_user_defined_tool(&self) -> Option<UserDefinedTool> {
-        Some(self.clone())
+        if self.built_in {
+            Some(self.clone())
+        } else {
+            None
+        }
     }
 }
 

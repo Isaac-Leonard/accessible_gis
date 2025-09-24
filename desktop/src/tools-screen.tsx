@@ -141,7 +141,6 @@ export const toolInputParamFromInput = (
 
 type ToolDialogProps = {
   tool: ToolDescriptor;
-
   layers: LayerDescriptor[];
   run: (id: string, params: ToolParameter[]) => void;
 };
@@ -195,7 +194,7 @@ export const ToolDialog = ({ tool, layers, run }: ToolDialogProps) => {
               rasterLayers={rasterLayers}
               datasets={datasets}
             />
-          ) : null}{" "}
+          ) : null}
         </div>
       ))}
       <button
