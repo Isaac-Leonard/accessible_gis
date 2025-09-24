@@ -98,13 +98,12 @@ type AudioTableEditorProps = {
 
 const AudioTableEditor = ({
   audioTable: initialTable,
-  colourTable,
   onSave,
 }: AudioTableEditorProps) => {
   const [audioTable, setAudioTable] = useState(initialTable);
   useEffect(() => {
     setAudioTable(initialTable);
-  }, [audioTable]);
+  }, [initialTable]);
   return (
     <div>
       <h3>Edit Audio table</h3>
