@@ -12,6 +12,7 @@ use crate::{
     gdal_if::{FieldType, LayerIndex},
     state::AppState,
     tools::describe_landforms::describe_landforms,
+    utils::Toggle,
     web_socket::{AppMessage, TouchDevice},
 };
 
@@ -142,7 +143,7 @@ pub fn set_layer_index(index: LayerIndex, state: AppState) {
 pub fn set_display_vector(state: AppState, touch_device: State<TouchDevice>) {
     state
         .with_current_vector_layer(|layer| {
-            layer.info.display = !layer.info.display;
+            layer.info.display.toggle();
             if layer.info.display {
                 touch_device.send(AppMessage::FetchVector(layer.get_touch_device_info()));
             } else {
@@ -158,7 +159,12 @@ pub fn set_display_vector(state: AppState, touch_device: State<TouchDevice>) {
 #[specta::specta]
 pub fn set_prefered_display_field(field: String, state: AppState, device: State<TouchDevice>) {
     state.with_current_vector_layer(|layer| {
-        layer.info.touch_device_settings.visual.prefered_label_field = Some(field.clone());
+        layer
+            .info
+            .touch_device_settings
+            .visual
+            .labels
+            .prefered_label_field = Some(field.clone());
         layer.info.touch_device_settings.audio.prefered_label_field = Some(field);
         device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
     });

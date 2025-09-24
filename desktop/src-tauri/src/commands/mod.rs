@@ -113,6 +113,9 @@ pub fn generate_handlers(s: impl AsRef<Path>) -> Builder {
             set_background_colour,
             get_css_colour_types,
             get_named_colours,
+            set_label_colour,
+            set_label_font,
+            toggle_label_fill_text,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds

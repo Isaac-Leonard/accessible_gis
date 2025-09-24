@@ -16,9 +16,16 @@ export type VectorSettings = {
 };
 
 export type TouchDeviceVisualVectorOptions = {
-  prefered_label_field: string | null;
-  use_labels: boolean;
   vector_line_colour: CssColour;
+  labels: TouchDeviceLabelOptions;
+};
+
+export type TouchDeviceLabelOptions = {
+  enabled: boolean;
+  text_colour: CssColour;
+  font: string;
+  fill_text: boolean;
+  prefered_label_field: string | null;
 };
 
 export type CssColour =
@@ -391,7 +398,7 @@ class Layer {
   }
 
   labelPolygon(polygon: Feature<Polygon, GeoJsonProperties>) {
-    if (!this.settings.visual.use_labels) {
+    if (!this.settings.visual.labels.enabled) {
       return;
     }
     const label = `${this.getPreferedNameForFeature(polygon.properties)}`;
@@ -406,9 +413,15 @@ class Layer {
     const { width } = this.ctx.measureText(label);
     labelPoint[0] -= width / 2;
     this.ctx.save();
-    this.ctx.fillStyle = "lightyellow";
-    this.ctx.font = "20px sans-serif";
-    this.ctx.fillText(label, labelPoint[0], labelPoint[1]);
+    this.ctx.fillStyle = colourToString(
+      this.settings.visual.labels.text_colour
+    );
+    this.ctx.font = this.settings.visual.labels.font;
+    if (this.settings.visual.labels.fill_text) {
+      this.ctx.fillText(label, labelPoint[0], labelPoint[1]);
+    } else {
+      this.ctx.strokeText(label, labelPoint[0], labelPoint[1]);
+    }
     this.ctx.restore();
   }
 }

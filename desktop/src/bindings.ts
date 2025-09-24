@@ -266,6 +266,15 @@ export const commands = {
   async getNamedColours(): Promise<NamedColour[]> {
     return await TAURI_INVOKE("get_named_colours");
   },
+  async setLabelColour(colour: CssColour): Promise<void> {
+    await TAURI_INVOKE("set_label_colour", { colour });
+  },
+  async setLabelFont(font: string): Promise<void> {
+    await TAURI_INVOKE("set_label_font", { font });
+  },
+  async toggleLabelFillText(): Promise<void> {
+    await TAURI_INVOKE("toggle_label_fill_text");
+  },
 };
 
 /** user-defined events **/
@@ -1051,6 +1060,13 @@ export type TouchDeviceAudioVectorOptions = {
   announce_leaving: boolean;
   announce_geometry_type: boolean;
 };
+export type TouchDeviceLabelOptions = {
+  enabled: boolean;
+  text_colour: CssColour;
+  font: string;
+  fill_text: boolean;
+  prefered_label_field: string | null;
+};
 export type TouchDeviceSettings = { background_colour: CssColour };
 export type TouchDeviceState = { settings: TouchDeviceSettings };
 export type TouchDeviceVectorOptions = {
@@ -1058,9 +1074,8 @@ export type TouchDeviceVectorOptions = {
   visual: TouchDeviceVisualVectorOptions;
 };
 export type TouchDeviceVisualVectorOptions = {
-  prefered_label_field: string | null;
-  use_labels: boolean;
   vector_line_colour: CssColour;
+  labels?: TouchDeviceLabelOptions;
 };
 export type UiScreen =
   | ({ name: "Project" } & ProjectScreen)

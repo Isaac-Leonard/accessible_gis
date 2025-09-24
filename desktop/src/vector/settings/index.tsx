@@ -1,5 +1,5 @@
 import { client } from "../../api";
-import { Input, NumberInput } from "../../binded-input";
+import { Checkbox, Input, NumberInput } from "../../binded-input";
 import {
   CssColour,
   CssColourDiscriminants,
@@ -141,18 +141,38 @@ const TouchDeviceSettings = ({ settings }: TouchDeviceSettingsProps) => (
       Toggle announcing types of geometries
     </button>
     <h5>Visual</h5>
-    <button
-      onClick={() => client.toggleLabels()}
-      role="switch"
-      aria-checked={settings?.visual.use_labels}
-    >
-      Toggle Auto Labels
-    </button>
     <ColourPicker
       prompt="Colour for vector outlines"
       colour={settings.visual.vector_line_colour}
       onDone={client.setVectorLineColour}
     />
+    <h6>Labels</h6>
+    <button
+      onClick={() => client.toggleLabels()}
+      role="switch"
+      aria-checked={settings?.visual.labels?.enabled}
+    >
+      Toggle Auto Labels
+    </button>
+    <ColourPicker
+      prompt="Colour for labels"
+      colour={settings.visual.labels!.text_colour}
+      onDone={client.setLabelColour}
+    />
+    <Input
+      label="Label font"
+      binding={{
+        value: settings.visual.labels!.font,
+        setValue: client.setLabelFont,
+      }}
+    />
+    <Checkbox
+      label="Fill label text"
+      binding={{
+        value: settings.visual.labels!.fill_text,
+        setValue: () => client.toggleLabelFillText(),
+      }}
+    />{" "}
   </div>
 );
 

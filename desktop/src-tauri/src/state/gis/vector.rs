@@ -41,11 +41,31 @@ pub struct TouchDeviceVectorOptions {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct TouchDeviceVisualVectorOptions {
-    pub prefered_label_field: Option<String>,
-    pub use_labels: bool,
     pub vector_line_colour: CssColour,
+    #[serde(default)]
+    pub labels: TouchDeviceLabelOptions,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
+pub struct TouchDeviceLabelOptions {
+    pub enabled: bool,
+    pub text_colour: CssColour,
+    pub font: String,
+    pub fill_text: bool,
+    pub prefered_label_field: Option<String>,
+}
+
+impl Default for TouchDeviceLabelOptions {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            prefered_label_field: None,
+            text_colour: CssColour::Named(NamedColour::LightYellow),
+            font: "20px sans-serif".to_string(),
+            fill_text: true,
+        }
+    }
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct TouchDeviceAudioVectorOptions {
     pub prefered_label_field: Option<String>,
@@ -62,9 +82,8 @@ impl Default for TouchDeviceVectorOptions {
                 announce_geometry_type: false,
             },
             visual: TouchDeviceVisualVectorOptions {
-                prefered_label_field: None,
-                use_labels: false,
                 vector_line_colour: CssColour::Named(NamedColour::White),
+                labels: TouchDeviceLabelOptions::default(),
             },
         }
     }

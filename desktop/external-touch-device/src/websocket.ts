@@ -12,6 +12,7 @@ import {
   NamedColour,
   RgbColour,
   TouchDeviceAudioVectorOptions,
+  TouchDeviceLabelOptions,
   TouchDeviceVisualVectorOptions,
   VectorInfo,
 } from "touch-device/src/vector-manager";
@@ -324,11 +325,19 @@ const CssColourParser: ZodType<CssColour> = z.discriminatedUnion("type", [
   z.object({ type: z.literal("Rgb"), value: RgbColourParser }),
 ]);
 
+export const TouchDeviceLabelOptionsParser: ZodType<TouchDeviceLabelOptions> =
+  z.object({
+    enabled: z.boolean(),
+    prefered_label_field: z.string().nullable(),
+    text_colour: CssColourParser,
+    font: z.string(),
+    fill_text: z.boolean(),
+  });
+
 export const touchDeviceVisualVectorOptionsParser: ZodType<TouchDeviceVisualVectorOptions> =
   z.object({
-    prefered_label_field: z.string().nullable(),
-    use_labels: z.boolean(),
     vector_line_colour: CssColourParser,
+    labels: TouchDeviceLabelOptionsParser,
   });
 
 export const touchDeviceAudioVectorOptionsParser: ZodType<TouchDeviceAudioVectorOptions> =
