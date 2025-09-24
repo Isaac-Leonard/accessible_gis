@@ -3,8 +3,9 @@ import {
   Checkbox,
   Input as TextInput,
   NumberInput,
-  useBindedObjectProperties,
+  propertyGetSet,
   GetSet,
+  useBindedObjectProperties,
 } from "./binded-input";
 import {
   DatasetLayerIndex,
@@ -63,9 +64,7 @@ type ParameterDescriptor = { label: string; id: string } & (
     | { type: "Dataset"; value: number }
     | { type: "Layer"; value: DatasetLayerIndex; options: "Vector" | "Raster" }
     | { type: "Option"; value: string; options: string[] }
-    | { type: "Flag"; value: boolean }
     | { type: "File"; value: string }
-    | { type: "Preset"; value: ToolPresetParameterValue }
   );
 
 export const toolInputParamFromInput = (
@@ -154,15 +153,6 @@ export const ToolDialog = ({ tool, layers, run }: ToolDialogProps) => {
     tool.inputs.map(toolInputParamFromInput)
   );
 
-  const setValueAt =
-    <T,>(index: number) =>
-    (value: T) => {
-      const replacement = { ...params[index], value };
-      const newArray = params.slice();
-      newArray[index] = replacement as any;
-      setParams(newArray);
-    };
-
   const setIncludeParam = (index: number, included: boolean) => {
     const replacement = { ...params[index], included };
     const newArray = params.slice();
@@ -170,21 +160,16 @@ export const ToolDialog = ({ tool, layers, run }: ToolDialogProps) => {
     setParams(newArray);
   };
 
-  const makeParamBinding = <T extends ParameterDescriptor>(
-    param: T,
-    index: number
-  ): { value: T["value"]; setValue: (value: T["value"]) => void } => ({
-    value: param.value,
-    setValue: setValueAt(index),
+  const makeParamBinding = (param: ParameterDescriptor, index: number) => ({
+    value: param,
+    setValue: (value: ParameterDescriptor) => {
+      const newParams = params.slice();
+      newParams[index] = value;
+      setParams(newParams);
+    },
   });
 
-  const datasets = layers.reduce((arr, el) => {
-    if (arr.includes(el.dataset_file)) {
-      return arr;
-    } else {
-      return [...arr, el.dataset_file];
-    }
-  }, [] as string[]);
+  const datasets = [...new Set(layers.map((ds) => ds.dataset_file))];
 
   const vectorLayers = layers.filter((layer) => layer.type === "Vector");
   const rasterLayers = layers.filter((layer) => layer.type === "Raster");
@@ -205,13 +190,10 @@ export const ToolDialog = ({ tool, layers, run }: ToolDialogProps) => {
           ) : null}
           {(param.optional && param.included) || !param.optional ? (
             <ToolInput
-              param={param}
-              index={index}
-              makeParamBinding={makeParamBinding}
+              parameterBinding={makeParamBinding(param, index)}
               vectorLayers={vectorLayers}
               rasterLayers={rasterLayers}
               datasets={datasets}
-              setValueAt={setValueAt}
             />
           ) : null}{" "}
         </div>
@@ -244,73 +226,72 @@ const toolInputFromDescriptor = (
   ({ type: param.type, value: param.value } as ToolParameterValue);
 
 const ToolInput = ({
-  param,
-  index,
-  makeParamBinding,
+  parameterBinding,
   datasets,
-  setValueAt,
   vectorLayers,
   rasterLayers,
 }: {
-  param: ParameterDescriptor;
-  index: number;
-  makeParamBinding: <T extends ParameterDescriptor>(
-    param: T,
-    index: number
-  ) => GetSet<T["value"]>;
+  parameterBinding: GetSet<ParameterDescriptor>;
   datasets: string[];
   vectorLayers: LayerDescriptor[];
   rasterLayers: LayerDescriptor[];
-  setValueAt: <T>(index: number) => (value: T) => void;
 }): JSX.Element => {
-  switch (param.type) {
+  switch (parameterBinding.value.type) {
     case "Float":
       return (
         <NumberInput
-          label={param.label}
-          binding={makeParamBinding(param, index)}
+          label={parameterBinding.value.label}
+          binding={propertyGetSet("value", parameterBinding)}
         />
       );
     case "Int":
       return (
         <NumberInput
-          label={param.label}
-          binding={makeParamBinding(param, index)}
+          label={parameterBinding.value.label}
+          binding={propertyGetSet("value", parameterBinding)}
         />
       );
     case "String":
       return (
         <TextInput
-          label={param.label}
-          binding={makeParamBinding(param, index)}
+          label={parameterBinding.value.label}
+          binding={propertyGetSet("value", parameterBinding)}
         />
       );
     case "Dataset":
       return (
         <IndexedOptionPicker
-          prompt={param.label}
+          prompt={parameterBinding.value.label}
           emptyText="No datasets to select"
-          index={param.value}
+          index={parameterBinding.value.value}
           options={datasets}
-          setIndex={setValueAt(index)}
+          setIndex={(value) =>
+            parameterBinding.setValue({
+              ...parameterBinding.value,
+              type: "Dataset",
+              value,
+            })
+          }
         />
       );
     case "Layer":
-      switch (param.options) {
+      switch (parameterBinding.value.options) {
         case "Vector":
           return (
             <IndexedOptionPicker
-              prompt={param.label}
+              prompt={parameterBinding.value.label}
               emptyText="There are no vector layers to select"
               index={vectorLayers.findIndex(
                 (layer) =>
-                  layer.dataset === param.value.dataset &&
+                  // First check just to satisfy type script
+                  parameterBinding.value.type === "Layer" &&
+                  layer.dataset === parameterBinding.value.value.dataset &&
                   layer.type === "Vector" &&
-                  layer.index === param.value.layer.index
+                  layer.index === parameterBinding.value.value.layer.index
               )}
               options={vectorLayers.map((layer) => layer.dataset_file)}
               setIndex={(layer_index) =>
-                setValueAt<DatasetLayerIndex>(index)({
+                propertyGetSet("value", parameterBinding).setValue({
                   dataset: vectorLayers[layer_index].dataset,
                   layer: {
                     type: "Vector",
@@ -323,17 +304,19 @@ const ToolInput = ({
         case "Raster":
           return (
             <IndexedOptionPicker
-              prompt={param.label}
+              prompt={parameterBinding.value.label}
               emptyText="There are no raster layers to select"
               index={rasterLayers.findIndex(
                 (layer) =>
-                  layer.dataset === param.value.dataset &&
+                  // First check just to satisfy type script
+                  parameterBinding.value.type === "Layer" &&
+                  layer.dataset === parameterBinding.value.value.dataset &&
                   layer.type === "Raster" &&
-                  layer.index === param.value.layer.index
+                  layer.index === parameterBinding.value.value.layer.index
               )}
               options={rasterLayers.map((layer) => layer.dataset_file)}
               setIndex={(layer_index) =>
-                setValueAt<DatasetLayerIndex>(index)({
+                propertyGetSet("value", parameterBinding).setValue({
                   dataset: rasterLayers[layer_index].dataset,
                   layer: {
                     type: "Raster",
@@ -347,38 +330,29 @@ const ToolInput = ({
     case "Option":
       return (
         <OptionPicker
-          prompt={param.label}
+          prompt={parameterBinding.value.label}
           emptyText="No options are available to pick"
-          selectedOption={param.value}
-          setOption={setValueAt(index)}
-          options={param.options}
-        />
-      );
-    case "Flag":
-      return (
-        <Checkbox
-          label={param.label}
-          binding={makeParamBinding(param, index)}
+          selectedOption={parameterBinding.value.value}
+          setOption={propertyGetSet("value", parameterBinding).setValue}
+          options={parameterBinding.value.options}
         />
       );
     case "File":
       return (
         <div>
           <SaveButton
-            text={param.label + ": " + param.value}
-            prompt={param.label}
-            onSave={makeParamBinding(param, index).setValue}
+            text={
+              parameterBinding.value.label + ": " + parameterBinding.value.value
+            }
+            prompt={parameterBinding.value.label}
+            onSave={propertyGetSet("value", parameterBinding).setValue}
           />
         </div>
       );
-    case "Preset":
-      return (
-        <div>
-          {param.label}: {param.value.value}
-        </div>
-      );
     default:
-      return <div>Got unknown type {JSON.stringify(param)}</div>;
+      return (
+        <div>Got unknown type {JSON.stringify(parameterBinding.value)}</div>
+      );
   }
 };
 

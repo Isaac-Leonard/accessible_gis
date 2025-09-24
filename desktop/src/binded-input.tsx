@@ -266,3 +266,15 @@ export const useBindedObjectState = <T extends Record<string, unknown>>(
 } => {
   return useBindedObjectProperties(...useState(obj));
 };
+
+export const propertyGetSet = <
+  T extends Record<string, unknown>,
+  K extends keyof T,
+  R extends T[K]
+>(
+  key: K,
+  getSet: GetSet<T>
+): GetSet<R> => ({
+  value: getSet.value[key] as R,
+  setValue: (value: R) => getSet.setValue({ ...getSet.value, [key]: value }),
+});
