@@ -106,3 +106,56 @@ pub fn toggle_label_fill_text(state: AppState, device: State<TouchDevice>) {
         device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
     });
 }
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_label_line_width(width: usize, state: AppState, device: State<TouchDevice>) {
+    state.with_current_vector_layer(|layer| {
+        layer.info.touch_device_settings.visual.labels.line_width = width;
+        device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_vector_point_radius(radius: usize, state: AppState, device: State<TouchDevice>) {
+    state.with_current_vector_layer(|layer| {
+        layer.info.touch_device_settings.visual.point_radius = radius;
+        device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_vector_line_width(width: usize, state: AppState, device: State<TouchDevice>) {
+    state.with_current_vector_layer(|layer| {
+        layer.info.touch_device_settings.visual.line_width = width;
+        device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_audio_point_radius(radius: f64, state: AppState, device: State<TouchDevice>) {
+    state.with_current_vector_layer(|layer| {
+        layer
+            .info
+            .touch_device_settings
+            .audio
+            .radius_for_point_announcements = radius;
+        device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_audio_line_width(width: f64, state: AppState, device: State<TouchDevice>) {
+    state.with_current_vector_layer(|layer| {
+        layer
+            .info
+            .touch_device_settings
+            .audio
+            .distance_for_line_announcements = width;
+        device.send(AppMessage::UpdateVector(layer.get_touch_device_info()))
+    });
+}

@@ -275,6 +275,21 @@ export const commands = {
   async toggleLabelFillText(): Promise<void> {
     await TAURI_INVOKE("toggle_label_fill_text");
   },
+  async setLabelLineWidth(width: number): Promise<void> {
+    await TAURI_INVOKE("set_label_line_width", { width });
+  },
+  async setVectorPointRadius(radius: number): Promise<void> {
+    await TAURI_INVOKE("set_vector_point_radius", { radius });
+  },
+  async setVectorLineWidth(width: number): Promise<void> {
+    await TAURI_INVOKE("set_vector_line_width", { width });
+  },
+  async setAudioPointRadius(radius: number): Promise<void> {
+    await TAURI_INVOKE("set_audio_point_radius", { radius });
+  },
+  async setAudioLineWidth(width: number): Promise<void> {
+    await TAURI_INVOKE("set_audio_line_width", { width });
+  },
 };
 
 /** user-defined events **/
@@ -1059,11 +1074,14 @@ export type TouchDeviceAudioVectorOptions = {
   prefered_label_field: string | null;
   announce_leaving: boolean;
   announce_geometry_type: boolean;
+  radius_for_point_announcements?: number;
+  distance_for_line_announcements?: number;
 };
 export type TouchDeviceLabelOptions = {
   enabled: boolean;
   text_colour: CssColour;
   font: string;
+  line_width?: number;
   fill_text: boolean;
   prefered_label_field: string | null;
 };
@@ -1075,6 +1093,8 @@ export type TouchDeviceVectorOptions = {
 };
 export type TouchDeviceVisualVectorOptions = {
   vector_line_colour: CssColour;
+  point_radius?: number;
+  line_width?: number;
   labels?: TouchDeviceLabelOptions;
 };
 export type UiScreen =

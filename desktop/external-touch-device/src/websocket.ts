@@ -331,12 +331,15 @@ export const TouchDeviceLabelOptionsParser: ZodType<TouchDeviceLabelOptions> =
     prefered_label_field: z.string().nullable(),
     text_colour: CssColourParser,
     font: z.string(),
+    line_width: z.number(),
     fill_text: z.boolean(),
   });
 
 export const touchDeviceVisualVectorOptionsParser: ZodType<TouchDeviceVisualVectorOptions> =
   z.object({
     vector_line_colour: CssColourParser,
+    point_radius: z.number(),
+    line_width: z.number(),
     labels: TouchDeviceLabelOptionsParser,
   });
 
@@ -345,6 +348,8 @@ export const touchDeviceAudioVectorOptionsParser: ZodType<TouchDeviceAudioVector
     prefered_label_field: z.string().nullable(),
     announce_leaving: z.boolean(),
     announce_geometry_type: z.boolean(),
+    radius_for_point_announcements: z.number(),
+    distance_for_line_announcements: z.number(),
   });
 
 export const vectorSettingsParser: ZodType<VectorSettings> = z.object({

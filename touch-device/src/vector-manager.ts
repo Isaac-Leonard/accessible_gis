@@ -17,6 +17,8 @@ export type VectorSettings = {
 
 export type TouchDeviceVisualVectorOptions = {
   vector_line_colour: CssColour;
+  point_radius: number;
+  line_width: number;
   labels: TouchDeviceLabelOptions;
 };
 
@@ -24,6 +26,7 @@ export type TouchDeviceLabelOptions = {
   enabled: boolean;
   text_colour: CssColour;
   font: string;
+  line_width: number;
   fill_text: boolean;
   prefered_label_field: string | null;
 };
@@ -190,11 +193,12 @@ export type TouchDeviceAudioVectorOptions = {
   prefered_label_field: string | null;
   announce_leaving: boolean;
   announce_geometry_type: boolean;
+  radius_for_point_announcements: number;
+  distance_for_line_announcements: number;
 };
 
 class Layer {
   previousFeatures: Feature[] = [];
-  radius = 5;
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
 
@@ -213,8 +217,10 @@ class Layer {
     const [x, y] = this.coordinateManager.coordsToScreen(p as [number, number]);
     this.ctx.save();
     this.ctx.beginPath();
-    this.ctx.fillStyle = "#ffffff";
-    this.ctx.arc(x, y, this.radius, 0, 2 * Math.PI);
+    this.ctx.fillStyle = colourToString(
+      this.settings.visual.vector_line_colour
+    );
+    this.ctx.arc(x, y, this.settings.visual.point_radius, 0, 2 * Math.PI);
     this.ctx.closePath();
     this.ctx.fill();
     this.ctx.restore();
@@ -233,12 +239,14 @@ class Layer {
   }
 
   render() {
-    this.ctx.fillStyle = "#ffffff";
+    // Draw the outlines of each vector
+    this.ctx.fillStyle = colourToString(
+      this.settings.visual.vector_line_colour
+    );
     this.ctx.strokeStyle = colourToString(
       this.settings.visual.vector_line_colour
     );
-    this.ctx.lineWidth = 2;
-    // Draw the outlines of each vector
+    this.ctx.lineWidth = this.settings.visual.line_width;
     this.features.features.forEach(({ geometry }) => {
       switch (geometry.type) {
         case "Point":
@@ -265,6 +273,13 @@ class Layer {
     });
 
     // Draw labels over the top of the map
+    this.ctx.fillStyle = colourToString(
+      this.settings.visual.labels.text_colour
+    );
+    this.ctx.strokeStyle = colourToString(
+      this.settings.visual.labels.text_colour
+    );
+    this.ctx.lineWidth = this.settings.visual.labels.line_width;
     this.features.features.forEach(({ geometry, properties }) => {
       switch (geometry.type) {
         case "Polygon":
@@ -301,7 +316,7 @@ class Layer {
         case "Point":
           if (
             turf.distance(coords, geometry.coordinates, kilometres) <
-            this.radius
+            this.settings.audio.radius_for_point_announcements
           ) {
             foundFeatures.push(feature);
           }
@@ -310,7 +325,8 @@ class Layer {
           if (
             geometry.coordinates.some(
               (position) =>
-                turf.distance(coords, position, kilometres) < this.radius
+                turf.distance(coords, position, kilometres) <
+                this.settings.audio.radius_for_point_announcements
             )
           ) {
             foundFeatures.push(feature);
@@ -321,7 +337,9 @@ class Layer {
             ...geodesic,
             ...kilometres,
           });
-          if (distanceToLine < this.radius) {
+          if (
+            distanceToLine < this.settings.audio.distance_for_line_announcements
+          ) {
             foundFeatures.push(feature);
           }
           continue;
@@ -332,7 +350,7 @@ class Layer {
                 turf.pointToLineDistance(coords, turf.lineString(line), {
                   ...geodesic,
                   ...kilometres,
-                }) < this.radius
+                }) < this.settings.audio.distance_for_line_announcements
             )
           ) {
             foundFeatures.push(feature);

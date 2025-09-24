@@ -140,11 +140,39 @@ const TouchDeviceSettings = ({ settings }: TouchDeviceSettingsProps) => (
     >
       Toggle announcing types of geometries
     </button>
+    <NumberInput
+      label="Distance to line for announcement (km)"
+      binding={{
+        value: settings.audio!.distance_for_line_announcements!,
+        setValue: client.setAudioLineWidth,
+      }}
+    />
+    <NumberInput
+      label="Distance to points for announcements (km)"
+      binding={{
+        value: settings.audio!.radius_for_point_announcements!,
+        setValue: client.setAudioPointRadius,
+      }}
+    />
     <h5>Visual</h5>
     <ColourPicker
       prompt="Colour for vector outlines"
       colour={settings.visual.vector_line_colour}
       onDone={client.setVectorLineColour}
+    />
+    <NumberInput
+      label="Vector line width (px)"
+      binding={{
+        value: settings.visual!.line_width!,
+        setValue: client.setVectorLineWidth,
+      }}
+    />
+    <NumberInput
+      label="Vector point radius (px)"
+      binding={{
+        value: settings.visual!.point_radius!,
+        setValue: client.setVectorPointRadius,
+      }}
     />
     <h6>Labels</h6>
     <button
@@ -164,6 +192,13 @@ const TouchDeviceSettings = ({ settings }: TouchDeviceSettingsProps) => (
       binding={{
         value: settings.visual.labels!.font,
         setValue: client.setLabelFont,
+      }}
+    />
+    <NumberInput
+      label="Text line width (px)"
+      binding={{
+        value: settings.visual.labels!.line_width!,
+        setValue: client.setLabelLineWidth,
       }}
     />
     <Checkbox

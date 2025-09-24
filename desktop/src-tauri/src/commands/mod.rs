@@ -116,6 +116,11 @@ pub fn generate_handlers(s: impl AsRef<Path>) -> Builder {
             set_label_colour,
             set_label_font,
             toggle_label_fill_text,
+            set_label_line_width,
+            set_vector_point_radius,
+            set_vector_line_width,
+            set_audio_point_radius,
+            set_audio_line_width
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds
