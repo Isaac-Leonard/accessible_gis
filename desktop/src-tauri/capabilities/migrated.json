@@ -27,6 +27,8 @@
     "dialog:default",
     "shell:default",
     "core:path:default",
-    "core:path:allow-basename"
+    "core:path:allow-basename",
+    "core:event:allow-listen",
+    "core:event:default"
   ]
 }
