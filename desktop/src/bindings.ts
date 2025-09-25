@@ -290,6 +290,18 @@ export const commands = {
   async setAudioLineWidth(width: number): Promise<void> {
     await TAURI_INVOKE("set_audio_line_width", { width });
   },
+  async saveTool(id: string, file: string): Promise<void> {
+    await TAURI_INVOKE("save_tool", { id, file });
+  },
+  async saveToolsBulk(ids: string[], file: string): Promise<void> {
+    await TAURI_INVOKE("save_tools_bulk", { ids, file });
+  },
+  async loadTool(file: string): Promise<void> {
+    await TAURI_INVOKE("load_tool", { file });
+  },
+  async loadToolsBulk(file: string): Promise<void> {
+    await TAURI_INVOKE("load_tools_bulk", { file });
+  },
 };
 
 /** user-defined events **/

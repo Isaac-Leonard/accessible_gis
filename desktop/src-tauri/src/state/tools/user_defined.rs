@@ -80,9 +80,9 @@ impl Tool for UserDefinedTool {
 
     fn as_user_defined_tool(&self) -> Option<UserDefinedTool> {
         if self.built_in {
-            Some(self.clone())
-        } else {
             None
+        } else {
+            Some(self.clone())
         }
     }
 }

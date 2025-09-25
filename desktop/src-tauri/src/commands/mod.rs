@@ -120,7 +120,11 @@ pub fn generate_handlers(s: impl AsRef<Path>) -> Builder {
             set_vector_point_radius,
             set_vector_line_width,
             set_audio_point_radius,
-            set_audio_line_width
+            set_audio_line_width,
+            save_tool,
+            save_tools_bulk,
+            load_tool,
+            load_tools_bulk,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds

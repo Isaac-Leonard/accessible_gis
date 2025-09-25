@@ -1,4 +1,7 @@
+use std::path::PathBuf;
+
 use gdal::spatial_ref::SpatialRef;
+use itertools::Itertools;
 use uuid::Uuid;
 
 use crate::{
@@ -7,7 +10,7 @@ use crate::{
     state::{
         AppState,
         gis::combined::StatefulLayerEnum,
-        tools::{NewUserDefinedTool, SavedToolOutputAction, ToolParameter, UserDefinedTool},
+        tools::{NewUserDefinedTool, SavedToolOutputAction, Tool, ToolParameter, UserDefinedTool},
         workflows::{NewWorkflow, Workflow, WorkflowInput},
     },
 };
@@ -22,14 +25,14 @@ pub fn reproject_layer(srs: Srs, name: &str, state: AppState) {
                 let output = layer
                     .reproject(name, srs)
                     .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
-                eprint!("{:?}", output)
+                eprintln!("{:?}", output)
             }
             Some(StatefulLayerEnum::Raster(band)) => {
                 // TODO: Allow users to specify option for expand_rgba
                 let output = band
                     .reproject(name, srs)
                     .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
-                eprint!("{:?}", output)
+                eprintln!("{:?}", output)
             }
             None => Err(ErrorDetails::Other(
                 "No layer available to reproject".to_string(),
@@ -126,5 +129,75 @@ pub fn run_workflow(id: Uuid, inputs: Vec<WorkflowInput>, state: AppState) {
             .ok_or_else(|| ErrorDetails::Other("Couldn't find project to run".to_string()))?
             .clone()
             .run_workflow(inputs, project)
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn save_tools_bulk(ids: Vec<Uuid>, file: PathBuf, state: AppState) {
+    state.with_project_fallible(|project| {
+        let tools_to_save = project
+            .get_tools()
+            .into_iter()
+            .filter_map(|tool| tool.as_user_defined_tool())
+            .filter(|tool| ids.contains(&tool.get_id()))
+            .collect_vec();
+        let json = serde_json::to_string_pretty(&tools_to_save).map_err(|err| {
+            ErrorDetails::SerdeError(format!("Failed to serialise tools: {err:?}"))
+        })?;
+        std::fs::write(file, json)
+            .map_err(|err| ErrorDetails::IoError(format!("Failed to save tools: {err:?}")))
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn save_tool(id: Uuid, file: PathBuf, state: AppState) {
+    state.with_project_fallible(|project| {
+        let tool_to_save = project
+            .get_tools()
+            .into_iter()
+            .filter_map(|tool| tool.as_user_defined_tool())
+            .find(|tool| id == tool.get_id())
+            .ok_or_else(|| ErrorDetails::Other("Could not find tool to save".to_string()))?;
+        let json = serde_json::to_string_pretty(&tool_to_save).map_err(|err| {
+            ErrorDetails::SerdeError(format!("Failed to serialise tools: {err:?}"))
+        })?;
+        std::fs::write(file, json)
+            .map_err(|err| ErrorDetails::IoError(format!("Failed to save tools: {err:?}")))
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn load_tool(file: PathBuf, state: AppState) {
+    state.with_project_fallible(|project| {
+        let content = std::fs::read(file).map_err(|err| {
+            ErrorDetails::IoError(format!("Could not read file to load tool: {err:?}"))
+        })?;
+        let tool = serde_json::from_slice::<UserDefinedTool>(&content).map_err(|err| {
+            ErrorDetails::SerdeError(format!("Could not deserialise saved tool: {err:?}"))
+        })?;
+        project.tools.push(Box::new(tool));
+        Ok(())
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn load_tools_bulk(file: PathBuf, state: AppState) {
+    state.with_project_fallible(|project| {
+        let content = std::fs::read(file).map_err(|err| {
+            ErrorDetails::IoError(format!("Could not read file to load tools: {err:?}"))
+        })?;
+        let tools = serde_json::from_slice::<Vec<UserDefinedTool>>(&content).map_err(|err| {
+            ErrorDetails::SerdeError(format!("Could not deserialise saved tools: {err:?}"))
+        })?;
+        project.tools.extend(
+            tools
+                .into_iter()
+                .map(|tool| Box::new(tool) as Box<dyn Tool>),
+        );
+        Ok(())
     });
 }

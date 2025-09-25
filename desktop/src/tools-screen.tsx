@@ -38,7 +38,7 @@ export const ToolsScreen = ({ tools, layers }: ToolsScreenInfo) => {
   return (
     <div>
       <h2>Tools</h2>
-      <ToolCreationDialog />
+      <ToolsActionsDialog tools={tools} />
       <div>
         {tools.map((tool) => (
           <ToolDialog
@@ -790,4 +790,56 @@ export const PresetInputValueEditor = ({
         />
       );
   }
+};
+
+const ToolsActionsDialog = ({ tools }: { tools: ToolDescriptor[] }) => {
+  const { open, setOpen } = useDialog();
+  return (
+    <Dialog
+      modal={true}
+      openText="Actions for tools"
+      open={open}
+      setOpen={setOpen}
+    >
+      <h4>Tool Actions</h4>
+      <ToolCreationDialog />
+      <BulkSaveDialog tools={tools} />
+      <LoadButton text="Load tools" onLoad={client.loadToolsBulk} />
+    </Dialog>
+  );
+};
+
+const BulkSaveDialog = ({ tools }: { tools: ToolDescriptor[] }) => {
+  const [toolsToSave, setToolsToSave] = useState<string[]>([]);
+  const { open, setOpen } = useDialog();
+  return (
+    <Dialog modal={true} open={open} setOpen={setOpen} openText="Bulk save">
+      <h5>Bulk Save Tools</h5>
+      <div>Select tools to save:</div>
+      <div>
+        {tools.map((tool) => (
+          <Checkbox
+            key={tool.id}
+            label={tool.label}
+            binding={{
+              value: toolsToSave.includes(tool.id),
+              setValue: (include) =>
+                include
+                  ? setToolsToSave([...toolsToSave, tool.id])
+                  : setToolsToSave(toolsToSave.filter((id) => tool.id !== id)),
+            }}
+          />
+        ))}
+      </div>
+      <SaveButton
+        text="Save to file"
+        onSave={(file) => {
+          console.log("Saving to " + file);
+          console.log(toolsToSave);
+          client.saveToolsBulk(toolsToSave, file);
+          setOpen(false);
+        }}
+      />
+    </Dialog>
+  );
 };
