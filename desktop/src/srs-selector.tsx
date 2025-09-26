@@ -1,3 +1,4 @@
+import { Input, NumberInput } from "./binded-input";
 import { Srs } from "./bindings";
 import { OptionPicker } from "./option-picker";
 
@@ -26,25 +27,23 @@ const SrsValueInput = ({ srs, setSrs }: SrsSelectorProps) => {
     case "Proj":
     case "Esri":
       return (
-        <label>
-          <input
-            value={srs.value}
-            onInput={(e) =>
-              setSrs({ type: srs.type, value: e.currentTarget.value })
-            }
-          />
-        </label>
+        <Input
+          label={`${srs.type} string`}
+          binding={{
+            value: srs.value,
+            setValue: (value) => setSrs({ type: srs.type, value }),
+          }}
+        />
       );
     case "Epsg":
       return (
-        <label>
-          <input
-            value={srs.value}
-            onInput={(e) =>
-              setSrs({ type: srs.type, value: Number(e.currentTarget.value) })
-            }
-          />
-        </label>
+        <NumberInput
+          label={`${srs.type} code`}
+          binding={{
+            value: srs.value,
+            setValue: (value) => setSrs({ type: srs.type, value }),
+          }}
+        />
       );
   }
 };

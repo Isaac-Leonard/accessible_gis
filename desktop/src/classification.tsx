@@ -50,7 +50,6 @@ const ClassificationScreen = ({ onClassify }: { onClassify: () => void }) => {
           </tr>
         </thead>
         <tbody>
-          {" "}
           {classifications.map(({ target, min, max }, i) => (
             <tr>
               <td>{i}</td>
