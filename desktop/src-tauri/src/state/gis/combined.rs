@@ -5,7 +5,7 @@ use crate::gdal_if::LayerIndex;
 
 use super::{raster::StatefulRasterBand, shared::SharedInfo, vector::StatefulVectorLayer};
 
-#[derive(strum::EnumTryAs)]
+#[derive(strum::EnumTryAs, Debug)]
 pub enum StatefulLayerEnum<'a> {
     Raster(StatefulRasterBand<'a>),
     Vector(StatefulVectorLayer<'a>),
@@ -28,6 +28,13 @@ impl<'a> StatefulLayerEnum<'a> {
         match self {
             Self::Vector(layer) => &mut layer.info.shared,
             Self::Raster(band) => &mut band.info.shared,
+        }
+    }
+
+    pub fn shared_ref(&self) -> &SharedInfo {
+        match self {
+            Self::Vector(layer) => &layer.info.shared,
+            Self::Raster(band) => &band.info.shared,
         }
     }
 

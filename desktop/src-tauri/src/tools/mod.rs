@@ -14,7 +14,7 @@ use uuid::Uuid;
 use crate::{
     gdal_if::LayerIndexDiscriminants,
     state::tools::{
-        ToolInputDescriptor, ToolInputType, ToolOutputAction, ToolPresetParameterValue,
+        LayerType, ToolInputDescriptor, ToolInputType, ToolOutputAction, ToolPresetParameterValue,
         ToolRuntimeInputDescriptor, UserDefinedTool,
     },
 };
@@ -149,7 +149,7 @@ pub fn get_sieve_filter_tool() -> UserDefinedTool {
             }),
             ToolInputDescriptor::Runtime(ToolRuntimeInputDescriptor {
                 label: "Input".to_string(),
-                param_type: ToolInputType::Layer(LayerIndexDiscriminants::Raster),
+                param_type: ToolInputType::Layer(LayerType::Raster),
                 optional: false,
                 id: Uuid::new_v4(),
             }),

@@ -231,7 +231,7 @@ const WorkflowInputDescriptorEditor = ({
           />
           {input.value.value.param_type.type === "Layer" ? (
             <OptionPicker
-              options={["Vector", "Raster"] as const}
+              options={["Vector", "Raster", "Any"] as const}
               selectedOption={input.value.value.param_type.options}
               prompt="Layer type"
               emptyText="This should not be empty"

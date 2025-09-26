@@ -23,6 +23,7 @@ import {
   ToolParameter,
   ToolsScreenInfo,
   ToolRuntimeInputDescriptor,
+  LayerType,
 } from "./bindings";
 import { Dialog, useDialog } from "./dialog";
 import {
@@ -62,7 +63,7 @@ type ParameterDescriptor = { label: string; id: string } & (
     | { type: "Int"; value: number }
     | { type: "String"; value: string }
     | { type: "Dataset"; value: number }
-    | { type: "Layer"; value: DatasetLayerIndex; options: "Vector" | "Raster" }
+    | { type: "Layer"; value: DatasetLayerIndex; options: LayerType }
     | { type: "Option"; value: string; options: string[] }
     | { type: "File"; value: string }
   );
@@ -112,7 +113,13 @@ export const toolInputParamFromInput = (
         type: input.param_type.type,
         value: {
           dataset: 0,
-          layer: { type: input.param_type.options, index: 0 },
+          layer: {
+            type:
+              input.param_type.options === "Any"
+                ? "Vector"
+                : input.param_type.options,
+            index: 0,
+          },
         },
         label: input.label,
         options: input.param_type.options,
@@ -324,6 +331,84 @@ const ToolInput = ({
                 })
               }
             />
+          );
+        case "Any":
+          return (
+            <div>
+              <button
+                onClick={() =>
+                  parameterBinding.setValue({
+                    ...parameterBinding.value,
+                    type: "Layer",
+                    options: "Any",
+                    value: {
+                      dataset: 0,
+                      layer: {
+                        type:
+                          (parameterBinding.value.value as DatasetLayerIndex)
+                            .layer.type === "Vector"
+                            ? "Raster"
+                            : "Vector",
+                        index:
+                          (parameterBinding.value.value as DatasetLayerIndex)
+                            .layer.type === "Vector"
+                            ? 0
+                            : 1,
+                      },
+                    },
+                  })
+                }
+              >
+                {parameterBinding.value.value.layer.type === "Vector"}
+              </button>
+              {parameterBinding.value.value.layer.type === "Vector" ? (
+                <IndexedOptionPicker
+                  prompt={parameterBinding.value.label}
+                  emptyText="There are no vector layers to select"
+                  index={vectorLayers.findIndex(
+                    (layer) =>
+                      // First check just to satisfy type script
+                      parameterBinding.value.type === "Layer" &&
+                      layer.dataset === parameterBinding.value.value.dataset &&
+                      layer.type === "Vector" &&
+                      layer.index === parameterBinding.value.value.layer.index
+                  )}
+                  options={vectorLayers.map((layer) => layer.dataset_file)}
+                  setIndex={(layer_index) =>
+                    propertyGetSet("value", parameterBinding).setValue({
+                      dataset: vectorLayers[layer_index].dataset,
+                      layer: {
+                        type: "Vector",
+                        index: vectorLayers[layer_index].index,
+                      },
+                    })
+                  }
+                />
+              ) : (
+                <IndexedOptionPicker
+                  prompt={parameterBinding.value.label}
+                  emptyText="There are no raster layers to select"
+                  index={rasterLayers.findIndex(
+                    (layer) =>
+                      // First check just to satisfy type script
+                      parameterBinding.value.type === "Layer" &&
+                      layer.dataset === parameterBinding.value.value.dataset &&
+                      layer.type === "Raster" &&
+                      layer.index === parameterBinding.value.value.layer.index
+                  )}
+                  options={rasterLayers.map((layer) => layer.dataset_file)}
+                  setIndex={(layer_index) =>
+                    propertyGetSet("value", parameterBinding).setValue({
+                      dataset: rasterLayers[layer_index].dataset,
+                      layer: {
+                        type: "Raster",
+                        index: rasterLayers[layer_index].index,
+                      },
+                    })
+                  }
+                />
+              )}
+            </div>
           );
       }
     case "Option":
@@ -675,7 +760,7 @@ const ToolInputCreator = ({
           />
           {input.param_type.type === "Layer" ? (
             <OptionPicker
-              options={["Vector", "Raster"] as const}
+              options={["Vector", "Raster", "Any"] as const}
               selectedOption={input.param_type.options}
               prompt="Layer type"
               emptyText="This should not be empty"

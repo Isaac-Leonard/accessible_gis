@@ -562,13 +562,10 @@ export type LayerDescriptor = (
 export type LayerIndex =
   | { type: "Vector"; index: number }
   | { type: "Raster"; index: number };
-/**
- * Auto-generated discriminant enum variants
- */
-export type LayerIndexDiscriminants = "Vector" | "Raster";
 export type LayerScreenInfo =
   | ({ type: "Vector" } & VectorScreenData)
   | ({ type: "Raster" } & RasterScreenData);
+export type LayerType = "Vector" | "Raster" | "Any";
 export type Line = { start: Point; end: Point };
 export type LineDescription =
   | ({ type: "Closed" } & ClosedLineDescription)
@@ -1023,7 +1020,7 @@ export type ToolInputType =
   | { type: "Float" }
   | { type: "Int" }
   | { type: "String" }
-  | { type: "Layer"; options: LayerIndexDiscriminants }
+  | { type: "Layer"; options: LayerType }
   | { type: "Dataset" }
   | { type: "Option"; options: string[] }
   /**

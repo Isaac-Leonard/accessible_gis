@@ -4,7 +4,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{errors::ErrorDetails, gdal_if::LayerIndexDiscriminants};
+use crate::errors::ErrorDetails;
 
 use super::{
     ReturnedToolOutput, Tool, ToolInputDescriptor, ToolOutputAction, ToolParsedParamValue,
@@ -125,9 +125,17 @@ pub enum ToolInputType {
     Float,
     Int,
     String,
-    Layer(LayerIndexDiscriminants),
+    Layer(LayerType),
     Dataset,
     Option(Vec<String>),
     /// bool to determine if this file is an output of the tool or not
     File(bool),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type, strum::EnumDiscriminants)]
+#[strum_discriminants(derive(Serialize, Deserialize, specta::Type, strum::EnumIter))]
+pub enum LayerType {
+    Vector,
+    Raster,
+    Any,
 }

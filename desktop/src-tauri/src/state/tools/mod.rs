@@ -16,7 +16,9 @@ use crate::{
 use super::{
     dataset_collection::{DatasetCollection, NonEmptyDelegatorImpl},
     gis::{
-        combined::DatasetLayerIndex, dataset::StatefulDataset, raster::StatefulRasterBand,
+        combined::{DatasetLayerIndex, StatefulLayerEnum},
+        dataset::StatefulDataset,
+        raster::StatefulRasterBand,
         vector::StatefulVectorLayer,
     },
 };
@@ -254,6 +256,7 @@ pub enum ToolParsedParamValue<'a> {
     String(String),
     Vector(StatefulVectorLayer<'a>),
     Raster(StatefulRasterBand<'a>),
+    AnyLayer(StatefulLayerEnum<'a>),
     Dataset(&'a StatefulDataset),
     Option(String),
     File(ToolParsedFileParameter),
@@ -272,6 +275,9 @@ impl ToolParsedParamValue<'_> {
             // TODO: Try see if we can return the band index too
             ToolParsedParamValue::Raster(band) => {
                 band.info.shared.name.to_string_lossy().to_string()
+            }
+            ToolParsedParamValue::AnyLayer(band) => {
+                band.shared_ref().name.to_string_lossy().to_string()
             }
             ToolParsedParamValue::Dataset(dataset) => {
                 dataset.dataset.file_name.to_string_lossy().to_string()
@@ -310,17 +316,22 @@ impl<'a> ToolParsedParamValue<'a> {
                 )
             }
             (ToolParameterValue::Layer(index), ToolInputType::Layer(kind)) => match kind {
-                LayerIndexDiscriminants::Vector => ToolParsedParamValue::Vector(
+                LayerType::Vector => ToolParsedParamValue::Vector(
                     datasets
                         .get(index)
                         .and_then(|layer| layer.try_as_vector())
                         .ok_or_else(|| ErrorDetails::Other("Missing vector layer".to_string()))?,
                 ),
-                LayerIndexDiscriminants::Raster => ToolParsedParamValue::Raster(
+                LayerType::Raster => ToolParsedParamValue::Raster(
                     datasets
                         .get(index)
                         .and_then(|layer| layer.try_as_raster())
                         .ok_or_else(|| ErrorDetails::Other("Missing raster layer".to_string()))?,
+                ),
+                LayerType::Any => ToolParsedParamValue::AnyLayer(
+                    datasets
+                        .get(index)
+                        .ok_or_else(|| ErrorDetails::Other("Missing layer".to_string()))?,
                 ),
             },
             (ToolParameterValue::Option(option), ToolInputType::Option(options)) => {
