@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use gdal::spatial_ref::SpatialRef;
 use itertools::Itertools;
+use tauri::AppHandle;
 use uuid::Uuid;
 
 use crate::{
@@ -60,14 +61,14 @@ pub fn set_srs(srs: Srs, state: AppState) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn run_tool(tool_id: Uuid, parameters: Vec<ToolParameter>, state: AppState) {
+pub fn run_tool(tool_id: Uuid, parameters: Vec<ToolParameter>, state: AppState, app: AppHandle) {
     state.with_project_fallible(|project| {
         let tools = project.get_tools();
         let tool = tools
             .iter()
             .find(|tool| tool.get_id() == tool_id)
             .ok_or_else(|| ErrorDetails::Other(format!("Could not get tool with id {tool_id}")))?;
-        let output = tool.run(parameters, &mut project.datasets)?;
+        let output = tool.run(parameters, &mut project.datasets, &app)?;
         let action = tool.get_output_actions();
         for file in &action.load_layers {
             let Some(path) = output.files.get(*file) else {
@@ -120,7 +121,7 @@ pub fn add_workflow(workflow: NewWorkflow, state: AppState) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn run_workflow(id: Uuid, inputs: Vec<WorkflowInput>, state: AppState) {
+pub fn run_workflow(id: Uuid, inputs: Vec<WorkflowInput>, state: AppState, app: AppHandle) {
     state.with_project_fallible(|project| {
         project
             .workflows
@@ -128,7 +129,7 @@ pub fn run_workflow(id: Uuid, inputs: Vec<WorkflowInput>, state: AppState) {
             .find(|workflow| workflow.id == id)
             .ok_or_else(|| ErrorDetails::Other("Couldn't find project to run".to_string()))?
             .clone()
-            .run_workflow(inputs, project)
+            .run_workflow(inputs, project, &app)
     });
 }
 

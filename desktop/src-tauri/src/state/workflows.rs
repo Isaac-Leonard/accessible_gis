@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use tauri::AppHandle;
 use uuid::Uuid;
 
 use crate::{errors::ErrorDetails, gdal_if::LayerIndexDiscriminants};
@@ -76,6 +77,7 @@ impl Workflow {
         &self,
         inputs: Vec<WorkflowInput>,
         project: &mut Project,
+        app: &AppHandle,
     ) -> Result<(), ErrorDetails> {
         for tool_call in &self.tools {
             let tool = project
@@ -112,7 +114,7 @@ impl Workflow {
             project.tool_outputs.push(SavedToolOutputAction {
                 read: true,
                 tool: tool.get_label(),
-                output: tool.run(workflow_inputs, &mut project.datasets)?,
+                output: tool.run(workflow_inputs, &mut project.datasets, app)?,
                 id: Uuid::new_v4(),
             });
         }

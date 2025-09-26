@@ -102,7 +102,7 @@ impl<'a> StatefulRasterBand<'a> {
         let dataset = if let Some(dataset) = self.info.wgs84_reprojected_file.as_mut() {
             dataset
         } else {
-            let reprojected_dataset_name = get_random_temp_path(app, "tif");
+            let reprojected_dataset_name = get_random_temp_path(app, Some("tif"));
             // Deliberately ignore the result as it is almost certain to get an error as most paths should be unique.
             let _ = std::fs::remove_file(&reprojected_dataset_name);
             self.reproject(&reprojected_dataset_name, Srs::Epsg(4326))

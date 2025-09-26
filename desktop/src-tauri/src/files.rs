@@ -21,11 +21,13 @@ pub fn get_csv(file: String) -> Vec<Vec<String>> {
         .collect()
 }
 
-pub fn get_random_temp_path(app: &AppHandle, ext: impl AsRef<OsStr>) -> PathBuf {
+pub fn get_random_temp_path(app: &AppHandle, ext: Option<impl AsRef<OsStr>>) -> PathBuf {
     let mut path = app
         .path()
         .resolve(uuid::Uuid::new_v4().to_string(), BaseDirectory::Temp)
         .unwrap();
-    path.set_extension(ext);
+    if let Some(ext) = ext {
+        path.set_extension(ext);
+    }
     path
 }

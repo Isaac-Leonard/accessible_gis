@@ -24,6 +24,7 @@ import {
   ToolsScreenInfo,
   ToolRuntimeInputDescriptor,
   LayerType,
+  ToolFileInput,
 } from "./bindings";
 import { Dialog, useDialog } from "./dialog";
 import {
@@ -65,7 +66,7 @@ type ParameterDescriptor = { label: string; id: string } & (
     | { type: "Dataset"; value: number }
     | { type: "Layer"; value: DatasetLayerIndex; options: LayerType }
     | { type: "Option"; value: string; options: string[] }
-    | { type: "File"; value: string }
+    | { type: "File"; value: ToolFileInput; output: boolean }
   );
 
 export const toolInputParamFromInput = (
@@ -138,10 +139,11 @@ export const toolInputParamFromInput = (
     case "File":
       return {
         type: input.param_type.type,
-        value: "",
+        value: { type: "Named", value: "" },
         label: input.label,
         id: input.id,
         ...optional,
+        output: input.param_type.options,
       };
   }
 };
@@ -423,15 +425,21 @@ const ToolInput = ({
       );
     case "File":
       return (
-        <div>
-          <SaveButton
-            text={
-              parameterBinding.value.label + ": " + parameterBinding.value.value
-            }
-            prompt={parameterBinding.value.label}
-            onSave={propertyGetSet("value", parameterBinding).setValue}
-          />
-        </div>
+        <FileInput
+          label={`${parameterBinding.value.label}: ${
+            parameterBinding.value.value.value ?? ""
+          }`}
+          file={parameterBinding.value.value}
+          setFile={(file) =>
+            parameterBinding.setValue({
+              ...parameterBinding.value,
+              type: "File",
+              value: file,
+              output: (parameterBinding.value as { output: boolean }).output,
+            })
+          }
+          output={parameterBinding.value.output}
+        />
       );
     default:
       return (
@@ -563,8 +571,9 @@ export const presetInputFromDiscriminant = (
     case "Int":
       return { type: discriminant, value: 0 };
     case "String":
-    case "File":
       return { type: discriminant, value: "" };
+    case "File":
+      return { type: discriminant, value: { type: "Named", value: "" } };
   }
 };
 
@@ -869,13 +878,73 @@ export const PresetInputValueEditor = ({
       );
     case "File":
       return (
-        <LoadButton
-          text={"Preset input: " + input.value}
-          onLoad={(value) => setInput({ type: input.type, value })}
+        <FileInput
+          label={`Preset value: ${input.value.value ?? ""}`}
+          file={input.value}
+          setFile={(file) => setInput({ type: "File", value: file })}
+          output={false}
         />
       );
   }
 };
+
+type FileInputProps = {
+  label: String;
+  file: ToolFileInput;
+  setFile: (file: ToolFileInput) => void;
+  output: boolean;
+};
+
+const FileInput = ({ label, file, setFile, output }: FileInputProps) => (
+  <div>
+    {label}
+    <button
+      onClick={() =>
+        setFile(
+          file.type === "Temp"
+            ? { type: "Named", value: "" }
+            : { type: "Temp", value: null }
+        )
+      }
+    >
+      {file.type}
+    </button>
+    {file.type === "Named" ? (
+      output ? (
+        <SaveButton
+          text={"Preset input: " + file.value}
+          onSave={(value) => setFile({ type: "Named", value })}
+        />
+      ) : (
+        <LoadButton
+          text={"Preset input: " + file.value}
+          onLoad={(value) => setFile({ type: "Named", value })}
+        />
+      )
+    ) : (
+      <div>
+        <button
+          role="switch"
+          aria-checked={file.value !== null}
+          onClick={() =>
+            setFile({ type: "Temp", value: file.value === null ? "" : null })
+          }
+        >
+          Extention
+        </button>
+        {file.value !== null ? (
+          <TextInput
+            label="Extention"
+            binding={{
+              value: file.value,
+              setValue: (value) => setFile({ type: "Named", value }),
+            }}
+          />
+        ) : null}
+      </div>
+    )}
+  </div>
+);
 
 const ToolsActionsDialog = ({ tools }: { tools: ToolDescriptor[] }) => {
   const { open, setOpen } = useDialog();

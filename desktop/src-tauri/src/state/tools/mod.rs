@@ -1,6 +1,7 @@
 pub mod user_defined;
 
 use std::{mem::transmute, path::PathBuf, process::Output as CommandOutput};
+use tauri::AppHandle;
 pub use user_defined::*;
 
 use serde::{Deserialize, Serialize};
@@ -8,7 +9,7 @@ use uuid::Uuid;
 
 use crate::{
     errors::ErrorDetails,
-    gdal_if::LayerIndexDiscriminants,
+    files::get_random_temp_path,
     tools::{describe_landforms::DescribeLandformsTool, get_sieve_filter_tool},
     ui::ToolDescriptor,
 };
@@ -35,11 +36,12 @@ pub trait Tool: Send + Sync {
         &self,
         params: Vec<ToolParameter>,
         project: &'a mut DatasetCollection,
+        app: &AppHandle,
     ) -> Result<Vec<ToolParsedParamValue<'a>>, ErrorDetails> {
         let mut parsed = Vec::new();
         for expected in self.get_expected_input_parameters() {
             let parsed_val = match expected {
-                ToolInputDescriptor::Preset(value) => ToolParsedParamValue::from(value),
+                ToolInputDescriptor::Preset(value) => ToolParsedParamValue::from_preset(value, app),
                 ToolInputDescriptor::Runtime(ToolRuntimeInputDescriptor {
                     label,
                     param_type,
@@ -57,7 +59,7 @@ pub trait Tool: Send + Sync {
                             self.get_label()
                         ))
                     })?;
-                    ToolParsedParamValue::parse_from(param.value.clone(), param_type, project)?
+                    ToolParsedParamValue::parse_from(param.value.clone(), param_type, project, app)?
                 }
             };
             // TODO: This is really bad
@@ -75,9 +77,10 @@ pub trait Tool: Send + Sync {
         &self,
         params: Vec<ToolParameter>,
         project: &mut DatasetCollection,
+        app: &AppHandle,
     ) -> Result<ToolOutput, ErrorDetails> {
         let mut output_files = Vec::new();
-        let params = self.parse_input_parameters(params, project)?;
+        let params = self.parse_input_parameters(params, project, app)?;
 
         for param in &params {
             if let Some(file) = param.try_as_file_ref()
@@ -184,6 +187,7 @@ pub struct ToolRuntimeInputDescriptor {
     pub optional: bool,
     pub id: Uuid,
 }
+
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
 pub struct ToolParameter {
     pub id: Uuid,
@@ -200,7 +204,7 @@ pub enum ToolParameterValue {
     Dataset(usize),
     Option(String),
     Flag(bool),
-    File(PathBuf),
+    File(ToolFileInput),
 }
 
 #[derive(
@@ -219,18 +223,18 @@ pub enum ToolPresetParameterValue {
     Float(f64),
     Int(i64),
     String(String),
-    File(PathBuf),
+    File(ToolFileInput),
 }
 
-impl From<ToolPresetParameterValue> for ToolParsedParamValue<'_> {
-    fn from(value: ToolPresetParameterValue) -> Self {
+impl ToolParsedParamValue<'_> {
+    fn from_preset(value: ToolPresetParameterValue, app: &AppHandle) -> Self {
         match value {
             ToolPresetParameterValue::Float(num) => ToolParsedParamValue::Float(num),
             ToolPresetParameterValue::Int(num) => ToolParsedParamValue::Int(num),
             ToolPresetParameterValue::String(string) => ToolParsedParamValue::String(string),
-            ToolPresetParameterValue::File(path) => {
+            ToolPresetParameterValue::File(file) => {
                 ToolParsedParamValue::File(ToolParsedFileParameter {
-                    path,
+                    path: file.get_path(app),
                     use_as_output: false,
                 })
             }
@@ -245,6 +249,31 @@ impl From<ToolPresetParameterValue> for ToolParameterValue {
             ToolPresetParameterValue::Int(num) => Self::Int(num),
             ToolPresetParameterValue::String(string) => Self::String(string),
             ToolPresetParameterValue::File(path) => Self::File(path),
+        }
+    }
+}
+
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    specta::Type,
+    strum::EnumTryAs,
+    strum::EnumDiscriminants,
+)]
+#[serde(tag = "type", content = "value")]
+pub enum ToolFileInput {
+    Temp(Option<String>),
+    Named(PathBuf),
+}
+
+impl ToolFileInput {
+    pub fn get_path(self, app: &AppHandle) -> PathBuf {
+        match self {
+            ToolFileInput::Named(path) => path,
+            ToolFileInput::Temp(ext) => get_random_temp_path(app, ext),
         }
     }
 }
@@ -299,6 +328,7 @@ impl<'a> ToolParsedParamValue<'a> {
         param: ToolParameterValue,
         expected: ToolInputType,
         datasets: &'a mut DatasetCollection,
+        app: &AppHandle,
     ) -> Result<Self, ErrorDetails> {
         Ok(match (param, expected) {
             (ToolParameterValue::Float(num), ToolInputType::Float) => {
@@ -337,9 +367,9 @@ impl<'a> ToolParsedParamValue<'a> {
             (ToolParameterValue::Option(option), ToolInputType::Option(options)) => {
                 parse_option(option, options)?
             }
-            (ToolParameterValue::File(path), ToolInputType::File(use_as_output)) => {
+            (ToolParameterValue::File(file), ToolInputType::File(use_as_output)) => {
                 ToolParsedParamValue::File(ToolParsedFileParameter {
-                    path,
+                    path: file.get_path(app),
                     use_as_output,
                 })
             }

@@ -11,12 +11,9 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, path::BaseDirectory};
 use uuid::Uuid;
 
-use crate::{
-    gdal_if::LayerIndexDiscriminants,
-    state::tools::{
-        LayerType, ToolInputDescriptor, ToolInputType, ToolOutputAction, ToolPresetParameterValue,
-        ToolRuntimeInputDescriptor, UserDefinedTool,
-    },
+use crate::state::tools::{
+    LayerType, ToolInputDescriptor, ToolInputType, ToolOutputAction, ToolPresetParameterValue,
+    ToolRuntimeInputDescriptor, UserDefinedTool,
 };
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]

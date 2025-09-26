@@ -66,7 +66,7 @@ async fn get_vector(
 ) -> Result<HttpResponse, Error> {
     eprintln!("get_vector called: {name}");
 
-    let json_name = get_random_temp_path(&app, "geojson");
+    let json_name = get_random_temp_path(&app, Some("geojson"));
     let state = app.state::<AppDataSync>();
 
     let found_layer = state.with_project_fallible(|project| {
@@ -131,7 +131,7 @@ async fn get_raster(state: Data<AppDataSync>) -> impl Responder {
 
 #[get("/get_image")]
 async fn get_image(state: Data<AppDataSync>, app: Data<AppHandle>) -> impl Responder {
-    let raster_name = get_random_temp_path(&app, "png");
+    let raster_name = get_random_temp_path(&app, Some("png"));
     // Deliberately ignore the result as it is almost certain to get an error as most paths should be unique.
     let _ = std::fs::remove_file(&raster_name);
     state.with_lock(|state| {

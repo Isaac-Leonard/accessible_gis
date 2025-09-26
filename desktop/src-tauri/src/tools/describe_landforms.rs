@@ -11,7 +11,6 @@ use uuid::Uuid;
 
 use crate::{
     errors::ErrorDetails,
-    gdal_if::LayerIndexDiscriminants,
     state::tools::{
         LayerType, ReturnedToolOutput, Tool, ToolInputDescriptor, ToolInputType, ToolOutputAction,
         ToolParsedParamValue, ToolRuntimeInputDescriptor,

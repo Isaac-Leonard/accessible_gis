@@ -1016,6 +1016,9 @@ export type ToolDescriptor = {
   inputs: ToolRuntimeInputDescriptor[];
   id: string;
 };
+export type ToolFileInput =
+  | { type: "Temp"; value: string | null }
+  | { type: "Named"; value: string };
 export type ToolInputType =
   | { type: "Float" }
   | { type: "Int" }
@@ -1055,12 +1058,12 @@ export type ToolParameterValue =
   | { type: "Dataset"; value: number }
   | { type: "Option"; value: string }
   | { type: "Flag"; value: boolean }
-  | { type: "File"; value: string };
+  | { type: "File"; value: ToolFileInput };
 export type ToolPresetParameterValue =
   | { type: "Float"; value: number }
   | { type: "Int"; value: number }
   | { type: "String"; value: string }
-  | { type: "File"; value: string };
+  | { type: "File"; value: ToolFileInput };
 /**
  * Auto-generated discriminant enum variants
  */
