@@ -147,7 +147,6 @@ pub async fn ws_handle(
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "type", content = "data")]
 pub enum AppMessage {
-    FocusRaster,
     FocusBox([f64; 4]),
     FetchRaster(RasterDisplayInfo),
     FetchVector(VectorInfo),

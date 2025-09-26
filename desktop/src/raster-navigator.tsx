@@ -15,6 +15,7 @@ import { RenderMethodsSelector } from "./render_methods_selector";
 import { Dialog, useDialog } from "./dialog";
 import { AudioSettingsScreen } from "./settings-screen";
 import { AudioTableManager } from "./audio-table";
+import { Checkbox, NumberInput } from "./binded-input";
 
 export const RasterNavigator = ({ layer }: { layer: RasterScreenData }) => {
   return (
@@ -65,16 +66,6 @@ const RasterNavigatorInner = ({ layer }: { layer: RasterScreenData }) => {
               setValue: client.setCurrentRenderMethod,
             }}
           />
-          <label>
-            Enable OCR when displayed?
-            <input
-              role="switch"
-              type="checkbox"
-              checked={layer.ocr}
-              aria-pressed={layer.ocr}
-              onChange={(e) => client.setCurrentOcr(e.currentTarget.checked)}
-            />
-          </label>
         </>
       ) : (
         ""
@@ -168,20 +159,14 @@ const PixelExplorer = ({ layer }: { layer: RasterScreenData }) => {
       setOpen={setOpen}
     >
       <div onKeyDown={keyHandler}>
-        <input
-          type="number"
-          value={radius}
-          onChange={(e) => setRadius(Number(e.currentTarget.value))}
-          autofocus={true}
+        <NumberInput
+          label="Step size"
+          binding={{ value: radius, setValue: setRadius }}
         />
-        <label>
-          Show coords?{" "}
-          <input
-            type="checkbox"
-            defaultChecked={true}
-            onChange={(e) => setShowCoords(e.currentTarget.checked)}
-          />
-        </label>
+        <Checkbox
+          label="Show coords?"
+          binding={{ value: showCoords, setValue: setShowCoords }}
+        />
         <CoordinateButtons x={x} y={y} radius={radius} setCoords={setCoords} />
 
         <p role="status">{info}</p>
