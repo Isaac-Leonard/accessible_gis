@@ -8,16 +8,18 @@ use std::path::PathBuf;
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter, Manager};
+use tauri_specta::Event;
 use uuid::Uuid;
 
-use crate::{errors::ErrorDetails, gdal_if::LayerIndexDiscriminants};
+use crate::{commands::MessageEvent, errors::ErrorDetails, gdal_if::LayerIndexDiscriminants};
 
 use super::{
+    AppDataSync, AppState,
     projects::Project,
     tools::{
-        NewToolInput, SavedToolOutputAction, Tool, ToolInputDescriptor, ToolInputType,
-        ToolParameter, ToolParameterValue, ToolPresetParameterValue,
+        NewToolInput, ReturnedToolOutput, SavedToolOutputAction, Tool, ToolInputDescriptor,
+        ToolInputType, ToolOutput, ToolParameter, ToolParameterValue, ToolPresetParameterValue,
     },
 };
 
@@ -79,45 +81,89 @@ impl Workflow {
         project: &mut Project,
         app: &AppHandle,
     ) -> Result<(), ErrorDetails> {
-        for tool_call in &self.tools {
-            let tool = project
-                .tools
-                .iter()
-                .find(|tool| tool.get_id() == tool_call.tool)
-                .ok_or_else(|| {
-                    ErrorDetails::Other("Could not get tool for workflow".to_string())
-                })?;
+        let tool_calls: Vec<_> = self
+            .tools
+            .iter()
+            .map(|tool_call| {
+                let tool = project
+                    .tools
+                    .iter()
+                    .find(|tool| tool.get_id() == tool_call.tool)
+                    .ok_or_else(|| {
+                        ErrorDetails::Other("Could not get tool for workflow".to_string())
+                    })?
+                    .clone();
 
-            let workflow_inputs = tool_call
-                .inputs
-                .iter()
-                .map(|connection| {
-                    let expected = self
-                        .inputs
-                        .iter()
-                        .find(|expected| expected.id == connection.input)
-                        .unwrap()
-                        .clone();
-                    let got = inputs
-                        .iter()
-                        .find(|input| input.id == connection.input)
-                        .map(|input| input.value.clone());
+                let workflow_inputs = tool_call
+                    .inputs
+                    .iter()
+                    .map(|connection| {
+                        let expected = self
+                            .inputs
+                            .iter()
+                            .find(|expected| expected.id == connection.input)
+                            .unwrap()
+                            .clone();
+                        let got = inputs
+                            .iter()
+                            .find(|input| input.id == connection.input)
+                            .map(|input| input.value.clone());
 
-                    ToolParameter {
-                        id: connection.parameter,
-                        value: got
-                            .unwrap_or_else(|| expected.value.try_as_preset().unwrap().into()),
+                        ToolParameter {
+                            id: connection.parameter,
+                            value: got
+                                .unwrap_or_else(|| expected.value.try_as_preset().unwrap().into()),
+                        }
+                    })
+                    .collect_vec();
+                let params =
+                    tool.parse_input_parameters(workflow_inputs, &mut project.datasets, app)?;
+                Ok::<_, ErrorDetails>((tool, params))
+            })
+            .try_collect()?;
+        let app = app.clone();
+        tauri::async_runtime::spawn(async move {
+            let state = app.state::<AppDataSync>();
+            for (tool, params) in tool_calls {
+                let result = tool.execute(params);
+                match result {
+                    Ok(result) => {
+                        state.with_project(|project| {
+                            project.tool_outputs.push(SavedToolOutputAction {
+                                read: false,
+                                tool: tool.get_label(),
+                                output: ToolOutput {
+                                    returned_output: result,
+                                    files: Vec::new(),
+                                },
+                                id: Uuid::new_v4(),
+                            })
+                        });
                     }
-                })
-                .collect_vec();
-
-            project.tool_outputs.push(SavedToolOutputAction {
-                read: true,
-                tool: tool.get_label(),
-                output: tool.run(workflow_inputs, &mut project.datasets, app)?,
-                id: Uuid::new_v4(),
+                    Err(err) => {
+                        state.with_lock(|state| {
+                            state.errors.push(err.into());
+                            state.errors.push(
+                                ErrorDetails::Other(format!(
+                                    "Failed to finish workflow due to error in the {} tool",
+                                    tool.get_label()
+                                ))
+                                .into(),
+                            );
+                        });
+                        return;
+                    }
+                };
+                MessageEvent.emit(&app);
+            }
+            // This should not be an error but there's currently no better notification mechinism
+            state.with_lock(|state| {
+                state
+                    .errors
+                    .push(ErrorDetails::Other("Project done".to_string()).into())
             });
-        }
+            MessageEvent.emit(&app);
+        });
         Ok(())
     }
 

@@ -62,7 +62,7 @@ impl Tool for UserDefinedTool {
 
     fn execute(
         &self,
-        params: &[ToolParsedParamValue],
+        params: Vec<ToolParsedParamValue>,
     ) -> Result<Option<ReturnedToolOutput>, ErrorDetails> {
         let mut command = Command::new(&self.command);
         for param in params {

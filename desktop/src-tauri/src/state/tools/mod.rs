@@ -78,14 +78,14 @@ pub trait Tool: Send + Sync {
         }
 
         Ok(ToolOutput {
-            returned_output: self.execute(&params)?,
+            returned_output: self.execute(params)?,
             files: output_files,
         })
     }
 
     fn execute(
         &self,
-        params: &[ToolParsedParamValue],
+        params: Vec<ToolParsedParamValue>,
     ) -> Result<Option<ReturnedToolOutput>, ErrorDetails>;
 
     fn for_ui(&self) -> ToolDescriptor {

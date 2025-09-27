@@ -232,7 +232,7 @@ impl Tool for DescribeLandformsTool {
 
     fn execute(
         &self,
-        params: &[ToolParsedParamValue],
+        params: Vec<ToolParsedParamValue>,
     ) -> Result<Option<ReturnedToolOutput>, ErrorDetails> {
         let layer = params[0].try_as_file_ref().unwrap();
         let result = describe_landforms(&layer.path).map_err(|err| ErrorDetails::Other(err))?;
