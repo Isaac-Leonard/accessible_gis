@@ -229,13 +229,13 @@ impl ToolParsedParamValue {
     }
 }
 
-impl From<ToolPresetParameterValue> for ToolParameterValue {
-    fn from(value: ToolPresetParameterValue) -> Self {
+impl ToolParameterValue {
+    pub fn from_preset(value: ToolPresetParameterValue, app: &AppHandle) -> Self {
         match value {
             ToolPresetParameterValue::Float(num) => Self::Float(num),
             ToolPresetParameterValue::Int(num) => Self::Int(num),
             ToolPresetParameterValue::String(string) => Self::String(string),
-            ToolPresetParameterValue::File(path) => Self::File(path),
+            ToolPresetParameterValue::File(file) => Self::File(file.to_named(app)),
         }
     }
 }
@@ -262,6 +262,10 @@ impl ToolFileInput {
             ToolFileInput::Named(path) => path,
             ToolFileInput::Temp(ext) => get_random_temp_path(app, ext),
         }
+    }
+
+    pub fn to_named(self, app: &AppHandle) -> Self {
+        Self::Named(self.get_path(app))
     }
 }
 

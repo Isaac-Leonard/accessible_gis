@@ -81,6 +81,20 @@ impl Workflow {
         project: &mut Project,
         app: &AppHandle,
     ) -> Result<(), ErrorDetails> {
+        // This is done to ensure temporary file paths remain stable accross tool calls such as where one tool may depend on the output of another that has been written to a temporary file.
+        let prepared_presets = self
+            .inputs
+            .iter()
+            .map(|expected| TempWorkflowInputDescriptor {
+                id: expected.id,
+                value: expected
+                    .value
+                    .clone()
+                    .try_as_preset()
+                    .map(|value| ToolParameterValue::from_preset(value, app)),
+            })
+            .collect_vec();
+
         let tool_calls: Vec<_> = self
             .tools
             .iter()
@@ -98,12 +112,12 @@ impl Workflow {
                     .inputs
                     .iter()
                     .map(|connection| {
-                        let expected = self
-                            .inputs
+                        let expected = prepared_presets
                             .iter()
                             .find(|expected| expected.id == connection.input)
                             .unwrap()
                             .clone();
+
                         let got = inputs
                             .iter()
                             .find(|input| input.id == connection.input)
@@ -111,8 +125,7 @@ impl Workflow {
 
                         ToolParameter {
                             id: connection.parameter,
-                            value: got
-                                .unwrap_or_else(|| expected.value.try_as_preset().unwrap().into()),
+                            value: got.unwrap_or_else(|| expected.value.clone().unwrap()),
                         }
                     })
                     .collect_vec();
@@ -246,6 +259,11 @@ impl WorkflowInputDescriptor {
             id: Uuid::new_v4(),
         }
     }
+}
+
+pub struct TempWorkflowInputDescriptor {
+    pub id: Uuid,
+    pub value: Option<ToolParameterValue>,
 }
 
 #[derive(Clone, Debug, Deserialize, specta::Type)]
