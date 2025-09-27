@@ -234,9 +234,8 @@ impl Tool for DescribeLandformsTool {
         &self,
         params: &[ToolParsedParamValue],
     ) -> Result<Option<ReturnedToolOutput>, ErrorDetails> {
-        let layer = params[0].try_as_vector_ref().unwrap();
-        let result =
-            describe_landforms(&layer.info.shared.name).map_err(|err| ErrorDetails::Other(err))?;
+        let layer = params[0].try_as_file_ref().unwrap();
+        let result = describe_landforms(&layer.path).map_err(|err| ErrorDetails::Other(err))?;
         Ok(Some(ReturnedToolOutput::String(result)))
     }
 

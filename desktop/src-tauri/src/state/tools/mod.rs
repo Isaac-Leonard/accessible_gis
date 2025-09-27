@@ -1,6 +1,6 @@
 pub mod user_defined;
 
-use std::{mem::transmute, path::PathBuf, process::Output as CommandOutput};
+use std::{path::PathBuf, process::Output as CommandOutput};
 use tauri::AppHandle;
 pub use user_defined::*;
 
@@ -8,20 +8,13 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    errors::ErrorDetails,
-    files::get_random_temp_path,
-    tools::{describe_landforms::DescribeLandformsTool, get_sieve_filter_tool},
-    ui::ToolDescriptor,
+    errors::ErrorDetails, files::get_random_temp_path,
+    tools::describe_landforms::DescribeLandformsTool, ui::ToolDescriptor,
 };
 
 use super::{
     dataset_collection::{DatasetCollection, NonEmptyDelegatorImpl},
-    gis::{
-        combined::{DatasetLayerIndex, StatefulLayerEnum},
-        dataset::StatefulDataset,
-        raster::StatefulRasterBand,
-        vector::StatefulVectorLayer,
-    },
+    gis::combined::DatasetLayerIndex,
 };
 
 pub trait Tool: Send + Sync {
@@ -32,12 +25,12 @@ pub trait Tool: Send + Sync {
 
     fn get_output_actions(&self) -> ToolOutputAction;
 
-    fn parse_input_parameters<'a>(
+    fn parse_input_parameters(
         &self,
         params: Vec<ToolParameter>,
-        project: &'a mut DatasetCollection,
+        project: &mut DatasetCollection,
         app: &AppHandle,
-    ) -> Result<Vec<ToolParsedParamValue<'a>>, ErrorDetails> {
+    ) -> Result<Vec<ToolParsedParamValue>, ErrorDetails> {
         let mut parsed = Vec::new();
         for expected in self.get_expected_input_parameters() {
             let parsed_val = match expected {
@@ -61,12 +54,6 @@ pub trait Tool: Send + Sync {
                     })?;
                     ToolParsedParamValue::parse_from(param.value.clone(), param_type, project, app)?
                 }
-            };
-            // TODO: This is really bad
-            // This needs to be refactored properly however I suspect that cannot be done without rewriting large parts of the gdal-rs library.
-            // This shouldn't currently cause any issues as all of this code is currently affectively single threaded for now.
-            let parsed_val = unsafe {
-                transmute::<ToolParsedParamValue<'_>, ToolParsedParamValue<'a>>(parsed_val)
             };
             parsed.push(parsed_val);
         }
@@ -226,7 +213,7 @@ pub enum ToolPresetParameterValue {
     File(ToolFileInput),
 }
 
-impl ToolParsedParamValue<'_> {
+impl ToolParsedParamValue {
     fn from_preset(value: ToolPresetParameterValue, app: &AppHandle) -> Self {
         match value {
             ToolPresetParameterValue::Float(num) => ToolParsedParamValue::Float(num),
@@ -279,38 +266,21 @@ impl ToolFileInput {
 }
 
 #[derive(Debug, strum::EnumTryAs)]
-pub enum ToolParsedParamValue<'a> {
+pub enum ToolParsedParamValue {
     Float(f64),
     Int(i64),
     String(String),
-    Vector(StatefulVectorLayer<'a>),
-    Raster(StatefulRasterBand<'a>),
-    AnyLayer(StatefulLayerEnum<'a>),
-    Dataset(&'a StatefulDataset),
     Option(String),
     File(ToolParsedFileParameter),
 }
 
-impl ToolParsedParamValue<'_> {
+impl ToolParsedParamValue {
     pub fn to_command_string(&self) -> String {
         match self {
             ToolParsedParamValue::Float(num) => num.to_string(),
             ToolParsedParamValue::Int(num) => num.to_string(),
             ToolParsedParamValue::String(str) => str.to_string(),
             // TODO: Try see if we can return the layer index too
-            ToolParsedParamValue::Vector(layer) => {
-                layer.info.shared.name.to_string_lossy().to_string()
-            }
-            // TODO: Try see if we can return the band index too
-            ToolParsedParamValue::Raster(band) => {
-                band.info.shared.name.to_string_lossy().to_string()
-            }
-            ToolParsedParamValue::AnyLayer(band) => {
-                band.shared_ref().name.to_string_lossy().to_string()
-            }
-            ToolParsedParamValue::Dataset(dataset) => {
-                dataset.dataset.file_name.to_string_lossy().to_string()
-            }
             ToolParsedParamValue::Option(string) => string.clone(),
             ToolParsedParamValue::File(file) => file.path.to_string_lossy().to_string(),
         }
@@ -319,15 +289,15 @@ impl ToolParsedParamValue<'_> {
 
 #[derive(Debug)]
 pub struct ToolParsedFileParameter {
-    path: PathBuf,
-    use_as_output: bool,
+    pub path: PathBuf,
+    pub use_as_output: bool,
 }
 
-impl<'a> ToolParsedParamValue<'a> {
+impl ToolParsedParamValue {
     pub fn parse_from(
         param: ToolParameterValue,
         expected: ToolInputType,
-        datasets: &'a mut DatasetCollection,
+        datasets: &mut DatasetCollection,
         app: &AppHandle,
     ) -> Result<Self, ErrorDetails> {
         Ok(match (param, expected) {
@@ -339,31 +309,55 @@ impl<'a> ToolParsedParamValue<'a> {
                 ToolParsedParamValue::String(str)
             }
             (ToolParameterValue::Dataset(index), ToolInputType::Dataset) => {
-                ToolParsedParamValue::Dataset(
-                    datasets
+                ToolParsedParamValue::File(ToolParsedFileParameter {
+                    use_as_output: false,
+                    path: datasets
                         .get_dataset(index)
-                        .ok_or_else(|| ErrorDetails::Other("Missing dataset".to_string()))?,
-                )
+                        .ok_or_else(|| ErrorDetails::Other("Missing dataset".to_string()))?
+                        .dataset
+                        .file_name
+                        .clone(),
+                })
             }
             (ToolParameterValue::Layer(index), ToolInputType::Layer(kind)) => match kind {
-                LayerType::Vector => ToolParsedParamValue::Vector(
-                    datasets
+                LayerType::Vector => ToolParsedParamValue::File(ToolParsedFileParameter {
+                    use_as_output: false,
+                    path: datasets
                         .get(index)
                         .and_then(|layer| layer.try_as_vector())
-                        .ok_or_else(|| ErrorDetails::Other("Missing vector layer".to_string()))?,
-                ),
-                LayerType::Raster => ToolParsedParamValue::Raster(
-                    datasets
+                        .ok_or_else(|| ErrorDetails::Other("Missing vector layer".to_string()))?
+                        .info
+                        .shared
+                        .name
+                        .clone(),
+                }),
+                LayerType::Raster => ToolParsedParamValue::File(ToolParsedFileParameter {
+                    use_as_output: false,
+                    path: datasets
                         .get(index)
                         .and_then(|layer| layer.try_as_raster())
-                        .ok_or_else(|| ErrorDetails::Other("Missing raster layer".to_string()))?,
-                ),
-                LayerType::Any => ToolParsedParamValue::AnyLayer(
-                    datasets
+                        .ok_or_else(|| ErrorDetails::Other("Missing raster layer".to_string()))?
+                        .info
+                        .shared
+                        .name
+                        .clone(),
+                }),
+                LayerType::Any => ToolParsedParamValue::File(ToolParsedFileParameter {
+                    use_as_output: false,
+                    path: datasets
                         .get(index)
-                        .ok_or_else(|| ErrorDetails::Other("Missing layer".to_string()))?,
-                ),
+                        .ok_or_else(|| ErrorDetails::Other("Missing layer".to_string()))?
+                        .shared_ref()
+                        .name
+                        .clone(),
+                }),
             },
+            (ToolParameterValue::File(file), ToolInputType::Layer(_kind)) => {
+                ToolParsedParamValue::File(ToolParsedFileParameter {
+                    use_as_output: false,
+                    path: file.get_path(app),
+                })
+            }
             (ToolParameterValue::Option(option), ToolInputType::Option(options)) => {
                 parse_option(option, options)?
             }
@@ -373,22 +367,21 @@ impl<'a> ToolParsedParamValue<'a> {
                     use_as_output,
                 })
             }
-            _ => Err(ErrorDetails::Other("Mismatched command types".to_string()))?,
+            (got, expected) => Err(ErrorDetails::Other(format!(
+                "Mismatched command types, expected {expected:?} but got {got:?}"
+            )))?,
         })
     }
 }
 
 pub fn get_built_in_tools() -> Vec<Box<dyn Tool>> {
-    vec![
-        Box::new(DescribeLandformsTool),
-        Box::new(get_sieve_filter_tool()),
-    ]
+    vec![Box::new(DescribeLandformsTool)]
 }
 
 pub fn parse_option(
     option: String,
     options: Vec<String>,
-) -> Result<ToolParsedParamValue<'static>, ErrorDetails> {
+) -> Result<ToolParsedParamValue, ErrorDetails> {
     if !options.contains(&option) {
         return Err(ErrorDetails::Other(
             "Somehow got unallowed option".to_string(),

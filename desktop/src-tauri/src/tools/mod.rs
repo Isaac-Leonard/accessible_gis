@@ -4,17 +4,10 @@ pub mod shape_analysis;
 use std::{
     path::Path,
     process::{Command, Output},
-    sync::LazyLock,
 };
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, path::BaseDirectory};
-use uuid::Uuid;
-
-use crate::state::tools::{
-    LayerType, ToolInputDescriptor, ToolInputType, ToolOutputAction, ToolPresetParameterValue,
-    ToolRuntimeInputDescriptor, UserDefinedTool,
-};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "type", content = "error")]
@@ -124,47 +117,6 @@ fn label_landforms(
 
 fn wbt() -> Command {
     Command::new("whitebox_tools")
-}
-
-pub fn get_sieve_filter_tool() -> UserDefinedTool {
-    static TOOL: LazyLock<UserDefinedTool> = LazyLock::new(|| UserDefinedTool {
-        built_in: true,
-        label: "Sieve filter".to_string(),
-        inputs: vec![
-            ToolInputDescriptor::Preset(ToolPresetParameterValue::String("-st".to_string())),
-            ToolInputDescriptor::Runtime(ToolRuntimeInputDescriptor {
-                label: "Filter threshold".to_string(),
-                param_type: ToolInputType::Int,
-                id: Uuid::new_v4(),
-                optional: false,
-            }),
-            ToolInputDescriptor::Runtime(ToolRuntimeInputDescriptor {
-                label: "Use 8 connectedness".to_string(),
-                param_type: ToolInputType::Option(vec!["-4".to_string(), "-8".to_string()]),
-                optional: true,
-                id: Uuid::new_v4(),
-            }),
-            ToolInputDescriptor::Runtime(ToolRuntimeInputDescriptor {
-                label: "Input".to_string(),
-                param_type: ToolInputType::Layer(LayerType::Raster),
-                optional: false,
-                id: Uuid::new_v4(),
-            }),
-            ToolInputDescriptor::Runtime(ToolRuntimeInputDescriptor {
-                label: "Output raster".to_string(),
-                param_type: ToolInputType::File(true),
-                optional: false,
-                id: Uuid::new_v4(),
-            }),
-        ],
-        command: "gdal_sieve.py".to_string(),
-        output_actions: ToolOutputAction {
-            alert_output: false,
-            load_layers: vec![0],
-        },
-        id: Uuid::new_v4(),
-    });
-    TOOL.clone()
 }
 
 fn proc_to_result(output: Output) -> Result<String, String> {

@@ -937,7 +937,7 @@ const FileInput = ({ label, file, setFile, output }: FileInputProps) => (
             label="Extention"
             binding={{
               value: file.value,
-              setValue: (value) => setFile({ type: "Named", value }),
+              setValue: (value) => setFile({ type: "Temp", value }),
             }}
           />
         ) : null}
