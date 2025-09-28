@@ -231,6 +231,7 @@ const EscSoundSelector = ({ selected, setSound }: EscSoundSelectorProps) => {
   const [category, setCategory] = useState(selectedSound.category);
   const indexInCategory = EscSounds[category].indexOf(selectedSound);
   const playAudio = async (name: string) => {
+    console.log(name);
     const path = await Path.join(audioPath, name);
     console.log(path);
     const src = convertFileSrc(path);
@@ -259,6 +260,9 @@ const EscSoundSelector = ({ selected, setSound }: EscSoundSelectorProps) => {
         }}
         emptyText="This shouldn't be empty"
       />
+      <button onClick={() => playAudio(selectedSound.filename)}>
+        Play sound
+      </button>{" "}
     </div>
   );
 };
