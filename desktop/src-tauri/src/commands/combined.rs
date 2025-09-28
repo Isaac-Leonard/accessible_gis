@@ -202,3 +202,9 @@ pub fn load_tools_bulk(file: PathBuf, state: AppState) {
         Ok(())
     });
 }
+
+#[tauri::command]
+#[specta::specta]
+pub fn remove_dataset(state: AppState) {
+    state.with_project(|project| project.datasets.remove_dataset());
+}

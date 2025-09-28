@@ -302,6 +302,9 @@ export const commands = {
   async loadToolsBulk(file: string): Promise<void> {
     await TAURI_INVOKE("load_tools_bulk", { file });
   },
+  async removeDataset(): Promise<void> {
+    await TAURI_INVOKE("remove_dataset");
+  },
 };
 
 /** user-defined events **/

@@ -128,6 +128,9 @@ export function LayerSelector({
         emptyText="No layers loaded"
         prompt="Select layer"
       ></IndexedOptionPicker>
+      {selectedIndex !== null ? (
+        <button onClick={client.removeDataset}>Remove Dataset</button>
+      ) : null}
     </div>
   );
 }

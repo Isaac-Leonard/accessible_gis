@@ -302,6 +302,22 @@ impl DatasetCollection {
         let res = f(dataset, index);
         Some(res)
     }
+
+    pub fn remove_dataset(&mut self) {
+        match self {
+            Self::Empty => {}
+            Self::NonEmpty(datasets) => {
+                datasets.datasets.remove(datasets.index);
+                if datasets.datasets.len() == datasets.index {
+                    if datasets.index != 0 {
+                        datasets.index -= 1;
+                    } else {
+                        *self = Self::Empty
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub struct IndexedDatasetLayer<'a> {

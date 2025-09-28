@@ -125,6 +125,7 @@ pub fn generate_handlers(s: impl AsRef<Path>) -> Builder {
             save_tools_bulk,
             load_tool,
             load_tools_bulk,
+            remove_dataset,
         ])
         .events(collect_events![MessageEvent]);
     #[cfg(debug_assertions)] // <- Only export on non-release builds
