@@ -135,6 +135,7 @@ impl Workflow {
             })
             .try_collect()?;
         let app = app.clone();
+        let project_name = self.label.clone();
         tauri::async_runtime::spawn(async move {
             let state = app.state::<AppDataSync>();
             for (tool, params) in tool_calls {
@@ -167,14 +168,16 @@ impl Workflow {
                         return;
                     }
                 };
+                // Let the frontend know there are updates to the backend state
                 MessageEvent.emit(&app);
             }
             // This should not be an error but there's currently no better notification mechinism
             state.with_lock(|state| {
                 state
                     .errors
-                    .push(ErrorDetails::Other("Project done".to_string()).into())
+                    .push(ErrorDetails::Other(format!("Project done {project_name}")).into())
             });
+            // Let the frontend know there are updates to the backend state
             MessageEvent.emit(&app);
         });
         Ok(())
