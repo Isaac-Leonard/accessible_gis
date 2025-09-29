@@ -118,7 +118,9 @@ impl From<NewToolInput> for ToolInputDescriptor {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, specta::Type, strum::EnumDiscriminants)]
+#[derive(
+    Clone, Debug, Serialize, Deserialize, specta::Type, strum::EnumDiscriminants, strum::EnumTryAs,
+)]
 #[serde(tag = "type", content = "options")]
 #[strum_discriminants(derive(Serialize, Deserialize, specta::Type, strum::EnumIter))]
 pub enum ToolInputType {

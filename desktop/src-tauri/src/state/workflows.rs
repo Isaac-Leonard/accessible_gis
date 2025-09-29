@@ -1,25 +1,17 @@
-// my_module.rs
-#![allow(dead_code)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
-#![allow(unused_mut)]
-
-use std::path::PathBuf;
-
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Manager};
 use tauri_specta::Event;
 use uuid::Uuid;
 
-use crate::{commands::MessageEvent, errors::ErrorDetails, gdal_if::LayerIndexDiscriminants};
+use crate::{commands::MessageEvent, errors::ErrorDetails};
 
 use super::{
-    AppDataSync, AppState,
+    AppDataSync,
     projects::Project,
     tools::{
-        NewToolInput, ReturnedToolOutput, SavedToolOutputAction, Tool, ToolInputDescriptor,
-        ToolInputType, ToolOutput, ToolParameter, ToolParameterValue, ToolPresetParameterValue,
+        SavedToolOutputAction, ToolInputType, ToolOutput, ToolParameter, ToolParameterValue,
+        ToolPresetParameterValue,
     },
 };
 
@@ -115,8 +107,7 @@ impl Workflow {
                         let expected = prepared_presets
                             .iter()
                             .find(|expected| expected.id == connection.input)
-                            .unwrap()
-                            .clone();
+                            .unwrap();
 
                         let got = inputs
                             .iter()
@@ -169,7 +160,7 @@ impl Workflow {
                     }
                 };
                 // Let the frontend know there are updates to the backend state
-                MessageEvent.emit(&app);
+                let _ = MessageEvent.emit(&app);
             }
             // This should not be an error but there's currently no better notification mechinism
             state.with_lock(|state| {
@@ -178,7 +169,7 @@ impl Workflow {
                     .push(ErrorDetails::Other(format!("Project done {project_name}")).into())
             });
             // Let the frontend know there are updates to the backend state
-            MessageEvent.emit(&app);
+            let _ = MessageEvent.emit(&app);
         });
         Ok(())
     }
@@ -273,13 +264,6 @@ pub struct TempWorkflowInputDescriptor {
 pub struct WorkflowInput {
     pub id: Uuid,
     pub value: ToolParameterValue,
-}
-
-#[derive(Clone, Debug, Deserialize, specta::Type, strum::EnumTryAs)]
-#[serde(tag = "type", content = "value")]
-pub enum FileValue {
-    Temp,
-    Custom(PathBuf),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
