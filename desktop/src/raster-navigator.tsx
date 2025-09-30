@@ -1,6 +1,5 @@
 import {
   AudioSettings,
-  Point,
   RasterScreenData,
   RasterScreenMetadata,
   DatasetMetadata,
@@ -81,33 +80,20 @@ const RasterNavigatorInner = ({ layer }: { layer: RasterScreenData }) => {
 
 const PixelExplorer = ({ layer }: { layer: RasterScreenData }) => {
   const [showCoords, setShowCoords] = useState(true);
-  const [points, setPoints] = useState<Point[]>([]);
   const [{ x, y }, setCoords] = useState({ x: 0, y: 0 });
   const [radius, setRadius] = useState(1);
   const { open, setOpen } = useDialog();
   let { cols, rows } = layer.metadata;
-  const [getCountry, setCountry] = useState(false);
-  const [getTown, setTown] = useState(false);
   const [info, setInfo] = useState("");
   useEffect(() => {
     (async () => {
       if (x < cols && x >= 0 && y < rows && y >= 0) {
-        if (getTown) {
-          const town = await client.nearestTown({ x, y });
-          setInfo(`${town?.distance ?? 0 / 1000}km from ${town?.name}`);
-        } else if (getCountry) {
-          const info = await client.pointInCountry({ x, y });
-          setInfo(
-            `In ${info?.name}, ${info?.distance ?? 0 / 1000}km from boarder`
-          );
+        const val = await client.getValueAtPoint({ x, y });
+        const newVal = typeof val === "number" ? val.toPrecision(4) : val;
+        if (showCoords) {
+          setInfo(`${newVal ?? "No data"} at ${x}, ${rows - y}`);
         } else {
-          const val = await client.getValueAtPoint({ x, y });
-          const newVal = typeof val === "number" ? val.toPrecision(4) : val;
-          if (showCoords) {
-            setInfo(`${newVal ?? "No data"} at ${x}, ${rows - y}`);
-          } else {
-            setInfo(newVal ?? "No data");
-          }
+          setInfo(newVal ?? "No data");
         }
       }
     })();
@@ -115,6 +101,7 @@ const PixelExplorer = ({ layer }: { layer: RasterScreenData }) => {
 
   const keyHandler = (e: KeyboardEvent) => {
     coordinateArrowHandler(x, y, radius, setCoords)(e);
+    // Jump to coordinates of the first found highest value
     if (e.key === "M") {
       e.preventDefault();
       client.getPointOfMaxValue().then((p) => {
@@ -123,6 +110,7 @@ const PixelExplorer = ({ layer }: { layer: RasterScreenData }) => {
         }
       });
     }
+    // Jump to coordinates of the first found lowest value
     if (e.key === "m") {
       e.preventDefault();
       client.getPointOfMinValue().then((p) => {
@@ -130,24 +118,6 @@ const PixelExplorer = ({ layer }: { layer: RasterScreenData }) => {
           setCoords(p);
         }
       });
-    }
-    if (e.key === "c") {
-      e.preventDefault();
-      setCountry(true);
-      setTown(false);
-    }
-    if (e.key === "t") {
-      e.preventDefault();
-      setTown(true);
-      setCountry(false);
-    }
-    if (e.key === "p") {
-      e.preventDefault();
-      setPoints([...points, { x, y }]);
-    }
-    // TODO: Implement a way to properly build up geometries manually by examining raster data.
-    if (e.key === "s" && e.ctrlKey) {
-      // savePoints(points);
     }
   };
 

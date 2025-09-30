@@ -18,23 +18,6 @@ export const commands = {
   async getPointOfMinValue(): Promise<Point | null> {
     return await TAURI_INVOKE("get_point_of_min_value");
   },
-  async describeLine(
-    line: LineString,
-    srs: string | null,
-    distance: number,
-    towns: number
-  ): Promise<LineDescription> {
-    return await TAURI_INVOKE("describe_line", { line, srs, distance, towns });
-  },
-  async describePolygon(polygon: Polygon): Promise<string> {
-    return await TAURI_INVOKE("describe_polygon", { polygon });
-  },
-  async pointInCountry(point: Point): Promise<DistanceFromBoarder | null> {
-    return await TAURI_INVOKE("point_in_country", { point });
-  },
-  async nearestTown(point: Point): Promise<DistanceFromBoarder | null> {
-    return await TAURI_INVOKE("nearest_town", { point });
-  },
   async getCsv(file: string): Promise<string[][]> {
     return await TAURI_INVOKE("get_csv", { file });
   },
@@ -363,17 +346,6 @@ export type AudioTypeDiscriminants =
   | "LinearMap"
   | "EscSound";
 export type Classification = { min: number; max: number; target: number };
-export type ClosedLineDescription = {
-  x: number;
-  y: number;
-  perimeter: number;
-  area: number;
-  countries: string[];
-  towns: string[];
-  waviness: number;
-  distances: number;
-  number_of_points: number;
-};
 /**
  * Serializable CMYK colour entry.
  */
@@ -426,7 +398,6 @@ export type DesktopVectorOptions = {
   primary_field_name: string | null;
   sort_features_by: SortOption;
 };
-export type DistanceFromBoarder = { name: string; distance: number };
 export type Duration = { secs: number; nanos: number };
 export type EditDatasetError =
   | { OpenError: OpenDatasetError }
@@ -570,9 +541,6 @@ export type LayerScreenInfo =
   | ({ type: "Raster" } & RasterScreenData);
 export type LayerType = "Vector" | "Raster" | "Any";
 export type Line = { start: Point; end: Point };
-export type LineDescription =
-  | ({ type: "Closed" } & ClosedLineDescription)
-  | ({ type: "Open" } & OpenLineDescription);
 export type LineString = { points: Point[] };
 export type MessageEvent = null;
 export type MissingDriverError = { driver: string; gdal_error: MyGdalError };
@@ -904,18 +872,6 @@ export type NewWorkflowInputDescriptor = {
   value: WorkflowInputDescriptorValue;
 };
 export type OpenDatasetError = { name: string; gdal_error: MyGdalError };
-export type OpenLineDescription = {
-  x: number;
-  y: number;
-  length: number;
-  end_to_end_distance: number;
-  angular_sum: number;
-  countries: string[];
-  towns: string[];
-  waviness: number;
-  distances: number;
-  number_of_points: number;
-};
 export type Output = { stdout: string; stderr: string; status: number | null };
 export type Point = { x: number; y: number };
 export type Polygon = { exterior: LineString; interior: LineString[] };

@@ -4,7 +4,6 @@ import { Geometry, Line } from "../bindings";
 
 export function GeometryViewer({
   geometry,
-  srs,
 }: {
   geometry: Geometry;
   srs: string | null;
@@ -19,7 +18,7 @@ export function GeometryViewer({
     case "Line":
       return <LineView {...geometry} />;
     case "LineString":
-      return <LineStringView line={geometry} srs={srs} />;
+      return <LineStringView line={geometry} />;
     case "Polygon":
       return <PolygonViewer polygon={geometry} />;
     default:
