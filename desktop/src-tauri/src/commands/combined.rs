@@ -19,25 +19,21 @@ use crate::{
 #[tauri::command]
 #[specta::specta]
 pub fn reproject_layer(srs: Srs, name: &str, state: AppState) {
-    state.with_current_dataset_mut_fallible(|ds, _| -> Result<(), ErrorDetails> {
-        let layer = ds.get_current_layer();
+    state.with_current_layer_mut_fallible(|layer| -> Result<(), ErrorDetails> {
         Ok(match layer {
-            Some(StatefulLayerEnum::Vector(layer)) => {
+            StatefulLayerEnum::Vector(layer) => {
                 let output = layer
                     .reproject(name, srs)
                     .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
                 eprintln!("{:?}", output)
             }
-            Some(StatefulLayerEnum::Raster(band)) => {
+            StatefulLayerEnum::Raster(band) => {
                 // TODO: Allow users to specify option for expand_rgba
                 let output = band
                     .reproject(name, srs)
                     .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
                 eprintln!("{:?}", output)
             }
-            None => Err(ErrorDetails::Other(
-                "No layer available to reproject".to_string(),
-            ))?,
         })
     });
 }

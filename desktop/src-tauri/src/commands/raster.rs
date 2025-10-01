@@ -139,20 +139,6 @@ pub fn set_current_audio_settings(settings: AudioSettings, state: AppState) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_image_pixels(state: AppState) -> Result<Vec<u8>, String> {
-    state
-        .with_current_raster_band_fallible(|band| {
-            band.band
-                .band()
-                .read_band_as::<u8>()
-                .map(|data| data.into_shape_and_vec().1)
-                .map_err(|err| ErrorDetails::Other(format!("Not u8 data: {err:?}")))
-        })
-        .ok_or_else(|| "Couldn't read band data".to_owned())
-}
-
-#[tauri::command]
-#[specta::specta]
 pub fn get_point_of_max_value(state: AppState) -> Option<Point> {
     state.with_current_raster_band_fallible(|band| {
         let data = read_raster_data(band.band.band())?;

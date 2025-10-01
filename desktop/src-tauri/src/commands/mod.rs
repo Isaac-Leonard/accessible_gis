@@ -1,7 +1,6 @@
 mod audio;
 mod combined;
 mod constants;
-mod context;
 mod dataset;
 mod dem;
 mod individual_settings;
@@ -21,7 +20,6 @@ pub use crate::*;
 pub use audio::*;
 pub use combined::*;
 pub use constants::*;
-pub use context::*;
 pub use dataset::*;
 pub use dem::*;
 pub use individual_settings::*;
@@ -52,7 +50,6 @@ pub fn generate_handlers(s: impl AsRef<Path>) -> Builder {
             add_field_to_schema,
             edit_dataset,
             add_feature_to_layer,
-            get_image_pixels,
             set_name_field,
             classify_current_raster,
             set_srs,
