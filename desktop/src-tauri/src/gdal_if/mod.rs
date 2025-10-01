@@ -5,7 +5,6 @@ mod extra_implementations;
 mod field_schema;
 mod fields;
 mod layer;
-mod local_feature;
 pub mod processing;
 mod raster;
 pub mod vector;
@@ -14,7 +13,6 @@ pub use dataset::*;
 pub use field_schema::*;
 pub use fields::*;
 pub use layer::*;
-pub use local_feature::*;
 pub use raster::*;
 
 use gdal::{Driver, DriverManager, Metadata, vector::Envelope as GdalEnvelope};

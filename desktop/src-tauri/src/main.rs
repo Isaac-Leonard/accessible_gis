@@ -16,27 +16,23 @@ mod utils;
 mod web_socket;
 
 use commands::web_socket::TouchDevice;
-use geo_types::Polygon;
 pub use state::dataset_collection;
 
 use clap::Parser;
 use files::get_csv;
-use gdal::{Dataset, vector::LayerAccess};
 use gdal_if::Field;
 use geometry::Geometry;
-use rstar::{RTree, primitives::GeomWithData};
 use serde::{Deserialize, Serialize};
 use state::{AppData, gis::raster::load_esc_sounds};
-use tauri::{AppHandle, Manager};
+use tauri::Manager;
 
 use std::sync::{Arc, Mutex};
 
 use crate::{
     audio::get_audio,
     commands::generate_handlers,
-    gdal_if::LocalFeatureInfo,
     server::run_server,
-    state::{AppDataSync, Country, PreloadedAppData},
+    state::{AppDataSync, PreloadedAppData},
 };
 
 fn main() {
@@ -61,14 +57,10 @@ fn launch_gui() {
         .setup(move |app| {
             specta_builder.mount_events(app);
             std::fs::create_dir_all(app.path().temp_dir().unwrap()).unwrap();
-            let countries = load_countries(app.handle());
             let esc_sounds = load_esc_sounds(app.handle()).unwrap();
             app.manage(AppDataSync {
                 data: Arc::new(Mutex::new(AppData::new(app.handle()))),
-                default_data: PreloadedAppData {
-                    countries,
-                    esc_sounds,
-                },
+                default_data: PreloadedAppData { esc_sounds },
             });
 
             //            let window = app.get_webview_window("main").unwrap();
@@ -102,34 +94,4 @@ impl FeatureInfo {
             fid: None,
         }
     }
-}
-
-fn load_countries(app: &AppHandle) -> RTree<GeomWithData<Polygon, Vec<Field>>> {
-    let countries_path = app
-        .path()
-        .resolve(
-            "data/countries.geojson",
-            tauri::path::BaseDirectory::Resource,
-        )
-        .unwrap();
-    eprintln!("Countries path: {:?}", countries_path);
-    let countries = RTree::bulk_load(
-        Dataset::open(countries_path)
-            .unwrap()
-            .layer(0)
-            .unwrap()
-            .features()
-            .flat_map(|feature| {
-                Vec::<Country>::from(LocalFeatureInfo {
-                    geometry: feature
-                        .geometry()
-                        .map(|geom| geom.to_geo())
-                        .transpose()
-                        .unwrap(),
-                    fields: feature.fields().map(Into::into).collect(),
-                })
-            })
-            .collect::<Vec<_>>(),
-    );
-    countries
 }

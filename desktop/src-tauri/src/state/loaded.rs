@@ -1,33 +1,27 @@
-use std::{collections::HashMap, path::Path, vec::IntoIter};
+use std::path::Path;
 
-use gdal::{Dataset, vector::LayerAccess};
-use geo::{Closest, ClosestPoint, Contains, GeodesicDistance};
-use geo_types::{LineString, Point, Polygon};
-use itertools::Itertools;
+use geo_types::Point;
 use serde::Serialize;
-use tauri::{AppHandle, Manager, Runtime, Wry, path::PathResolver};
+use tauri::{AppHandle, Manager, Runtime, path::PathResolver};
 use uuid::Uuid;
 
 use crate::{
     errors::{ApplicationError, ErrorDetails},
-    gdal_if::{LocalFeatureInfo, WrappedDataset},
-    geometry::AsPoint,
+    gdal_if::WrappedDataset,
 };
 
 use super::{
-    CountryImpl, Screen,
+    Screen,
     dataset_collection::{NonEmptyDelegator, NonEmptyDelegatorImplExt},
     gis::{
         combined::StatefulLayerEnum, dataset::StatefulDataset, raster::StatefulRasterBand,
         vector::StatefulVectorLayer,
     },
-    preloaded::Country,
     projects::Project,
     settings::GlobalSettings,
 };
 
 pub struct AppData {
-    pub towns: HashMap<String, Vec<LocalFeatureInfo>>,
     pub project: Option<Project>,
     pub screen: Screen,
     pub errors: ErrorList,
@@ -56,7 +50,6 @@ impl AppData {
     pub fn new(app: &AppHandle) -> Self {
         let mut errors = ErrorList::new();
         Self {
-            towns: HashMap::new(),
             screen: Screen::Main,
             project: None,
             settings: GlobalSettings::read(app.path())
@@ -103,92 +96,6 @@ impl AppData {
         self.with_current_raster_band(|band| band.band.point_to_wgs84(point))
             .flatten()
             .expect("Expected raster band and couldn't find it")
-    }
-
-    pub fn get_towns_by_code(
-        &mut self,
-        code: String,
-        resolver: &PathResolver<Wry>,
-    ) -> &Vec<LocalFeatureInfo> {
-        self.towns.entry(code).or_insert_with_key(|code| {
-            let dataset_path = resolver
-                .resolve(
-                    format!("data/countries/{code}.geojson"),
-                    tauri::path::BaseDirectory::Resource,
-                )
-                .unwrap();
-            let towns_dataset = Dataset::open(dataset_path).unwrap();
-            let mut layer = towns_dataset.layer(0).unwrap();
-            layer
-                .features()
-                .map(TryInto::try_into)
-                .collect::<Result<Vec<_>, _>>()
-                .unwrap()
-        })
-    }
-
-    pub fn get_towns_in_polygon<'a>(
-        &mut self,
-        polygon: &Polygon,
-        countries: impl Iterator<Item = &'a Country>,
-        resolver: &PathResolver<Wry>,
-    ) -> IntoIter<LocalFeatureInfo> {
-        countries
-            .flat_map(move |country| {
-                let polygon2 = polygon.clone();
-                self.get_towns_by_code(country.get_code(), resolver)
-                    .clone()
-                    .into_iter()
-                    .filter(move |town| {
-                        town.geometry
-                            .as_ref()
-                            .is_some_and(|geom| polygon2.contains(geom))
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .sorted_by(|a, b| {
-                // Sort in ascending order
-                str::parse::<i64>(&b.get_field("population").unwrap())
-                    .unwrap()
-                    .cmp(&str::parse::<i64>(&a.get_field("population").unwrap()).unwrap())
-            })
-    }
-
-    pub fn get_towns_near_line<'a>(
-        &mut self,
-        polygon: &LineString,
-        countries: impl Iterator<Item = &'a Country>,
-        distance: f64,
-        resolver: &PathResolver<Wry>,
-    ) -> IntoIter<LocalFeatureInfo> {
-        countries
-            .flat_map(move |country| {
-                let polygon2 = polygon.clone();
-                self.get_towns_by_code(country.get_code(), resolver)
-                    .clone()
-                    .into_iter()
-                    .filter(move |town| {
-                        town.geometry
-                            .as_ref()
-                            .map(|geom| {
-                                match polygon2.clone().closest_point(geom.as_point().unwrap()) {
-                                    Closest::Indeterminate => false,
-                                    Closest::Intersection(_) => true,
-                                    Closest::SinglePoint(p) => {
-                                        p.geodesic_distance(geom.as_point().unwrap()) < distance
-                                    }
-                                }
-                            })
-                            .is_some_and(|b| b)
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .sorted_by(|a, b| {
-                // Sort in ascending order
-                str::parse::<i64>(&b.get_field("population").unwrap())
-                    .unwrap()
-                    .cmp(&str::parse::<i64>(&a.get_field("population").unwrap()).unwrap())
-            })
     }
 
     pub fn settings(&self) -> &GlobalSettings {
