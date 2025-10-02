@@ -1,17 +1,13 @@
 use gdal::{
-    GeoTransform, GeoTransformEx,
+    GeoTransform,
     raster::{GdalDataType, RasterBand, ResampleAlg},
-    spatial_ref::{CoordTransform, SpatialRef},
+    spatial_ref::SpatialRef,
 };
-use geo_types::Point;
 use itertools::Itertools;
 use ndarray::Array2;
-use proj::Coord;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::ErrorDetails;
-
-use super::extra_implementations::TransformPoint;
 
 pub struct WrappedRasterBand<'a> {
     band: RasterBand<'a>,
@@ -40,14 +36,6 @@ impl<'a> WrappedRasterBand<'a> {
             geo_transform,
             srs,
         }
-    }
-
-    pub fn point_to_wgs84(&self, point: Point) -> Option<Point> {
-        let point = self.geo_transform?.apply(point.x(), point.y());
-        let point = Point::from_xy(point.0, point.1);
-        let transform =
-            CoordTransform::new(self.srs.as_ref()?, &SpatialRef::from_epsg(2346).unwrap()).ok()?;
-        Some(transform.transform_point(point))
     }
 
     pub fn no_data_value(&self) -> Option<f64> {

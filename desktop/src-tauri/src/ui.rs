@@ -107,7 +107,6 @@ pub struct RasterScreenData {
     pub dataset_index: usize,
     pub display: bool,
     pub render_method: RenderMethod,
-    pub ocr: bool,
     pub audio_settings: AudioSettings,
     pub metadata: RasterScreenMetadata,
     audio_table: Option<AudioTable>,
@@ -204,7 +203,6 @@ impl AppData {
                                     band: index,
                                 }),
                             render_method: band.info.render,
-                            ocr: band.info.ocr,
                             audio_settings: band.info.audio_settings.clone(),
                             audio_table: band.info.audio_table.clone(),
                             colour_table: band

@@ -52,14 +52,6 @@ export const AudioSettingsScreen = ({
   const getterSetter = useBindedObjectProperties(settings, setSettings);
   return (
     <Section component={<H>Audio Settings</H>}>
-      <AudioIndicatorSelector
-        prompt="Sound when touching areas with no data"
-        binding={getterSetter.no_data_value_sound}
-      />
-      <AudioIndicatorSelector
-        prompt="Sound when touching border of image"
-        binding={getterSetter.border_sound}
-      />
       <RasterGraphSettingsScreen
         settings={getterSetter.graph.value}
         setSettings={getterSetter.graph.setValue}
@@ -67,10 +59,6 @@ export const AudioSettingsScreen = ({
     </Section>
   );
 };
-
-const AudioIndicatorSelector = bindedSelectorFactory(
-  await client.getAudioIndicators()
-);
 
 type RasterGraphSettingsScreenProps = {
   settings: RasterGraphSettings;

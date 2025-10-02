@@ -1,7 +1,6 @@
 pub mod colour_table;
 mod dataset;
 mod errors;
-mod extra_implementations;
 mod field_schema;
 mod fields;
 mod layer;

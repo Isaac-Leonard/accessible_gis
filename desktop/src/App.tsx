@@ -35,9 +35,9 @@ function App() {
 
       <button onClick={() => client.setScreen("Main")}>Main</button>
       <button onClick={() => client.setScreen("NewDataset")}>
-        New dataset{" "}
+        New dataset
       </button>
-      <button onClick={() => client.openSettings()}>Settings</button>
+      <button onClick={() => client.setScreen("Settings")}>Settings</button>
       <button onClick={() => client.setScreen("Tools")}>Tools</button>
       <button onClick={() => client.setScreen("Workflows")}>Workflows</button>
       <button onClick={() => client.setScreen("TouchDevice")}>

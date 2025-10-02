@@ -375,16 +375,3 @@ impl Intersects for SingleGeometry {
         Geometry::from((*self).clone()).intersects(&Geometry::from((*rhs).to_owned()))
     }
 }
-
-pub trait AsPoint {
-    fn as_point(&self) -> Option<&GeoPoint>;
-}
-
-impl AsPoint for GeoGeometry {
-    fn as_point(&self) -> Option<&GeoPoint> {
-        match self {
-            Self::Point(p) => Some(p),
-            _ => None,
-        }
-    }
-}

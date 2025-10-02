@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use geo_types::Point;
 use serde::Serialize;
 use tauri::{AppHandle, Manager, Runtime, path::PathResolver};
 use uuid::Uuid;
@@ -90,12 +89,6 @@ impl AppData {
             }
             None => None,
         }
-    }
-
-    pub fn raster_point_to_wgs84(&mut self, point: Point) -> Point {
-        self.with_current_raster_band(|band| band.band.point_to_wgs84(point))
-            .flatten()
-            .expect("Expected raster band and couldn't find it")
     }
 
     pub fn settings(&self) -> &GlobalSettings {

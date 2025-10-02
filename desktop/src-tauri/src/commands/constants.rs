@@ -10,7 +10,6 @@ use crate::{
         AppState,
         colours::{CssColourDiscriminants, NamedColour},
         gis::raster::{AudioTypeDiscriminants, EscSound, RenderMethod},
-        settings::AudioIndicator,
         tools::{ToolInputTypeDiscriminants, ToolPresetParameterValueDiscriminants},
     },
 };
@@ -21,12 +20,6 @@ use crate::{
 #[specta::specta]
 pub fn get_render_methods() -> Vec<RenderMethod> {
     RenderMethod::iter().collect_vec()
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn get_audio_indicators() -> Vec<AudioIndicator> {
-    AudioIndicator::get_all_options()
 }
 
 #[tauri::command]

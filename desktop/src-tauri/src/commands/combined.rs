@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use gdal::spatial_ref::SpatialRef;
 use itertools::Itertools;
 use tauri::AppHandle;
 use uuid::Uuid;
@@ -35,23 +34,6 @@ pub fn reproject_layer(srs: Srs, name: &str, state: AppState) {
                 eprintln!("{:?}", output)
             }
         })
-    });
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn set_srs(srs: Srs, state: AppState) {
-    let srs = match srs {
-        Srs::Proj(proj_string) => SpatialRef::from_proj4(&proj_string),
-        Srs::Wkt(wkt_string) => SpatialRef::from_wkt(&wkt_string),
-        Srs::Esri(esri_wkt) => SpatialRef::from_esri(&esri_wkt),
-        Srs::Epsg(epsg_code) => SpatialRef::from_epsg(epsg_code),
-    }
-    .unwrap();
-    state.with_current_dataset_mut_fallible(|ds, _| {
-        ds.dataset
-            .set_spatial_ref(&srs)
-            .map_err(|err| ErrorDetails::Other(err.to_string()))
     });
 }
 

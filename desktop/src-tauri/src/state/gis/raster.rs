@@ -39,7 +39,6 @@ pub struct StatefulRasterInfo {
     pub shared: SharedInfo,
     pub image_type: ImageType,
     pub render: RenderMethod,
-    pub ocr: bool,
     #[serde(skip)]
     pub wgs84_reprojected_file: Option<WrappedDataset>,
     pub audio_table: Option<AudioTable>,
@@ -53,7 +52,6 @@ impl Clone for StatefulRasterInfo {
             shared: self.shared.clone(),
             image_type: self.image_type.clone(),
             render: self.render.clone(),
-            ocr: self.ocr.clone(),
             wgs84_reprojected_file: None,
             audio_table: self.audio_table.clone(),
         }
