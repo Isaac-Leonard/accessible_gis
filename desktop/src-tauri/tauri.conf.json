@@ -7,7 +7,6 @@
   },
   "bundle": {
 	"resources":{
-	    "../data": "data",
 	    "../external-touch-device/dist": "external-touch-device",
 	    "../../scripts": "scripts",
 	    "../../esc-50": "esc-50"
