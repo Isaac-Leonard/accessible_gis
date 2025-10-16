@@ -45,14 +45,6 @@ export const commands = {
   async addFeatureToLayer(feature: FeatureInfo): Promise<void> {
     await TAURI_INVOKE("add_feature_to_layer", { feature });
   },
-  async getImagePixels(): Promise<Result<number[], string>> {
-    try {
-      return { status: "ok", data: await TAURI_INVOKE("get_image_pixels") };
-    } catch (e) {
-      if (e instanceof Error) throw e;
-      else return { status: "error", error: e as any };
-    }
-  },
   async setNameField(field: string): Promise<void> {
     await TAURI_INVOKE("set_name_field", { field });
   },
@@ -61,9 +53,6 @@ export const commands = {
     classifications: Classification[]
   ): Promise<void> {
     await TAURI_INVOKE("classify_current_raster", { dest, classifications });
-  },
-  async setSrs(srs: Srs): Promise<void> {
-    await TAURI_INVOKE("set_srs", { srs });
   },
   async reprojectLayer(srs: Srs, name: string): Promise<void> {
     await TAURI_INVOKE("reproject_layer", { srs, name });
@@ -104,9 +93,6 @@ export const commands = {
   async generateCountsReport(name: string): Promise<void> {
     await TAURI_INVOKE("generate_counts_report", { name });
   },
-  async openSettings(): Promise<void> {
-    await TAURI_INVOKE("open_settings");
-  },
   async setSettings(settings: GlobalSettings): Promise<void> {
     await TAURI_INVOKE("set_settings", { settings });
   },
@@ -116,9 +102,6 @@ export const commands = {
   async getRenderMethods(): Promise<RenderMethod[]> {
     return await TAURI_INVOKE("get_render_methods");
   },
-  async getAudioIndicators(): Promise<AudioIndicator[]> {
-    return await TAURI_INVOKE("get_audio_indicators");
-  },
   async getWaveForms(): Promise<Waveform[]> {
     return await TAURI_INVOKE("get_wave_forms");
   },
@@ -127,9 +110,6 @@ export const commands = {
   },
   async setDisplayVector(): Promise<void> {
     await TAURI_INVOKE("set_display_vector");
-  },
-  async setCurrentOcr(enabled: boolean): Promise<void> {
-    await TAURI_INVOKE("set_current_ocr", { enabled });
   },
   async setCurrentRenderMethod(renderMethod: RenderMethod): Promise<void> {
     await TAURI_INVOKE("set_current_render_method", { renderMethod });
@@ -314,18 +294,10 @@ export type ApplicationError = (
   | { type: "DemClassificationError"; error: DemClassificationError }
   | { type: "Other"; error: string }
 ) & { read: boolean; id: string };
-export type AudioIndicator =
-  | "Silence"
-  | "MinFreq"
-  | "MaxFreq"
-  | "Verbal"
-  | "Different";
 export type AudioSettings = {
   min_freq: number;
   max_freq: number;
   volume: number;
-  no_data_value_sound: AudioIndicator;
-  border_sound: AudioIndicator;
   histogram: HistogramSettings;
   graph: RasterGraphSettings;
 };
@@ -903,7 +875,6 @@ export type RasterScreenData = {
   dataset_index: number;
   display: boolean;
   render_method: RenderMethod;
-  ocr: boolean;
   audio_settings: AudioSettings;
   metadata: RasterScreenMetadata;
   audio_table: AudioTable | null;
