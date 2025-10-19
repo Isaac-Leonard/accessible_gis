@@ -361,7 +361,9 @@ const ToolInput = ({
                   })
                 }
               >
-                {parameterBinding.value.value.layer.type === "Vector"}
+                {parameterBinding.value.value.layer.type === "Vector"
+                  ? "Change to Raster"
+                  : "Change to vector"}
               </button>
               {parameterBinding.value.value.layer.type === "Vector" ? (
                 <IndexedOptionPicker
