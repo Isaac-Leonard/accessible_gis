@@ -219,7 +219,7 @@ pub fn load_workflows_bulk(file: PathBuf, state: AppState) {
             })
             // Don't load in any workflows that don't have tools loaded for
             .filter(|workflow| {
-                workflow.tools.iter().all(|tool_call| {
+                !workflow.tools.iter().all(|tool_call| {
                     project
                         .tools
                         .iter()
