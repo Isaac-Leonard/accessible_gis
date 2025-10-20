@@ -37,14 +37,12 @@ export const VectorNavigator = ({ layer }: VectorLayerProp) => {
         View Landform Description
       </button>
       {layer.editable ? <DatasetEditor layer={layer} /> : <EditDatasetButton />}
+      <button onClick={client.setDisplayVector}>
+        {layer.info.display ? "Remove from screen" : "Show on screen"}
+      </button>
       {layer.info.display ? (
-        <>
-          <div>Displayed</div>
-          <button onClick={client.focusDataset}>Focus Layer</button>
-        </>
-      ) : (
-        <button onClick={client.setDisplayVector}>Show on screen</button>
-      )}
+        <button onClick={client.focusDataset}>Focus Layer</button>
+      ) : null}
       <LayerSettingsDialog layer={layer} />
       <FeaturePicker layer={layer} />
       <FeatureViewer layer={layer} />
