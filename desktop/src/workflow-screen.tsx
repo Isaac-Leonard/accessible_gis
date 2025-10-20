@@ -8,6 +8,7 @@ import {
   ToolInputType,
   ToolPresetParameterValueDiscriminants,
   WorkflowInputRuntimeValueDescriptor,
+  UiWorkflow,
 } from "./bindings";
 import { IndexedOptionPicker, OptionPicker } from "./option-picker";
 import { Dialog, useDialog } from "./dialog";
@@ -21,6 +22,7 @@ import {
   ToolInputTypeDiscriminantSelector,
   toolInputTypeFromDiscriminant,
 } from "./tools-screen";
+import { LoadButton, SaveButton } from "./save-button";
 
 const AddWorkflowScreen = ({ toolList }: { toolList: ToolDescriptor[] }) => {
   const [label, setLabel] = useState("");
@@ -393,7 +395,7 @@ const ListOfInputs = ({
 export const WorkflowScreen = ({ info }: { info: WorkflowsScreenInfo }) => {
   return (
     <div>
-      <AddWorkflowScreen toolList={info.tools} />
+      <WorkflowsActionsDialog info={info} />
       <div>
         {info.workflows.map((workflow) => (
           <ToolDialog
@@ -404,5 +406,59 @@ export const WorkflowScreen = ({ info }: { info: WorkflowsScreenInfo }) => {
         ))}
       </div>
     </div>
+  );
+};
+
+// TODO: Refactor to merge this with the tools action dialog
+const WorkflowsActionsDialog = ({ info }: { info: WorkflowsScreenInfo }) => {
+  const { open, setOpen } = useDialog();
+  return (
+    <Dialog
+      modal={true}
+      openText="Actions for workflows"
+      open={open}
+      setOpen={setOpen}
+    >
+      <h4>Workflow Actions</h4>
+      <AddWorkflowScreen toolList={info.tools} />
+      <BulkSaveDialog workflows={info.workflows} />
+      <LoadButton text="Load workflows" onLoad={client.loadWorkflowsBulk} />
+    </Dialog>
+  );
+};
+
+// TODO: Refactor to merge this with the tools saving dialog
+const BulkSaveDialog = ({ workflows }: { workflows: UiWorkflow[] }) => {
+  const [workflowsToSave, setWorkflowsToSave] = useState<string[]>([]);
+  const { open, setOpen } = useDialog();
+  return (
+    <Dialog modal={true} open={open} setOpen={setOpen} openText="Bulk save">
+      <h5>Bulk Save Workflows</h5>
+      <div>Select workflows to save:</div>
+      <div>
+        {workflows.map((workflow) => (
+          <Checkbox
+            key={workflow.id}
+            label={workflow.label}
+            binding={{
+              value: workflowsToSave.includes(workflow.id),
+              setValue: (include) =>
+                include
+                  ? setWorkflowsToSave([...workflowsToSave, workflow.id])
+                  : setWorkflowsToSave(
+                      workflowsToSave.filter((id) => workflow.id !== id)
+                    ),
+            }}
+          />
+        ))}
+      </div>
+      <SaveButton
+        text="Save to file"
+        onSave={(file) => {
+          client.saveWorkflowsBulk(workflowsToSave, file);
+          setOpen(false);
+        }}
+      />
+    </Dialog>
   );
 };

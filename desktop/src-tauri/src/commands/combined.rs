@@ -183,6 +183,58 @@ pub fn load_tools_bulk(file: PathBuf, state: AppState) {
 
 #[tauri::command]
 #[specta::specta]
+pub fn save_workflows_bulk(ids: Vec<Uuid>, file: PathBuf, state: AppState) {
+    state.with_project_fallible(|project| {
+        let workflows_to_save = project
+            .workflows
+            .iter()
+            .filter(|workflow| ids.contains(&workflow.id))
+            .collect_vec();
+        let json = serde_json::to_string_pretty(&workflows_to_save).map_err(|err| {
+            ErrorDetails::SerdeError(format!("Failed to serialise tools: {err:?}"))
+        })?;
+        std::fs::write(file, json)
+            .map_err(|err| ErrorDetails::IoError(format!("Failed to save tools: {err:?}")))
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn load_workflows_bulk(file: PathBuf, state: AppState) {
+    state.with_project_fallible(|project| {
+        let content = std::fs::read(file).map_err(|err| {
+            ErrorDetails::IoError(format!("Could not read file to load tools: {err:?}"))
+        })?;
+        let workflows = serde_json::from_slice::<Vec<Workflow>>(&content).map_err(|err| {
+            ErrorDetails::SerdeError(format!("Could not deserialise saved tools: {err:?}"))
+        })?;
+        let workflows = workflows
+            .into_iter()
+            // Don't duplicate workflows
+            .filter(|workflow| {
+                project
+                    .workflows
+                    .iter()
+                    .all(|existing_workflow| existing_workflow.id != workflow.id)
+            })
+            // Don't load in any workflows that don't have tools loaded for
+            .filter(|workflow| {
+                workflow.tools.iter().all(|tool_call| {
+                    project
+                        .tools
+                        .iter()
+                        .all(|tool| tool.get_id() != tool_call.tool)
+                })
+            })
+            // We have to collect/run the iterator before calling extend as it relies on Project
+            .collect_vec();
+        project.workflows.extend(workflows);
+        Ok(())
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn remove_dataset(state: AppState) {
     state.with_project(|project| project.datasets.remove_dataset());
 }

@@ -265,6 +265,12 @@ export const commands = {
   async loadToolsBulk(file: string): Promise<void> {
     await TAURI_INVOKE("load_tools_bulk", { file });
   },
+  async saveWorkflowsBulk(ids: string[], file: string): Promise<void> {
+    await TAURI_INVOKE("save_workflows_bulk", { ids, file });
+  },
+  async loadWorkflowsBulk(file: string): Promise<void> {
+    await TAURI_INVOKE("load_workflows_bulk", { file });
+  },
   async removeDataset(): Promise<void> {
     await TAURI_INVOKE("remove_dataset");
   },

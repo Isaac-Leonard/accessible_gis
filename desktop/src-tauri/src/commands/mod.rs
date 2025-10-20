@@ -114,6 +114,8 @@ pub fn generate_handlers(s: impl AsRef<Path>) -> Builder {
             save_tools_bulk,
             load_tool,
             load_tools_bulk,
+            save_workflows_bulk,
+            load_workflows_bulk,
             remove_dataset,
         ])
         .events(collect_events![MessageEvent]);
