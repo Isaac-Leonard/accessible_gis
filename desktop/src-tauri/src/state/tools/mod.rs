@@ -365,6 +365,9 @@ impl ToolParsedParamValue {
             (ToolParameterValue::Option(option), ToolInputType::Option(options)) => {
                 parse_option(option, options)?
             }
+            (ToolParameterValue::String(option), ToolInputType::Option(options)) => {
+                parse_option(option, options)?
+            }
             (ToolParameterValue::File(file), ToolInputType::File(use_as_output)) => {
                 ToolParsedParamValue::File(ToolParsedFileParameter {
                     path: file.get_path(app),
