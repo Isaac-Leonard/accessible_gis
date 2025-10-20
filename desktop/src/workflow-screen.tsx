@@ -325,7 +325,7 @@ const WorkflowInputDescriptorEditor = ({
                     value: {
                       param_type: {
                         type: "File",
-                        options: input.value.value.param_type.options,
+                        options: !input.value.value.param_type.options,
                       },
                       optional: (
                         input.value.value as WorkflowInputRuntimeValueDescriptor
