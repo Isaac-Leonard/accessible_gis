@@ -308,6 +308,33 @@ const WorkflowInputDescriptorEditor = ({
                 Add Option
               </button>
             </div>
+          ) : input.value.value.param_type.type === "File" ? (
+            <button
+              role="switch"
+              aria-checked={input.value.value.param_type.options}
+              onClick={() => {
+                // Here to make TS happy and just in case of the rare edge case
+                if (
+                  input.value.type === "Runtime" &&
+                  input.value.value.param_type.type === "File"
+                ) {
+                  setType({
+                    type: "Runtime",
+                    value: {
+                      param_type: {
+                        type: "File",
+                        options: input.value.value.param_type.options,
+                      },
+                      optional: (
+                        input.value.value as WorkflowInputRuntimeValueDescriptor
+                      ).optional,
+                    },
+                  });
+                }
+              }}
+            >
+              Use as output
+            </button>
           ) : null}
         </div>
       ) : (

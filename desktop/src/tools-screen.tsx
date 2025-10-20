@@ -990,8 +990,6 @@ const BulkSaveDialog = ({ tools }: { tools: ToolDescriptor[] }) => {
       <SaveButton
         text="Save to file"
         onSave={(file) => {
-          console.log("Saving to " + file);
-          console.log(toolsToSave);
           client.saveToolsBulk(toolsToSave, file);
           setOpen(false);
         }}
