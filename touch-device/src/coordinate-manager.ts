@@ -1,5 +1,3 @@
-import { getCanvas } from "./canvas-manager.js";
-
 export const minLon = -180,
   minLat = -90,
   maxLon = 180,
@@ -10,10 +8,7 @@ export class CoordinateManager {
   leftLon = minLon;
   bottomLat: number = minLat;
   rightLon: number = maxLon;
-  canvas: HTMLCanvasElement;
-  constructor() {
-    this.canvas = getCanvas().canvas;
-  }
+  constructor(private canvas: HTMLCanvasElement) {}
 
   screenToCoords(x: number, y: number): [number, number] {
     return [

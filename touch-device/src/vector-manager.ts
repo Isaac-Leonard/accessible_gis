@@ -7,7 +7,6 @@ import {
   Position,
 } from "geojson";
 import { CoordinateManager } from "./coordinate-manager.js";
-import { getCanvas } from "./canvas-manager.js";
 import { speak } from "./speach.js";
 
 export type VectorSettings = {
@@ -199,17 +198,15 @@ export type TouchDeviceAudioVectorOptions = {
 
 class Layer {
   previousFeatures: Feature[] = [];
-  canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
 
   constructor(
     public name: string,
     public features: FeatureCollection,
     public settings: VectorSettings,
-    private coordinateManager: CoordinateManager
+    private coordinateManager: CoordinateManager,
+    ctx: CanvasRenderingContext2D
   ) {
-    const { canvas, ctx } = getCanvas();
-    this.canvas = canvas;
     this.ctx = ctx;
   }
 
@@ -464,14 +461,23 @@ export type VectorInfo = { name: string; settings: VectorSettings };
 export class VectorManager {
   layers: Layer[] = [];
 
-  constructor(private coordinateManager: CoordinateManager) {}
+  constructor(
+    private coordinateManager: CoordinateManager,
+    private ctx: CanvasRenderingContext2D
+  ) {}
 
   render() {
     this.layers.forEach((layer) => layer.render());
   }
 
   createLayer(features: FeatureCollection, { name, settings }: VectorInfo) {
-    const layer = new Layer(name, features, settings, this.coordinateManager);
+    const layer = new Layer(
+      name,
+      features,
+      settings,
+      this.coordinateManager,
+      this.ctx
+    );
     this.layers.push(layer);
   }
 

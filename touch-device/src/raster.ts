@@ -1,7 +1,6 @@
 import * as ImageJs from "image-js";
 import { Image } from "image-js";
 import { pauseAudio, playAudio, setAudioFrequency } from "./audio.ts";
-import { getCanvas } from "./canvas-manager.ts";
 import { CoordinateManager } from "./coordinate-manager.ts";
 import { speak } from "./speach.ts";
 
@@ -102,15 +101,12 @@ class SoundManager {
 export class RasterManager {
   loading: boolean = false;
   raster: Raster | null = null;
-  canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
   soundManager: SoundManager = new SoundManager([]);
 
-  constructor(private coordinateManager: CoordinateManager) {
-    const { canvas, ctx } = getCanvas();
-    this.canvas = canvas;
-    this.ctx = ctx;
-  }
+  constructor(
+    private coordinateManager: CoordinateManager,
+    private canvas: HTMLCanvasElement
+  ) {}
 
   async updateImage(options: RasterOptions): Promise<null> {
     const sounds = [...(options.metadata.audioTable?.entries ?? [])];

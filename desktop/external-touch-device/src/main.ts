@@ -32,7 +32,7 @@ class GisManager {
   // Required variables
   raster: RasterManager;
 
-  coordinateManager = new CoordinateManager();
+  coordinateManager = new CoordinateManager(this.canvas);
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   gestureManager: GestureManager;
@@ -47,8 +47,8 @@ class GisManager {
     const { canvas, ctx } = getCanvas();
     this.canvas = canvas;
     this.ctx = ctx;
-    this.vectorManager = new VectorManager(this.coordinateManager);
-    this.raster = new RasterManager(this.coordinateManager);
+    this.vectorManager = new VectorManager(this.coordinateManager, this.ctx);
+    this.raster = new RasterManager(this.coordinateManager, this.canvas);
     this.gestureManager = new GestureManager(this.canvas);
     this.connection = new WsConnection();
     this.connection.addMessageHandler(this.wsMessageHandler.bind(this));
