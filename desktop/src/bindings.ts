@@ -663,7 +663,8 @@ export type MyGdalError =
       data: { data_type: MyExtendedDataTypeClass; method_name: string };
     }
   | { kind: "IntConversionError"; data: null }
-  | { kind: "BufferSizeMismatch"; data: [number, [number, number]] };
+  | { kind: "BufferSizeMismatch"; data: [number, [number, number]] }
+  | { kind: "DatasetNotThreadSafe" };
 export type MyIntoStringError = { inner: string; error: MyUtf8Error };
 export type MyNulError = [number, number[]];
 export type MyShapeError =

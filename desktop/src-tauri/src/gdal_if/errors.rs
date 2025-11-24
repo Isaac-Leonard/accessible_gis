@@ -67,6 +67,7 @@ pub enum MyGdalError {
     },
     IntConversionError(()),
     BufferSizeMismatch(usize, (usize, usize)),
+    DatasetNotThreadSafe,
 }
 
 impl From<GdalError> for MyGdalError {
@@ -125,6 +126,7 @@ impl From<GdalError> for MyGdalError {
             },
             GdalError::IntConversionError(_e) => MyGdalError::IntConversionError(()),
             GdalError::BufferSizeMismatch(a, b) => MyGdalError::BufferSizeMismatch(a, b),
+            GdalError::DatasetNotThreadSafe => MyGdalError::DatasetNotThreadSafe,
         }
     }
 }
