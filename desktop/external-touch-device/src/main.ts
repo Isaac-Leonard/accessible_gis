@@ -9,34 +9,18 @@ import {
   RasterManager,
 } from "touch-device";
 import { AppMessage, GeneralSettings, WsConnection } from "./websocket";
-import { colourToString } from "touch-device/src/vector-manager";
+import { colourToString } from "touch-device/src/utils";
 
 const root = document.getElementById("image");
-
-const createButton = () => {
-  const btn = document.createElement("button");
-  btn.onclick = async () => {
-    // Speech needs to be ran on a explicit button click to allow it to work for other interactions to work on certain browsers
-    speak(
-      "If you are using a screen reader please turn it off to use this application"
-    );
-    btn.remove();
-    new GisManager();
-  };
-  btn.textContent = "Start";
-  root?.appendChild(btn);
-  return btn;
-};
 
 class GisManager {
   // Required variables
   raster: RasterManager;
 
-  coordinateManager = new CoordinateManager(this.canvas);
+  coordinateManager: CoordinateManager;
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   gestureManager: GestureManager;
-  connection: WsConnection;
   vectorManager: VectorManager;
   settings: GeneralSettings = {
     background_colour: { type: "Named", value: "Black" },
@@ -47,11 +31,10 @@ class GisManager {
     const { canvas, ctx } = getCanvas();
     this.canvas = canvas;
     this.ctx = ctx;
+    this.coordinateManager = new CoordinateManager(this.canvas);
     this.vectorManager = new VectorManager(this.coordinateManager, this.ctx);
     this.raster = new RasterManager(this.coordinateManager, this.canvas);
     this.gestureManager = new GestureManager(this.canvas);
-    this.connection = new WsConnection();
-    this.connection.addMessageHandler(this.wsMessageHandler.bind(this));
 
     this.coordinateManager.focusFullScreen();
     this.canvas.addEventListener("touchstart", (e) => {
@@ -155,46 +138,39 @@ class GisManager {
 
   // Functions
 
-  async wsMessageHandler(msg: AppMessage) {
-    try {
-      switch (msg.type) {
-        case "FocusBox":
-          speak("Focusing bounding box");
-          this.coordinateManager.focusScreen(
-            [msg.data[0], msg.data[3]],
-            [msg.data[2], msg.data[1]]
-          );
-          this.render();
-          break;
-        case "FetchRaster":
-          await this.raster.updateImage(msg.data);
-          this.render();
-          break;
-        case "FetchVector":
-          const features = await this.getVectorLayer(msg.data.name);
-          this.vectorManager.createLayer(features, msg.data);
-          this.render();
-          break;
-        case "UpdateVector":
-          this.vectorManager.updateSettingsForLayer(msg.data);
-          this.render();
-          break;
-        case "RemoveVector":
-          this.vectorManager.removeLayer(msg.data);
-          this.render();
-          break;
-        case "UpdateGeneralSettings":
-          this.settings = msg.data;
-          this.render();
-          break;
-      }
-    } catch (e) {
-      this.connection.sendError(
-        `Something went wrong when processing message: ${e}, ${JSON.stringify(
-          e
-        )}`
-      );
+  async update(msg: AppMessage) {
+    switch (msg.type) {
+      case "FocusBox":
+        speak("Focusing bounding box");
+        this.coordinateManager.focusScreen(
+          [msg.data[0], msg.data[3]],
+          [msg.data[2], msg.data[1]]
+        );
+        this.render();
+        break;
+      case "FetchRaster":
+        await this.raster.updateImage(msg.data);
+        this.render();
+        break;
+      case "FetchVector":
+        const features = await this.getVectorLayer(msg.data.name);
+        this.vectorManager.createLayer(features, msg.data);
+        this.render();
+        break;
+      case "UpdateVector":
+        this.vectorManager.updateSettingsForLayer(msg.data);
+        this.render();
+        break;
+      case "RemoveVector":
+        this.vectorManager.removeLayer(msg.data);
+        this.render();
+        break;
+      case "UpdateGeneralSettings":
+        this.settings = msg.data;
+        this.render();
+        break;
     }
+    return null;
   }
 
   async getVectorLayer(name: string): Promise<FeatureCollection> {
@@ -214,4 +190,26 @@ class GisManager {
   }
 }
 
-createButton();
+function app() {
+  const btn = document.createElement("button");
+  btn.onclick = async () => {
+    // Speech needs to be ran on a explicit button click to allow it to work for other interactions to work on certain browsers
+    speak(
+      "If you are using a screen reader please turn it off to use this application"
+    );
+    btn.remove();
+    const gis = new GisManager();
+    const connection = new WsConnection();
+    connection.addMessageHandler((msg) => {
+      try {
+        gis.update(msg);
+      } catch (e) {
+        return e as Error;
+      }
+    });
+  };
+  btn.textContent = "Start";
+  root?.appendChild(btn);
+}
+
+app();

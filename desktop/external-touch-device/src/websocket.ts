@@ -7,10 +7,8 @@ import {
   RasterMetadata,
   RasterOptions,
 } from "touch-device/src/raster";
+import { CssColour, NamedColour, RgbColour } from "touch-device/src/types";
 import {
-  CssColour,
-  NamedColour,
-  RgbColour,
   TouchDeviceAudioVectorOptions,
   TouchDeviceLabelOptions,
   TouchDeviceVisualVectorOptions,
