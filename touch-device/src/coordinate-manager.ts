@@ -1,113 +1,142 @@
-export const minLon = -180,
-  minLat = -90,
-  maxLon = 180,
-  maxLat = 90;
+type CoordinateBox = {
+  topLat: number;
+  leftLon: number;
+  bottomLat: number;
+  rightLon: number;
+};
+
+export const MaximumBounds: CoordinateBox = {
+  leftLon: -180,
+  bottomLat: -90,
+  rightLon: 180,
+  topLat: 90,
+};
 
 export class CoordinateManager {
-  topLat = maxLat;
-  leftLon = minLon;
-  bottomLat: number = minLat;
-  rightLon: number = maxLon;
-  constructor(private canvas: HTMLCanvasElement) {}
+  visableBounds: CoordinateBox;
+  constructor(
+    private canvas: HTMLCanvasElement,
+    protected outterBounds: CoordinateBox = MaximumBounds,
+    visableBounds?: CoordinateBox
+  ) {
+    this.visableBounds = visableBounds ?? this.outterBounds;
+  }
 
   screenToCoords(x: number, y: number): [number, number] {
     return [
-      (x / this.canvas.width) * (this.rightLon - this.leftLon) + this.leftLon,
-      -(y / this.canvas.height) * (this.topLat - this.bottomLat) + this.topLat,
+      (x / this.canvas.width) *
+        (this.visableBounds.rightLon - this.visableBounds.leftLon) +
+        this.visableBounds.leftLon,
+      -(y / this.canvas.height) *
+        (this.visableBounds.topLat - this.visableBounds.bottomLat) +
+        this.visableBounds.topLat,
     ];
   }
 
   coordsToScreen([lon, lat]: [number, number]): [number, number] {
     return [
-      ((lon - this.leftLon) * this.canvas.width) /
-        (this.rightLon - this.leftLon),
-      -((lat - this.topLat) * this.canvas.height) /
-        (this.topLat - this.bottomLat),
+      ((lon - this.visableBounds.leftLon) * this.canvas.width) /
+        (this.visableBounds.rightLon - this.visableBounds.leftLon),
+      -((lat - this.visableBounds.topLat) * this.canvas.height) /
+        (this.visableBounds.topLat - this.visableBounds.bottomLat),
     ];
   }
 
-  focusScreen(
-    [minLon, maxLat]: [number, number],
-    [maxLon, minLat]: [number, number]
-  ) {
+  focusScreen(bounds: CoordinateBox) {
     const screenWidth = this.canvas.width;
     const screenHeight = this.canvas.height;
-    const lonRange = maxLon - minLon;
-    const latRange = maxLat - minLat;
-    this.topLat = maxLat;
-    this.leftLon = minLon;
+    const lonRange = this.outterBounds.rightLon - bounds.leftLon;
+    const latRange = bounds.topLat - bounds.bottomLat;
+    this.visableBounds.topLat = bounds.topLat;
+    this.visableBounds.leftLon = bounds.leftLon;
     const lonOverLat = lonRange / latRange;
     const widthOverHeight = screenWidth / screenHeight;
     if (widthOverHeight > lonOverLat) {
-      this.rightLon = maxLon;
-      this.bottomLat = maxLat - (lonRange / screenWidth) * screenHeight;
+      this.visableBounds.rightLon = bounds.rightLon;
+      this.visableBounds.bottomLat =
+        bounds.topLat - (lonRange / screenWidth) * screenHeight;
     } else {
-      this.bottomLat = minLat;
-      this.rightLon = minLon + (latRange / screenHeight) * screenWidth;
+      this.visableBounds.bottomLat = bounds.bottomLat;
+      this.visableBounds.rightLon =
+        bounds.leftLon + (latRange / screenHeight) * screenWidth;
     }
   }
 
   focusFullScreen() {
-    this.focusScreen([minLon, maxLat], [maxLon, minLat]);
+    this.focusScreen(this.outterBounds);
   }
 
   zoomOut() {
-    const lonRange = this.rightLon - this.leftLon;
-    const latRange = this.topLat - this.bottomLat;
-    const maxXScale = (maxLon - this.leftLon) / lonRange;
-    const maxYScale = (this.topLat - minLat) / latRange;
+    const lonRange = this.visableBounds.rightLon - this.visableBounds.leftLon;
+    const latRange = this.visableBounds.topLat - this.visableBounds.bottomLat;
+    const maxXScale =
+      (this.outterBounds.rightLon - this.visableBounds.leftLon) / lonRange;
+    const maxYScale =
+      (this.visableBounds.topLat - this.outterBounds.bottomLat) / latRange;
     let scale = Math.min(maxXScale, maxYScale, 2);
     if (scale <= 1) {
       return false;
     }
-    this.rightLon = this.leftLon + lonRange * scale;
-    this.bottomLat = this.topLat - latRange * scale;
+    this.visableBounds.rightLon = this.visableBounds.leftLon + lonRange * scale;
+    this.visableBounds.bottomLat = this.visableBounds.topLat - latRange * scale;
     return true;
   }
 
   zoomIn() {
-    const lonRange = this.rightLon - this.leftLon;
-    this.rightLon = this.leftLon + lonRange / 2;
-    const latRange = this.topLat - this.bottomLat;
-    this.bottomLat = this.topLat - latRange / 2;
+    const lonRange = this.visableBounds.rightLon - this.visableBounds.leftLon;
+    this.visableBounds.rightLon = this.visableBounds.leftLon + lonRange / 2;
+    const latRange = this.visableBounds.topLat - this.visableBounds.bottomLat;
+    this.visableBounds.bottomLat = this.visableBounds.topLat - latRange / 2;
   }
 
   scrollDown(): number {
-    const range = this.topLat - this.bottomLat;
-    const top = Math.min(this.topLat + range, maxLat);
-    const panDistance = top - this.topLat;
-    this.topLat = top;
-    this.bottomLat += panDistance;
+    const range = this.visableBounds.topLat - this.visableBounds.bottomLat;
+    const top = Math.min(
+      this.visableBounds.topLat + range,
+      this.outterBounds.topLat
+    );
+    const panDistance = top - this.visableBounds.topLat;
+    this.visableBounds.topLat = top;
+    this.visableBounds.bottomLat += panDistance;
     return panDistance;
   }
 
   scrollUp(): number {
-    const range = this.topLat - this.bottomLat;
+    const range = this.visableBounds.topLat - this.visableBounds.bottomLat;
     console.log("Range: " + range);
-    console.log("Bottom lat: " + this.bottomLat);
-    const bottom = Math.max(this.bottomLat - range, minLat);
+    console.log("Bottom lat: " + this.visableBounds.bottomLat);
+    const bottom = Math.max(
+      this.visableBounds.bottomLat - range,
+      this.outterBounds.bottomLat
+    );
     console.log(`Bottom: ${bottom}`);
-    const panDistance = this.bottomLat - bottom;
-    this.bottomLat = bottom;
-    this.topLat -= panDistance;
+    const panDistance = this.visableBounds.bottomLat - bottom;
+    this.visableBounds.bottomLat = bottom;
+    this.visableBounds.topLat -= panDistance;
     return panDistance;
   }
 
   scrollRight(): number {
-    const range = this.rightLon - this.leftLon;
-    const left = Math.max(this.leftLon - range, minLon);
-    const panDistance = this.leftLon - left;
-    this.leftLon = left;
-    this.rightLon -= panDistance;
+    const range = this.visableBounds.rightLon - this.visableBounds.leftLon;
+    const left = Math.max(
+      this.visableBounds.leftLon - range,
+      this.outterBounds.leftLon
+    );
+    const panDistance = this.visableBounds.leftLon - left;
+    this.visableBounds.leftLon = left;
+    this.visableBounds.rightLon -= panDistance;
     return panDistance;
   }
 
   scrollLeft(): number {
-    const range = this.rightLon - this.leftLon;
-    const right = Math.min(this.rightLon + range, maxLon);
-    const panDistance = right - this.rightLon;
-    this.rightLon = right;
-    this.leftLon += panDistance;
+    const range = this.visableBounds.rightLon - this.visableBounds.leftLon;
+    const right = Math.min(
+      this.visableBounds.rightLon + range,
+      this.outterBounds.rightLon
+    );
+    const panDistance = right - this.visableBounds.rightLon;
+    this.visableBounds.rightLon = right;
+    this.visableBounds.leftLon += panDistance;
     return panDistance;
   }
 }

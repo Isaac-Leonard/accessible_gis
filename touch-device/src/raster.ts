@@ -314,14 +314,16 @@ export class RasterManager {
       return;
     }
     if (
-      this.raster.metadata.origin[0] > this.coordinateManager.rightLon ||
-      this.raster.metadata.origin[1] < this.coordinateManager.bottomLat ||
+      this.raster.metadata.origin[0] >
+        this.coordinateManager.visableBounds.rightLon ||
+      this.raster.metadata.origin[1] <
+        this.coordinateManager.visableBounds.bottomLat ||
       this.raster.metadata.origin[0] +
         this.raster.metadata.width * this.raster.metadata.resolution <
-        this.coordinateManager.leftLon ||
+        this.coordinateManager.visableBounds.leftLon ||
       this.raster.metadata.origin[1] +
         this.raster.metadata.height * -this.raster.metadata.resolution >
-        this.coordinateManager.topLat
+        this.coordinateManager.visableBounds.topLat
     ) {
       // No raster data is visable
       console.log("Raster off screen");

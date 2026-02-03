@@ -142,10 +142,12 @@ class GisManager {
     switch (msg.type) {
       case "FocusBox":
         speak("Focusing bounding box");
-        this.coordinateManager.focusScreen(
-          [msg.data[0], msg.data[3]],
-          [msg.data[2], msg.data[1]]
-        );
+        this.coordinateManager.focusScreen({
+          leftLon: msg.data[0],
+          topLat: msg.data[3],
+          rightLon: msg.data[2],
+          bottomLat: msg.data[1],
+        });
         this.render();
         break;
       case "FetchRaster":
