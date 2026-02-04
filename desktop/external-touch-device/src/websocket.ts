@@ -155,9 +155,22 @@ const RasterMetadataParser: ZodType<RasterMetadata> = z.object({
 });
 
 const RasterOptionsParser: ZodType<RasterOptions> = z.union([
-  z.object({ type: z.literal("RawData"), metadata: RasterMetadataParser }),
-  z.object({ type: z.literal("Combined"), metadata: RasterMetadataParser }),
-  z.object({ type: z.literal("Image"), metadata: RasterMetadataParser }),
+  z.object({
+    type: z.literal("RawData"),
+    metadata: RasterMetadataParser,
+    src: z.string(),
+  }),
+  z.object({
+    type: z.literal("Combined"),
+    metadata: RasterMetadataParser,
+    rawSrc: z.string(),
+    imageSrc: z.string(),
+  }),
+  z.object({
+    type: z.literal("Image"),
+    metadata: RasterMetadataParser,
+    src: z.string(),
+  }),
 ]);
 
 const NamedColourParser: ZodType<NamedColour> = z.enum([

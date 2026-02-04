@@ -47,9 +47,9 @@ const getDefaultRasterAudioSettings = (): RasterAudioSettings => ({
 });
 
 export type RasterOptions = { metadata: RasterMetadata } & (
-  | { type: "RawData" }
-  | { type: "Image" }
-  | { type: "Combined" }
+  | { type: "RawData"; src: string }
+  | { type: "Image"; src: string }
+  | { type: "Combined"; rawSrc: string; imageSrc: string }
 );
 export type Raster = { metadata: RasterMetadata; settings: RasterSettings } & (
   | { type: "RawData"; data: RasterData; image: Image }
@@ -129,7 +129,7 @@ export class RasterManager {
   }
 
   async getRawDataRaster(options: Extract<RasterOptions, { type: "RawData" }>) {
-    const data = await this.getRasterData();
+    const data = await this.getRasterData(options.src);
     if (data === null) {
       this.raster = null;
       throw new Error("Expected to get raster data and couldn't");
@@ -154,13 +154,13 @@ export class RasterManager {
   async getCombinedRaster(
     options: Extract<RasterOptions, { type: "Combined" }>
   ) {
-    const data = await this.getRasterData();
+    const data = await this.getRasterData(options.rawSrc);
     if (data === null) {
       this.raster = null;
       throw new Error("Expected to get raster data and couldn't");
     }
     const settings = getDefaultSettings(data, options.metadata.noDataValue);
-    const image = await ImageJs.fetchURL("/get_image");
+    const image = await ImageJs.fetchURL(options.imageSrc);
     this.raster = {
       type: options.type,
       settings,
@@ -172,7 +172,7 @@ export class RasterManager {
   }
 
   async getImageRaster(options: Extract<RasterOptions, { type: "Image" }>) {
-    const image = await ImageJs.fetchURL("/get_image");
+    const image = await ImageJs.fetchURL(options.src);
     const data = this.dataFromImage(image);
     const settings = getDefaultSettings(data, options.metadata.noDataValue);
     this.raster = {
@@ -198,8 +198,9 @@ export class RasterManager {
     }
   }
 
-  async getRasterData(): Promise<RasterData | null> {
-    const dataRes = await fetch("/get_raster");
+  // src is the url from which to fetch raster data from
+  async getRasterData(src: string): Promise<RasterData | null> {
+    const dataRes = await fetch(src);
     if (dataRes.status !== 200) {
       return null;
     }
