@@ -4,6 +4,10 @@
   "description": "A standalone website for viewing GIS data accessibly",
   "main": "index.js",
   "devDependencies": {},
+  "dependencies": {
+      "@types/geojson": "^7946.0.16",
+    "geojson": "^0.5.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
