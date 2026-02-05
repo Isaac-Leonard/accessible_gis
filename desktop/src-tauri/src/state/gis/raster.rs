@@ -127,7 +127,7 @@ impl<'a> StatefulRasterBand<'a> {
             audio_table: self.info.audio_table.clone(),
         };
         Ok(RasterDisplayInfo {
-            kind: self.info.render,
+            render_data: self.info.render.into(),
             metadata,
         })
     }

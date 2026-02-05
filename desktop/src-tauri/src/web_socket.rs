@@ -163,11 +163,43 @@ pub struct VectorInfo {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RasterDisplayInfo {
-    #[serde(rename = "type")]
-    pub kind: RenderMethod,
+    #[serde(flatten)]
+    pub render_data: RenderDetails,
     pub metadata: RasterMetadata,
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(tag = "type")]
+pub enum RenderDetails {
+    RawData {
+        src: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    Combined {
+        raw_src: String,
+        image_src: String,
+    },
+    Image {
+        src: String,
+    },
+}
+
+impl From<RenderMethod> for RenderDetails {
+    fn from(value: RenderMethod) -> Self {
+        match value {
+            RenderMethod::RawData => RenderDetails::RawData {
+                src: "/get_raster".to_string(),
+            },
+            RenderMethod::Image => RenderDetails::Image {
+                src: "/get_image".to_string(),
+            },
+            RenderMethod::Combined => RenderDetails::Combined {
+                raw_src: "/get_raster".to_string(),
+                image_src: "/get_image".to_string(),
+            },
+        }
+    }
+}
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "type", content = "data")]
 enum DeviceMessage {
