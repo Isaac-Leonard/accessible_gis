@@ -1,8 +1,9 @@
 const synth = window.speechSynthesis;
-let voice: undefined | SpeechSynthesisVoice;
+let voice: SpeechSynthesisVoice;
 const updateVoices = () => {
   const newVoices = synth.getVoices();
-  voice = newVoices.find((v) => v.name.toLowerCase() === "daniel");
+  const foundVoice = newVoices.find((v) => v.name.toLowerCase() === "daniel");
+  voice = foundVoice ?? newVoices[0];
 };
 
 if (typeof synth !== "undefined" && synth.onvoiceschanged !== undefined) {
