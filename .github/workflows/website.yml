@@ -1,0 +1,52 @@
+name: deploy website
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build-website:
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: install dependencies
+        run: |
+          npm install
+          npm install --prefix touch-device
+          npm install --prefix website
+
+      - name: build
+        run: |
+          npm run build --prefix touch-device
+          npm run build --prefix website
+
+      - name: upload
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload entire repository
+          path: './website/dist'
+  deploy:
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build-website
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
