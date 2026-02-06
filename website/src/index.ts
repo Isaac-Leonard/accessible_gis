@@ -7,27 +7,46 @@ import {
   getCanvas,
   GestureManager,
   RasterManager,
-  RasterOptions,
 } from "touch-device";
+import { AudioTable } from "touch-device/src/raster";
 import { colourToString } from "touch-device/src/utils";
-import { VectorInfo } from "touch-device/src/vector-manager";
+import { VectorSettings } from "touch-device/src/vector-manager";
 
 const params = new URLSearchParams(location.search);
 const vectorUrl = params.get("vector");
 const rasterUrl = params.get("raster");
 const settingsUrl = params.get("settings");
+const audioTableUrl = params.get("audioTable");
 
-const minLat = Number(params.get("min_lat") ?? -180);
-const maxLat = Number(params.get("max_lat") ?? 180);
-const minLon = Number(params.get("min_lat") ?? -90);
-const maxLon = Number(params.get("max_lon") ?? 90);
+const minLon = Number(params.get("min_lon") ?? -180);
+const maxLon = Number(params.get("max_lon") ?? 180);
+const minLat = Number(params.get("min_lat") ?? -90);
+const maxLat = Number(params.get("max_lat") ?? 90);
 
 const root = document.getElementById("image");
 
-type SetupInfo = {
-  raster?: RasterOptions;
-  vector?: VectorInfo;
-};
+const defaultVectorSettings = {
+  audio: {
+    prefered_label_field: null,
+    announce_leaving: true,
+    announce_geometry_type: false,
+    radius_for_point_announcements: 5,
+    distance_for_line_announcements: 5,
+  },
+  visual: {
+    vector_line_colour: { type: "Named", value: "White" },
+    point_radius: 5,
+    line_width: 2,
+    labels: {
+      enabled: false,
+      text_colour: { type: "Named", value: "Yellow" },
+      font: "",
+      line_width: 2,
+      fill_text: true,
+      prefered_label_field: null,
+    },
+  },
+} as const;
 
 class GisManager {
   // Required variables
@@ -38,9 +57,9 @@ class GisManager {
   ctx: CanvasRenderingContext2D;
   gestureManager: GestureManager;
   vectorManager: VectorManager;
-  settings: GeneralSettings = {
+  settings = {
     background_colour: { type: "Named", value: "Black" },
-  };
+  } as const;
 
   // Initial configuration
   constructor() {
@@ -58,38 +77,7 @@ class GisManager {
     this.raster = new RasterManager(this.coordinateManager, this.canvas);
     this.gestureManager = new GestureManager(this.canvas);
 
-    this.setup({
-      raster:
-        rasterUrl !== null ? { type: "Image", src: rasterUrl } : undefined,
-      vector:
-        vectorUrl !== null
-          ? {
-              name: vectorUrl,
-              settings: {
-                audio: {
-                  prefered_label_field: null,
-                  announce_leaving: true,
-                  announce_geometry_type: false,
-                  radius_for_point_announcements: 5,
-                  distance_for_line_announcements: 5,
-                },
-                visual: {
-                  vector_line_colour: { type: "Named", value: "White" },
-                  point_radius: 5,
-                  line_width: 2,
-                  labels: {
-                    enabled: false,
-                    text_colour: { type: "Named", value: "Yellow" },
-                    font: "",
-                    line_width: 2,
-                    fill_text: true,
-                    prefered_label_field: null,
-                  },
-                },
-              },
-            }
-          : undefined,
-    });
+    this.setup();
 
     this.coordinateManager.focusFullScreen();
     this.canvas.addEventListener("touchstart", (e) => {
@@ -193,15 +181,27 @@ class GisManager {
 
   // Functions
 
-  async setup({ vector, raster }: SetupInfo) {
+  async setup() {
+    const audioTable =
+      audioTableUrl !== null ? await this.getAudioTable(audioTableUrl) : null;
     let promises = [];
-    if (raster) {
-      promises.push(this.raster.updateImage(raster).then(() => this.render()));
-    }
-    if (vector) {
+    if (rasterUrl) {
       promises.push(
-        this.getVectorLayer(vector.name).then((features) => {
-          this.vectorManager.createLayer(features, vector);
+        this.raster
+          .updateImage({ src: rasterUrl, audioTable })
+          .then(() => this.render())
+      );
+    }
+    if (vectorUrl) {
+      const settings = settingsUrl
+        ? await this.getVectorSettings(decodeURIComponent(settingsUrl))
+        : defaultVectorSettings;
+      promises.push(
+        this.getVectorLayer(decodeURIComponent(vectorUrl)).then((features) => {
+          this.vectorManager.createLayer(features, {
+            name: vectorUrl,
+            settings,
+          });
           this.render();
         })
       );
@@ -209,8 +209,22 @@ class GisManager {
     return await Promise.all(promises);
   }
 
+  async getVectorSettings(src: string): Promise<VectorSettings> {
+    const res = await fetch(src);
+    const json = await res.json();
+    // TODO: Parse this properly.
+    return json;
+  }
+
+  async getAudioTable(src: string): Promise<AudioTable> {
+    const res = await fetch(src);
+    const json = await res.json();
+    // TODO: Parse this properly
+    return json;
+  }
+
   async getVectorLayer(name: string): Promise<FeatureCollection> {
-    const res = await fetch(`get_vector/${name}`);
+    const res = await fetch(name);
     const geojson = await res
       .json()
       .then((x) => geoJsonParsers.featureCollectionNonNull.parse(x));
