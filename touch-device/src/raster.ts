@@ -3,16 +3,7 @@ import { Image } from "image-js";
 import { pauseAudio, playAudio, setAudioFrequency } from "./audio.ts";
 import { CoordinateManager } from "./coordinate-manager.ts";
 import { speak } from "./speach.ts";
-
-export type RasterData =
-  | { type: "Uint8"; data: Uint8Array }
-  | { type: "Uint16"; data: Uint16Array }
-  | { type: "Uint32"; data: Uint32Array }
-  | { type: "Int8"; data: Int8Array }
-  | { type: "Int16"; data: Int16Array }
-  | { type: "Int32"; data: Int32Array }
-  | { type: "Float32"; data: Float32Array }
-  | { type: "Float64"; data: Float64Array };
+import { fromArrayBuffer, TypedArray } from "geotiff";
 
 export type RasterMetadata = {
   origin: [number, number];
@@ -20,7 +11,6 @@ export type RasterMetadata = {
   height: number;
   resolution: number;
   noDataValue: number | null;
-  audioTable: AudioTable | null;
 };
 
 export type AudioTable = { entries: AudioType[]; other: AudioType };
@@ -46,23 +36,22 @@ const getDefaultRasterAudioSettings = (): RasterAudioSettings => ({
   maxFreq: 880,
 });
 
-export type RasterOptions = { metadata: RasterMetadata } & (
-  | { type: "RawData"; src: string }
-  | { type: "Image"; src: string }
-  | { type: "Combined"; rawSrc: string; imageSrc: string }
-);
-export type Raster = { metadata: RasterMetadata; settings: RasterSettings } & (
-  | { type: "RawData"; data: RasterData; image: Image }
-  | { type: "Image"; image: Image; data: RasterData }
-  | { type: "Combined"; image: Image; data: RasterData }
-);
+export type Raster = {
+  metadata: RasterMetadata;
+  settings: RasterSettings;
+  image: Image;
+  data: TypedArray;
+  audioTable: AudioTable | null;
+};
+
+export type RasterInfo = { src: string; audioTable: AudioTable | null };
 
 const getDefaultSettings = (
-  data: RasterData,
+  data: TypedArray,
   noDataValue: number | null
 ): RasterSettings => {
   return {
-    ...getMinMax(data.data, noDataValue),
+    ...getMinMax(data, noDataValue),
     audio: getDefaultRasterAudioSettings(),
   };
 };
@@ -108,105 +97,49 @@ export class RasterManager {
     private canvas: HTMLCanvasElement
   ) {}
 
-  async updateImage(options: RasterOptions): Promise<null> {
-    const sounds = [...(options.metadata.audioTable?.entries ?? [])];
-    if (options.metadata.audioTable) {
-      sounds.push(options.metadata.audioTable.other);
+  async updateImage(rasterInfo: RasterInfo): Promise<null> {
+    const sounds = [...(rasterInfo.audioTable?.entries ?? [])];
+    if (rasterInfo.audioTable !== null) {
+      sounds.push(rasterInfo.audioTable.other);
     }
     this.soundManager = new SoundManager(
       sounds
         .filter((sound) => sound.type === "EscSound")
         .map((sound) => sound.value)
     );
-    switch (options.type) {
-      case "RawData":
-        return this.getRawDataRaster(options);
-      case "Combined":
-        return this.getCombinedRaster(options);
-      case "Image":
-        return this.getImageRaster(options);
-    }
+    return this.getRaster(rasterInfo);
   }
 
-  async getRawDataRaster(options: Extract<RasterOptions, { type: "RawData" }>) {
-    const data = await this.getRasterData(options.src);
-    if (data === null) {
-      this.raster = null;
-      throw new Error("Expected to get raster data and couldn't");
-    }
-    const settings = getDefaultSettings(data, options.metadata.noDataValue);
-    this.raster = {
-      type: options.type,
-      settings,
-      metadata: options.metadata,
-      data,
-      image: rasterToGrey(
-        data,
-        options.metadata.width,
-        options.metadata.height,
-        settings.min,
-        settings.max
-      ),
+  async processGisRaster(buffer: ArrayBuffer): Promise<{
+    metadata: RasterMetadata;
+    settings: RasterSettings;
+    data: TypedArray;
+  }> {
+    const tiff = await fromArrayBuffer(buffer);
+    const data = await tiff.getImage();
+    const metadata: RasterMetadata = {
+      width: data.getWidth(),
+      height: data.getHeight(),
+      origin: data.getOrigin() as [number, number],
+      noDataValue: data.getGDALNoData(),
+      // TODO: This must be fixed to use the proper resolution and not assume the image uses perfectly square pixels
+      resolution: data.getResolution()[0],
     };
+    const bands = await data.readRasters({ interleave: false });
+    const band = bands[0] as TypedArray;
+    const settings = getDefaultSettings(band, metadata.noDataValue);
+    return { metadata, data: band, settings };
+  }
+
+  async getRaster({ src, audioTable = null }: RasterInfo) {
+    const res = await fetch(src);
+    const buffer = await res.arrayBuffer();
+    const [data, image] = await Promise.all([
+      this.processGisRaster(buffer),
+      ImageJs.decode(new DataView(buffer)),
+    ]);
+    this.raster = { ...data, image, audioTable };
     return null;
-  }
-
-  async getCombinedRaster(
-    options: Extract<RasterOptions, { type: "Combined" }>
-  ) {
-    const data = await this.getRasterData(options.rawSrc);
-    if (data === null) {
-      this.raster = null;
-      throw new Error("Expected to get raster data and couldn't");
-    }
-    const settings = getDefaultSettings(data, options.metadata.noDataValue);
-    const image = await ImageJs.fetchURL(options.imageSrc);
-    this.raster = {
-      type: options.type,
-      settings,
-      metadata: options.metadata,
-      data,
-      image,
-    };
-    return null;
-  }
-
-  async getImageRaster(options: Extract<RasterOptions, { type: "Image" }>) {
-    const image = await ImageJs.fetchURL(options.src);
-    const data = this.dataFromImage(image);
-    const settings = getDefaultSettings(data, options.metadata.noDataValue);
-    this.raster = {
-      type: options.type,
-      data,
-      metadata: options.metadata,
-      settings,
-      image,
-    };
-    return null;
-  }
-
-  dataFromImage(image: Image): RasterData {
-    const data = image.grey().getRawImage().data;
-    if (data instanceof Uint8Array) {
-      return { type: "Uint8", data };
-    } else if (data instanceof Uint16Array) {
-      return { type: "Uint16", data };
-    } else if (data instanceof Uint8ClampedArray) {
-      return { type: "Uint8", data: Uint8Array.from(data) };
-    } else {
-      throw new Error("Unknown data type for image.");
-    }
-  }
-
-  // src is the url from which to fetch raster data from
-  async getRasterData(src: string): Promise<RasterData | null> {
-    const dataRes = await fetch(src);
-    if (dataRes.status !== 200) {
-      return null;
-    }
-    const rasterData = await dataRes.arrayBuffer();
-    const data = new Float64Array(rasterData);
-    return { type: "Float64", data };
   }
 
   coordsToRaster([lon, lat]: [number, number]): [number, number] | null {
@@ -258,12 +191,12 @@ export class RasterManager {
       pauseAudio();
     } else {
       const index = y * this.raster.metadata.width + x;
-      let value = this.raster.data.data[index];
-      if (this.raster.metadata.audioTable !== null) {
+      let value = this.raster.data[index];
+      if (this.raster.audioTable !== null) {
         const entry =
-          value < this.raster.metadata.audioTable.entries.length
-            ? this.raster.metadata.audioTable.entries[value]
-            : this.raster.metadata.audioTable.other;
+          value < this.raster.audioTable.entries.length
+            ? this.raster.audioTable.entries[value]
+            : this.raster.audioTable.other;
         switch (entry.type) {
           case "Silence":
             this.soundManager.pause();
@@ -374,32 +307,4 @@ const getMinMax = (
     }
   }
   return { min, max };
-};
-
-const rasterToGrey = (
-  data: RasterData,
-  width: number,
-  height: number,
-  min: number,
-  max: number
-): Image => {
-  const options: ImageJs.ImageOptions = {
-    colorModel: "GREY",
-    bitDepth: 8,
-  };
-  switch (data.type) {
-    case "Uint8":
-      return new Image(width, height, { ...options, data: data.data });
-    case "Int8":
-      return new Image(width, height, {
-        ...options,
-        data: Uint8Array.from(data.data, (x) => x + 128),
-      });
-    default:
-      const range = max - min;
-      const scaledData = Uint8Array.from(data.data, (x) =>
-        Math.round(((x - min) / range) * 256)
-      );
-      return new Image(width, height, { ...options, data: scaledData });
-  }
 };

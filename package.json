@@ -15,6 +15,7 @@
   ],
   "license": "ISC",
   "dependencies": {
+    "geotiff": "^3.0.0",
     "typescript": "^5.8.2",
     "vite": "^6.3.5",
     "zod": "^3.24.2"

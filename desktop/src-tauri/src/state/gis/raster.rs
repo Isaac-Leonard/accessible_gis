@@ -107,8 +107,7 @@ impl<'a> StatefulRasterBand<'a> {
                 .map_err(|err| ErrorDetails::IoError(err.to_string()))?;
             let wgs84_dataset = WrappedDataset::open(reprojected_dataset_name)
                 .map_err(|err| ErrorDetails::OpenDatasetError(err))?;
-            self.info.wgs84_reprojected_file = Some(wgs84_dataset);
-            self.info.wgs84_reprojected_file.as_mut().unwrap()
+            self.info.wgs84_reprojected_file.insert(wgs84_dataset)
         };
         let band = dataset.get_raster(index).unwrap();
         eprintln!(
@@ -127,8 +126,11 @@ impl<'a> StatefulRasterBand<'a> {
             audio_table: self.info.audio_table.clone(),
         };
         Ok(RasterDisplayInfo {
-            render_data: self.info.render.into(),
+            // TODO: Make this dynamic to support loading multiple rasters and not have a hard coded string
+            // Particularly as this isn't even in the server or websocket code so server paths are out of place here.
+            src: "/get_raster".into(),
             metadata,
+            audio_table: self.info.audio_table.clone(),
         })
     }
 

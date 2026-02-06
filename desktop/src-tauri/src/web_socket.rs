@@ -22,7 +22,7 @@ use crate::{
     errors::ErrorDetails,
     state::{
         gis::{
-            raster::{RasterMetadata, RenderMethod},
+            raster::{AudioTable, RasterMetadata, RenderMethod},
             vector::TouchDeviceVectorOptions,
         },
         touch_device::TouchDeviceSettings,
@@ -162,10 +162,11 @@ pub struct VectorInfo {
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct RasterDisplayInfo {
-    #[serde(flatten)]
-    pub render_data: RenderDetails,
+    pub src: String,
     pub metadata: RasterMetadata,
+    pub audio_table: Option<AudioTable>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

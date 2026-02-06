@@ -1,12 +1,7 @@
 import type { BBox } from "geojson";
 import { geoJsonParsers } from "touch-device";
 import { VectorSettings } from "touch-device";
-import {
-  AudioTable,
-  AudioType,
-  RasterMetadata,
-  RasterOptions,
-} from "touch-device/src/raster";
+import { AudioTable, AudioType, RasterInfo } from "touch-device/src/raster";
 import { CssColour, NamedColour, RgbColour } from "touch-device/src/types";
 import {
   TouchDeviceAudioVectorOptions,
@@ -108,7 +103,7 @@ export class WsConnection {
 
 export type AppMessage =
   | { type: "FocusBox"; data: BBox }
-  | { type: "FetchRaster"; data: RasterOptions }
+  | { type: "FetchRaster"; data: RasterInfo }
   | { type: "FetchVector"; data: VectorInfo }
   | { type: "UpdateVector"; data: VectorInfo }
   | { type: "RemoveVector"; data: string }
@@ -145,33 +140,10 @@ export const AudioTableParser: ZodType<AudioTable> = z.object({
   other: AudioTypeParser,
 });
 
-const RasterMetadataParser: ZodType<RasterMetadata> = z.object({
-  resolution: z.number(),
-  width: z.number(),
-  height: z.number(),
-  noDataValue: z.number().nullable(),
-  origin: z.tuple([z.number(), z.number()]),
-  audioTable: AudioTableParser.nullable(),
+const RasterInfoParser: ZodType<RasterInfo> = z.object({
+  src: z.string(),
+  audioTable: AudioTableParser,
 });
-
-const RasterOptionsParser: ZodType<RasterOptions> = z.union([
-  z.object({
-    type: z.literal("RawData"),
-    metadata: RasterMetadataParser,
-    src: z.string(),
-  }),
-  z.object({
-    type: z.literal("Combined"),
-    metadata: RasterMetadataParser,
-    rawSrc: z.string(),
-    imageSrc: z.string(),
-  }),
-  z.object({
-    type: z.literal("Image"),
-    metadata: RasterMetadataParser,
-    src: z.string(),
-  }),
-]);
 
 const NamedColourParser: ZodType<NamedColour> = z.enum([
   "AliceBlue",
@@ -379,7 +351,7 @@ const GeneralSettingsParser: ZodType<GeneralSettings> = z.object({
 
 const messageParser: ZodType<AppMessage> = z.union([
   z.object({ type: z.literal("FocusBox"), data: geoJsonParsers.bBox }),
-  z.object({ type: z.literal("FetchRaster"), data: RasterOptionsParser }),
+  z.object({ type: z.literal("FetchRaster"), data: RasterInfoParser }),
   z.object({ type: z.literal("FetchVector"), data: VectorInfoParser }),
   z.object({ type: z.literal("UpdateVector"), data: VectorInfoParser }),
   z.object({ type: z.literal("RemoveVector"), data: z.string() }),

@@ -1,10 +1,5 @@
 export { RasterManager } from "./raster.js";
-export type {
-  Raster,
-  RasterSettings,
-  RasterData,
-  RasterOptions,
-} from "./raster.js";
+export type { Raster, RasterInfo, RasterSettings } from "./raster.js";
 export { getCanvas } from "./canvas-manager.js";
 export { CoordinateManager } from "./coordinate-manager.js";
 export * as geoJsonParsers from "./geojson-parser.js";
