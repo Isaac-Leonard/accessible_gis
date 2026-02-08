@@ -8,11 +8,9 @@ const updateVoices = () => {
   voice = foundVoice ?? newVoices[0];
 };
 
-if (typeof synth !== "undefined" && synth.onvoiceschanged !== undefined) {
-  synth.onvoiceschanged = () => {
-    updateVoices();
-  };
-}
+synth.addEventListener("voiceschanged", () => {
+  updateVoices();
+});
 
 // Initial call to updateVoices in case voices are already available
 updateVoices();
@@ -23,19 +21,16 @@ export async function speak(text: string) {
   }
   const announcement = new SpeechSynthesisUtterance(text);
   announcement.voice = voice;
-  announcement.rate = 1;
-  let res_: (value: unknown) => void;
-  announcement.lang = voice.lang;
-  const done = new Promise((res) => {
-    res_ = res;
-  });
   synth.cancel();
-  announcement.addEventListener("end", () => res_(null));
-  announcement.addEventListener("error", () => {
-    res_(null);
+  const done = new Promise((res) => {
+    announcement.addEventListener("end", () => res(null));
+    announcement.addEventListener("error", () => {
+      res(null);
+    });
   });
-  announcement.addEventListener("start", () => {});
   announcement.volume = 1;
+  announcement.rate = 1;
+  announcement.lang = voice.lang;
   synth.speak(announcement);
   await done;
 }
