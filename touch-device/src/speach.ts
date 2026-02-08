@@ -2,7 +2,9 @@ const synth = window.speechSynthesis;
 let voice: SpeechSynthesisVoice;
 const updateVoices = () => {
   const newVoices = synth.getVoices();
-  const foundVoice = newVoices.find((v) => v.name.toLowerCase() === "daniel");
+  const foundVoice = newVoices.find((v) =>
+    v.name.toLowerCase().includes("daniel")
+  );
   voice = foundVoice ?? newVoices[0];
 };
 
