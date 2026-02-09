@@ -53,10 +53,10 @@ export class CoordinateManager {
     const widthOverHeight = screenWidth / screenHeight;
     if (widthOverHeight > lonOverLat) {
       this.visableBounds.rightLon = bounds.rightLon;
-      this.visableBounds.bottomLat = bounds.topLat - lonRange / widthOverHeight;
+      this.visableBounds.bottomLat = bounds.topLat - latRange * widthOverHeight;
     } else {
       this.visableBounds.bottomLat = bounds.bottomLat;
-      this.visableBounds.rightLon = bounds.leftLon + latRange / widthOverHeight;
+      this.visableBounds.rightLon = bounds.leftLon + lonRange * widthOverHeight;
     }
   }
 
