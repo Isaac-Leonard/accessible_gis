@@ -15,8 +15,6 @@ import { VectorSettings } from "touch-device/src/vector-manager";
 const params = new URLSearchParams(location.search);
 const vectorUrl = params.get("vector");
 const rasterUrl = params.get("raster");
-const settingsUrl = params.get("settings");
-const audioTableUrl = params.get("audioTable");
 
 const minLon = Number(params.get("min_lon") ?? -180);
 const maxLon = Number(params.get("max_lon") ?? 180);
@@ -48,6 +46,14 @@ const defaultVectorSettings = {
   },
 } as const;
 
+type Settings = {
+  vector: string | null;
+  raster: string | null;
+  audioTable: string | null;
+  displaySettings: string | null;
+  voice: SpeechSynthesisVoice;
+};
+
 class GisManager {
   // Required variables
   raster: RasterManager;
@@ -62,7 +68,7 @@ class GisManager {
   } as const;
 
   // Initial configuration
-  constructor() {
+  constructor(settings: Settings) {
     const { canvas, ctx } = getCanvas();
     this.canvas = canvas;
     this.ctx = ctx;
@@ -73,11 +79,19 @@ class GisManager {
       bottomLat: minLat,
     };
     this.coordinateManager = new CoordinateManager(this.canvas, bounds);
-    this.vectorManager = new VectorManager(this.coordinateManager, this.ctx);
-    this.raster = new RasterManager(this.coordinateManager, this.canvas);
+    this.vectorManager = new VectorManager(
+      this.coordinateManager,
+      this.ctx,
+      settings.voice
+    );
+    this.raster = new RasterManager(
+      this.coordinateManager,
+      this.canvas,
+      settings.voice
+    );
     this.gestureManager = new GestureManager(this.canvas);
 
-    this.setup();
+    this.setup(settings);
 
     this.coordinateManager.focusFullScreen();
     this.canvas.addEventListener("touchstart", (e) => {
@@ -125,82 +139,87 @@ class GisManager {
     this.gestureManager.addPinchHandler(() => {
       const zoomed = this.coordinateManager.zoomOut();
       if (zoomed) {
-        speak("Zoomed out");
+        speak("Zoomed out", settings.voice);
         this.render();
       } else {
-        speak("Cannot zoom out, you may need to swipe down or right");
+        speak(
+          "Cannot zoom out, you may need to swipe down or right",
+          settings.voice
+        );
       }
     });
 
     this.gestureManager.addSpreadHandler(() => {
       this.coordinateManager.zoomIn();
-      speak("Zooming in");
+      speak("Zooming in", settings.voice);
       this.render();
     });
 
     this.gestureManager.addSwipeHandler("down", () => {
       const scrollDistance = this.coordinateManager.scrollDown();
       if (scrollDistance != 0) {
-        speak("Swiped down");
+        speak("Swiped down", settings.voice);
         this.render();
       } else {
-        speak("Could not scroll down, at top of map");
+        speak("Could not scroll down, at top of map", settings.voice);
       }
     });
 
     this.gestureManager.addSwipeHandler("up", () => {
       const scrollDistance = this.coordinateManager.scrollUp();
       if (scrollDistance != 0) {
-        speak("Swiped up");
+        speak("Swiped up", settings.voice);
         this.render();
       } else {
-        speak("Could not scroll up, at bottom of map");
+        speak("Could not scroll up, at bottom of map", settings.voice);
       }
     });
 
     this.gestureManager.addSwipeHandler("right", () => {
       const scrollDistance = this.coordinateManager.scrollRight();
       if (scrollDistance != 0) {
-        speak("Swiped right");
+        speak("Swiped right", settings.voice);
         this.render();
       } else {
-        speak("Could not scroll right, at left of map");
+        speak("Could not scroll right, at left of map", settings.voice);
       }
     });
 
     this.gestureManager.addSwipeHandler("left", () => {
       const scrollDistance = this.coordinateManager.scrollLeft();
       if (scrollDistance != 0) {
-        speak("Swiped left");
+        speak("Swiped left", settings.voice);
         this.render();
       } else {
-        speak("Could not scroll left, at right of map");
+        speak("Could not scroll left, at right of map", settings.voice);
       }
     });
   }
 
   // Functions
 
-  async setup() {
+  async setup(settings: Settings) {
     const audioTable =
-      audioTableUrl !== null ? await this.getAudioTable(audioTableUrl) : null;
+      settings.audioTable !== null
+        ? await this.getAudioTable(settings.audioTable)
+        : null;
     let promises = [];
-    if (rasterUrl) {
+    if (settings.raster) {
       promises.push(
         this.raster
-          .updateImage({ src: rasterUrl, audioTable })
+          .updateImage({ src: settings.raster, audioTable })
           .then(() => this.render())
       );
     }
-    if (vectorUrl) {
-      const settings = settingsUrl
-        ? await this.getVectorSettings(decodeURIComponent(settingsUrl))
+    if (settings.vector) {
+      const displaySettings = settings.displaySettings
+        ? await this.getVectorSettings(settings.displaySettings)
         : defaultVectorSettings;
       promises.push(
-        this.getVectorLayer(decodeURIComponent(vectorUrl)).then((features) => {
+        this.getVectorLayer(settings.vector).then((features) => {
           this.vectorManager.createLayer(features, {
-            name: vectorUrl,
-            settings,
+            name: settings.vector!,
+            settings: displaySettings,
           });
           this.render();
         })
@@ -241,17 +260,51 @@ class GisManager {
 }
 
 function app() {
-  const btn = document.createElement("button");
-  btn.onclick = async () => {
+  const form = document.getElementById("options") as HTMLFormElement;
+  const vectorInput = document.getElementById("vector") as HTMLInputElement;
+  const rasterInput = document.getElementById("raster") as HTMLInputElement;
+  const voiceInput = document.getElementById("voice") as HTMLSelectElement;
+  vectorInput.value =
+    typeof vectorUrl === "string" ? decodeURIComponent(vectorUrl) : "";
+  rasterInput.value =
+    typeof rasterUrl === "string" ? decodeURIComponent(rasterUrl) : "";
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
     // Speech needs to be ran on a explicit button click to allow it to work for other interactions to work on certain browsers
+    const settings = {
+      vector: vectorInput.value.length > 0 ? vectorInput.value : null,
+      raster: rasterInput.value.length > 0 ? rasterInput.value : null,
+      voice: voices[voiceInput.selectedIndex],
+      audioTable: null,
+      displaySettings: null,
+    };
+    root?.replaceChildren();
     speak(
-      "If you are using a screen reader please turn it off to use this application"
+      "If you are using a screen reader please turn it off to use this application",
+      settings.voice
     );
-    btn.remove();
-    new GisManager();
+    new GisManager(settings);
+  });
+  const synth = window.speechSynthesis;
+  let voices = synth.getVoices();
+  const updateVoices = () => {
+    voices = synth.getVoices();
+    // Clear current selection before repopulating it
+    voiceInput.replaceChildren();
+    for (let voice of voices) {
+      const option = document.createElement("option");
+      option.textContent = `${voice.name} (${voice.lang})`;
+      if (voice.default) {
+        if (voice.lang == window.navigator?.language) {
+          option.defaultSelected = true;
+        }
+        option.textContent += " - Default";
+      }
+      voiceInput.appendChild(option);
+    }
   };
-  btn.textContent = "Start";
-  root?.appendChild(btn);
+  updateVoices();
+  synth.addEventListener("voiceschanged", () => updateVoices());
 }
 
 app();

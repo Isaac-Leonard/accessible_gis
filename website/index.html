@@ -11,7 +11,30 @@
     </style>
   </head>
   <body">
-    <div id="image"></div>
-    <script type="module" src="/src/index.ts"></script>
+    <div id="image">
+      <h1>Accessible Map Viewer</h1>
+      <p>
+	This is a demo application of the accessible GIS application available at <a href="https://github.com/Isaac-leonard/accessible_gis">https://github.com/Isaac-leonard/accessible_gis</a>.
+      </p>
+      <h2>How to use</h2>
+      <p>
+	You can use the following default settings or change them to suit your preferences.
+	The vector and raster settings must be left clear or be links to geojson and tiff files respectively.
+	To use this application you must disable any currently active screen readers as this page reacts to direct touch events which screen readers traditionally intercept to prevent unintentionally clicking the wrong thing.
+      </p>
+      <form id="options">
+	<label for = "vector">Vector:
+	  <input id="vector" type = "text"/>
+	</label>
+	<label for="raster">Raster:
+	  <input id="raster" type = "text"/>
+	</label>
+	<label for="voice">Voice:
+	  <select id="voice"></select>
+	</label>
+	<input type="submit" value="Start"/>
+      </form>
+    </div>
+  <script type="module" src="/src/index.ts"></script>
   </body>
 </html>
