@@ -19,7 +19,7 @@ export class CoordinateManager {
     protected outterBounds: CoordinateBox = MaximumBounds,
     visableBounds?: CoordinateBox
   ) {
-    this.visableBounds = visableBounds ?? this.outterBounds;
+    this.visableBounds = visableBounds ?? { ...this.outterBounds };
   }
 
   screenToCoords(x: number, y: number): [number, number] {
