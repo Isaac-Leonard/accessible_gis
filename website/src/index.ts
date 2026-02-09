@@ -92,16 +92,18 @@ class GisManager {
     this.gestureManager = new GestureManager(this.canvas);
 
     this.setup(settings);
-    this.canvas.requestFullscreen({ navigationUI: "hide" });
+    if (typeof this.canvas.requestFullscreen !== "undefined") {
+      this.canvas.requestFullscreen({ navigationUI: "hide" });
+    }
     this.coordinateManager.focusFullScreen();
     this.canvas.addEventListener("touchstart", (e) => {
       e.preventDefault();
       if (e.touches.length > 1) {
         return;
       }
-      const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
-      console.log(`screen x: ${screenX}, screen y: ${screenY}`);
-      const coords = this.coordinateManager.screenToCoords(screenX, screenY);
+      const { pageX, pageY } = e.targetTouches[e.targetTouches.length - 1];
+      console.log(`screen x: ${pageX}, screen y: ${pageY}`);
+      const coords = this.coordinateManager.screenToCoords(pageX, pageY);
       console.log(`Lon: ${coords[0]}, lat: ${coords[1]}`);
       this.vectorManager.speakFeatures(coords);
       this.raster.playAudio(coords);
@@ -113,9 +115,9 @@ class GisManager {
         this.raster.pauseAudio();
         return;
       }
-      const { screenX, screenY } = e.targetTouches[e.targetTouches.length - 1];
-      console.log(`screen x: ${screenX}, screen y: ${screenY}`);
-      const coords = this.coordinateManager.screenToCoords(screenX, screenY);
+      const { pageX, pageY } = e.targetTouches[e.targetTouches.length - 1];
+      console.log(`screen x: ${pageX}, screen y: ${pageY}`);
+      const coords = this.coordinateManager.screenToCoords(pageX, pageY);
       this.vectorManager.speakFeatures(coords);
       this.raster.playAudio(coords);
     });
