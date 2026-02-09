@@ -92,7 +92,7 @@ class GisManager {
     this.gestureManager = new GestureManager(this.canvas);
 
     this.setup(settings);
-
+    this.canvas.requestFullscreen({ navigationUI: "hide" });
     this.coordinateManager.focusFullScreen();
     this.canvas.addEventListener("touchstart", (e) => {
       e.preventDefault();
