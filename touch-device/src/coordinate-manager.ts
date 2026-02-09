@@ -45,7 +45,7 @@ export class CoordinateManager {
   focusScreen(bounds: CoordinateBox) {
     const screenWidth = this.canvas.width;
     const screenHeight = this.canvas.height;
-    const lonRange = this.outterBounds.rightLon - bounds.leftLon;
+    const lonRange = bounds.rightLon - bounds.leftLon;
     const latRange = bounds.topLat - bounds.bottomLat;
     this.visableBounds.topLat = bounds.topLat;
     this.visableBounds.leftLon = bounds.leftLon;
@@ -53,12 +53,10 @@ export class CoordinateManager {
     const widthOverHeight = screenWidth / screenHeight;
     if (widthOverHeight > lonOverLat) {
       this.visableBounds.rightLon = bounds.rightLon;
-      this.visableBounds.bottomLat =
-        bounds.topLat - (lonRange / screenWidth) * screenHeight;
+      this.visableBounds.bottomLat = bounds.topLat - lonRange / widthOverHeight;
     } else {
       this.visableBounds.bottomLat = bounds.bottomLat;
-      this.visableBounds.rightLon =
-        bounds.leftLon + (latRange / screenHeight) * screenWidth;
+      this.visableBounds.rightLon = bounds.leftLon + latRange / widthOverHeight;
     }
   }
 
