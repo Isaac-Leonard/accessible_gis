@@ -101,9 +101,9 @@ class GisManager {
       if (e.touches.length > 1) {
         return;
       }
-      const { pageX, pageY } = e.targetTouches[e.targetTouches.length - 1];
-      console.log(`screen x: ${pageX}, screen y: ${pageY}`);
-      const coords = this.coordinateManager.screenToCoords(pageX, pageY);
+      const { clientX, clientY } = e.targetTouches[e.targetTouches.length - 1];
+      console.log(`screen x: ${clientX}, screen y: ${clientY}`);
+      const coords = this.coordinateManager.screenToCoords(clientX, clientY);
       console.log(`Lon: ${coords[0]}, lat: ${coords[1]}`);
       this.vectorManager.speakFeatures(coords);
       this.raster.playAudio(coords);
@@ -115,9 +115,9 @@ class GisManager {
         this.raster.pauseAudio();
         return;
       }
-      const { pageX, pageY } = e.targetTouches[e.targetTouches.length - 1];
-      console.log(`screen x: ${pageX}, screen y: ${pageY}`);
-      const coords = this.coordinateManager.screenToCoords(pageX, pageY);
+      const { clientX, clientY } = e.targetTouches[e.targetTouches.length - 1];
+      console.log(`screen x: ${clientX}, screen y: ${clientY}`);
+      const coords = this.coordinateManager.screenToCoords(clientX, clientY);
       this.vectorManager.speakFeatures(coords);
       this.raster.playAudio(coords);
     });
