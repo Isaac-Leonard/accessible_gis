@@ -15,12 +15,16 @@ synth.addEventListener("voiceschanged", () => {
 // Initial call to updateVoices in case voices are already available
 updateVoices();
 
-export async function speak(text: string) {
-  if (!voice) {
+export async function speak(
+  text: string,
+  preferedVoice?: SpeechSynthesisVoice
+) {
+  preferedVoice = preferedVoice ?? voice;
+  if (!preferedVoice) {
     return;
   }
   const announcement = new SpeechSynthesisUtterance(text);
-  announcement.voice = voice;
+  announcement.voice = preferedVoice;
   synth.cancel();
   const done = new Promise((res) => {
     announcement.addEventListener("end", () => res(null));
@@ -30,7 +34,7 @@ export async function speak(text: string) {
   });
   announcement.volume = 1;
   announcement.rate = 1;
-  announcement.lang = voice.lang;
+  announcement.lang = preferedVoice.lang;
   synth.speak(announcement);
   await done;
 }

@@ -304,7 +304,8 @@ export class VectorManager {
 
   constructor(
     private coordinateManager: CoordinateManager,
-    private ctx: CanvasRenderingContext2D
+    private ctx: CanvasRenderingContext2D,
+    private preferedVoice?: SpeechSynthesisVoice
   ) {}
 
   render() {
@@ -345,7 +346,7 @@ export class VectorManager {
 
     // Make sure there's actually text to speak so we don't interupt current speach with nothing
     if (text.length > 0) {
-      speak(text);
+      speak(text, this.preferedVoice);
     }
   }
 }

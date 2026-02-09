@@ -94,7 +94,8 @@ export class RasterManager {
 
   constructor(
     private coordinateManager: CoordinateManager,
-    private canvas: HTMLCanvasElement
+    private canvas: HTMLCanvasElement,
+    private preferedVoice?: SpeechSynthesisVoice
   ) {}
 
   async updateImage(rasterInfo: RasterInfo): Promise<null> {
@@ -210,7 +211,7 @@ export class RasterManager {
           case "Speak":
             this.soundManager.pause();
             pauseAudio();
-            speak(entry.value);
+            speak(entry.value, this.preferedVoice);
             return;
           case "LinearMap":
             this.soundManager.pause();
