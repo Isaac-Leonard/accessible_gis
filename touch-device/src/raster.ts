@@ -250,15 +250,15 @@ export class RasterManager {
     }
     if (
       this.raster.metadata.origin[0] >
-        this.coordinateManager.visableBounds.rightLon ||
+        this.coordinateManager.visibleBounds.rightLon ||
       this.raster.metadata.origin[1] <
-        this.coordinateManager.visableBounds.bottomLat ||
+        this.coordinateManager.visibleBounds.bottomLat ||
       this.raster.metadata.origin[0] +
         this.raster.metadata.width * this.raster.metadata.resolution <
-        this.coordinateManager.visableBounds.leftLon ||
+        this.coordinateManager.visibleBounds.leftLon ||
       this.raster.metadata.origin[1] +
         this.raster.metadata.height * -this.raster.metadata.resolution >
-        this.coordinateManager.visableBounds.topLat
+        this.coordinateManager.visibleBounds.topLat
     ) {
       // No raster data is visable
       console.log("Raster off screen");
