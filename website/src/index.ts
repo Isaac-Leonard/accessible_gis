@@ -158,43 +158,19 @@ class GisManager {
     });
 
     this.gestureManager.addSwipeHandler("down", () => {
-      const scrollDistance = this.coordinateManager.scrollDown();
-      if (scrollDistance != 0) {
-        speak("Swiped down", settings.voice);
-        this.render();
-      } else {
-        speak("Could not scroll down, at top of map", settings.voice);
-      }
+      this.scrollDown();
     });
 
     this.gestureManager.addSwipeHandler("up", () => {
-      const scrollDistance = this.coordinateManager.scrollUp();
-      if (scrollDistance != 0) {
-        speak("Swiped up", settings.voice);
-        this.render();
-      } else {
-        speak("Could not scroll up, at bottom of map", settings.voice);
-      }
+      this.scrollUp();
     });
 
     this.gestureManager.addSwipeHandler("right", () => {
-      const scrollDistance = this.coordinateManager.scrollRight();
-      if (scrollDistance != 0) {
-        speak("Swiped right", settings.voice);
-        this.render();
-      } else {
-        speak("Could not scroll right, at left of map", settings.voice);
-      }
+      this.scrollRight();
     });
 
     this.gestureManager.addSwipeHandler("left", () => {
-      const scrollDistance = this.coordinateManager.scrollLeft();
-      if (scrollDistance != 0) {
-        speak("Swiped left", settings.voice);
-        this.render();
-      } else {
-        speak("Could not scroll left, at right of map", settings.voice);
-      }
+      this.scrollLeft();
     });
 
     this.canvas.addEventListener("keyup", (e) => {
@@ -227,6 +203,46 @@ class GisManager {
       this.render();
     } else {
       speak("Cannot zoom out, you may need to swipe down or right", this.voice);
+    }
+  }
+
+  scrollDown() {
+    const scrollDistance = this.coordinateManager.scrollDown();
+    if (scrollDistance != 0) {
+      speak("Swiped down", this.voice);
+      this.render();
+    } else {
+      speak("Could not scroll down, at top of map", this.voice);
+    }
+  }
+
+  scrollUp() {
+    const scrollDistance = this.coordinateManager.scrollUp();
+    if (scrollDistance != 0) {
+      speak("Swiped up", this.voice);
+      this.render();
+    } else {
+      speak("Could not scroll up, at bottom of map", this.voice);
+    }
+  }
+
+  scrollRight() {
+    const scrollDistance = this.coordinateManager.scrollRight();
+    if (scrollDistance != 0) {
+      speak("Swiped right", this.voice);
+      this.render();
+    } else {
+      speak("Could not scroll right, at left of map", this.voice);
+    }
+  }
+
+  scrollLeft() {
+    const scrollDistance = this.coordinateManager.scrollLeft();
+    if (scrollDistance != 0) {
+      speak("Swiped left", this.voice);
+      this.render();
+    } else {
+      speak("Could not scroll left, at right of map", this.voice);
     }
   }
 
@@ -321,21 +337,38 @@ class GisManager {
 
     if (e.key.startsWith("Arrow") && this.keyboardCurrentlyPlaying) {
       e.preventDefault();
-      switch (e.key) {
-        case "ArrowUp":
-          // Moving up but the top left of the screen is [0,0] so we subtract
-          this.coords[1] -= this.stepSize;
-          break;
-        case "ArrowDown":
-          // Moving down but the top left of the screen is [0,0] so we add
-          this.coords[1] += this.stepSize;
-          break;
-        case "ArrowLeft":
-          this.coords[0] -= this.stepSize;
-          break;
-        case "ArrowRight":
-          this.coords[0] += this.stepSize;
-          break;
+      if (e.ctrlKey) {
+        switch (e.key) {
+          case "ArrowUp":
+            this.scrollUp();
+            break;
+          case "ArrowDown":
+            this.scrollDown();
+            break;
+          case "ArrowLeft":
+            this.scrollLeft();
+            break;
+          case "ArrowRight":
+            this.scrollRight();
+            break;
+        }
+      } else {
+        switch (e.key) {
+          case "ArrowUp":
+            // Moving up but the top left of the screen is [0,0] so we subtract
+            this.coords[1] -= this.stepSize;
+            break;
+          case "ArrowDown":
+            // Moving down but the top left of the screen is [0,0] so we add
+            this.coords[1] += this.stepSize;
+            break;
+          case "ArrowLeft":
+            this.coords[0] -= this.stepSize;
+            break;
+          case "ArrowRight":
+            this.coords[0] += this.stepSize;
+            break;
+        }
       }
       this.playAudio();
     }
