@@ -66,12 +66,17 @@ class GisManager {
   settings = {
     background_colour: { type: "Named", value: "Black" },
   } as const;
+  voice: SpeechSynthesisVoice;
+  keyboardCurrentlyPlaying: boolean = false;
+  coords: [number, number] = [0, 0];
+  stepSize: number = 1;
 
   // Initial configuration
   constructor(settings: Settings) {
     const { canvas, ctx } = getCanvas();
     this.canvas = canvas;
     this.ctx = ctx;
+    this.voice = settings.voice;
     const bounds = {
       leftLon: minLon,
       rightLon: maxLon,
@@ -92,10 +97,19 @@ class GisManager {
     this.gestureManager = new GestureManager(this.canvas);
 
     this.setup(settings);
+
+    if (typeof this.canvas.requestPointerLock !== "undefined") {
+      this.canvas.requestPointerLock();
+    }
+
     if (typeof this.canvas.requestFullscreen !== "undefined") {
       this.canvas.requestFullscreen({ navigationUI: "hide" });
     }
+    this.canvas.tabIndex = 1;
+    this.canvas.focus({ preventScroll: true });
+
     this.coordinateManager.focusFullScreen();
+
     this.canvas.addEventListener("touchstart", (e) => {
       e.preventDefault();
       if (e.touches.length > 1) {
@@ -103,23 +117,20 @@ class GisManager {
       }
       const { clientX, clientY } = e.targetTouches[e.targetTouches.length - 1];
       console.log(`screen x: ${clientX}, screen y: ${clientY}`);
-      const coords = this.coordinateManager.screenToCoords(clientX, clientY);
-      console.log(`Lon: ${coords[0]}, lat: ${coords[1]}`);
-      this.vectorManager.speakFeatures(coords);
-      this.raster.playAudio(coords);
+      this.coords = [clientX, clientY];
+      this.playAudio();
     });
 
     this.canvas.addEventListener("touchmove", (e) => {
       e.preventDefault();
       if (e.targetTouches.length > 1) {
-        this.raster.pauseAudio();
+        this.stopAudio();
         return;
       }
       const { clientX, clientY } = e.targetTouches[e.targetTouches.length - 1];
       console.log(`screen x: ${clientX}, screen y: ${clientY}`);
-      const coords = this.coordinateManager.screenToCoords(clientX, clientY);
-      this.vectorManager.speakFeatures(coords);
-      this.raster.playAudio(coords);
+      this.coords = [clientX, clientY];
+      this.playAudio();
     });
 
     this.canvas.addEventListener("touchend", (e) => {
@@ -127,7 +138,7 @@ class GisManager {
       if (e.touches.length > 1) {
         return;
       }
-      this.raster.pauseAudio();
+      this.stopAudio();
     });
 
     this.canvas.addEventListener("touchcancel", (e) => {
@@ -135,26 +146,15 @@ class GisManager {
       if (e.touches.length > 1) {
         return;
       }
-      this.raster.pauseAudio();
+      this.stopAudio();
     });
 
     this.gestureManager.addPinchHandler(() => {
-      const zoomed = this.coordinateManager.zoomOut();
-      if (zoomed) {
-        speak("Zoomed out", settings.voice);
-        this.render();
-      } else {
-        speak(
-          "Cannot zoom out, you may need to swipe down or right",
-          settings.voice
-        );
-      }
+      this.zoomOut();
     });
 
     this.gestureManager.addSpreadHandler(() => {
-      this.coordinateManager.zoomIn();
-      speak("Zooming in", settings.voice);
-      this.render();
+      this.zoomIn();
     });
 
     this.gestureManager.addSwipeHandler("down", () => {
@@ -196,9 +196,39 @@ class GisManager {
         speak("Could not scroll left, at right of map", settings.voice);
       }
     });
+
+    this.canvas.addEventListener("keyup", (e) => {
+      this.globalKeyHandler(e);
+    });
   }
 
   // Functions
+
+  playAudio() {
+    const coords = this.coordinateManager.screenToCoords(...this.coords);
+    this.vectorManager.speakFeatures(coords);
+    this.raster.playAudio(coords);
+  }
+
+  stopAudio() {
+    this.raster.pauseAudio();
+  }
+
+  zoomIn() {
+    this.coordinateManager.zoomIn();
+    speak("Zooming in", this.voice);
+    this.render();
+  }
+
+  zoomOut() {
+    const zoomed = this.coordinateManager.zoomOut();
+    if (zoomed) {
+      speak("Zoomed out", this.voice);
+      this.render();
+    } else {
+      speak("Cannot zoom out, you may need to swipe down or right", this.voice);
+    }
+  }
 
   async setup(settings: Settings) {
     const audioTable =
@@ -258,6 +288,57 @@ class GisManager {
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     this.raster.render();
     this.vectorManager.render();
+  }
+
+  globalKeyHandler(e: KeyboardEvent): void {
+    if (e.key === "p") {
+      e.preventDefault();
+      this.keyboardCurrentlyPlaying = !this.keyboardCurrentlyPlaying;
+      if (this.keyboardCurrentlyPlaying) {
+        this.playAudio();
+      } else {
+        this.stopAudio();
+      }
+    }
+
+    if (e.key === "Z") {
+      e.preventDefault();
+      this.zoomOut();
+    }
+
+    if (e.key === "z") {
+      e.preventDefault();
+      this.zoomIn();
+    }
+
+    if (e.key === "c") {
+      speak(`Currently at ${this.coords[0]} x, ${this.coords[1]} y`);
+    }
+    if (e.key === "C") {
+      const coords = this.coordinateManager.screenToCoords(...this.coords);
+      speak(`Currently at ${coords[0]} east, ${coords[1]} north`);
+    }
+
+    if (e.key.startsWith("Arrow") && this.keyboardCurrentlyPlaying) {
+      e.preventDefault();
+      switch (e.key) {
+        case "ArrowUp":
+          // Moving up but the top left of the screen is [0,0] so we subtract
+          this.coords[1] -= this.stepSize;
+          break;
+        case "ArrowDown":
+          // Moving down but the top left of the screen is [0,0] so we add
+          this.coords[1] += this.stepSize;
+          break;
+        case "ArrowLeft":
+          this.coords[0] -= this.stepSize;
+          break;
+        case "ArrowRight":
+          this.coords[0] += this.stepSize;
+          break;
+      }
+      this.playAudio();
+    }
   }
 }
 
