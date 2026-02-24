@@ -84,11 +84,22 @@ export class CoordinateManager {
     return true;
   }
 
-  zoomIn() {
-    const lonRange = this.visibleBounds.rightLon - this.visibleBounds.leftLon;
-    this.visibleBounds.rightLon = this.visibleBounds.leftLon + lonRange / 2;
-    const latRange = this.visibleBounds.topLat - this.visibleBounds.bottomLat;
-    this.visibleBounds.bottomLat = this.visibleBounds.topLat - latRange / 2;
+  zoomIn(coords?: [number, number]) {
+    if (typeof coords !== "undefined") {
+      const leftDistance = coords[0] - this.visibleBounds.leftLon;
+      const rightDistance = this.visibleBounds.rightLon - coords[0];
+      this.visibleBounds.leftLon = coords[0] - leftDistance / 2;
+      this.visibleBounds.rightLon = coords[0] + rightDistance / 2;
+      const topDistance = this.visibleBounds.topLat - coords[1];
+      const bottomDistance = this.visibleBounds.bottomLat + coords[1];
+      this.visibleBounds.topLat = coords[1] + topDistance / 2;
+      this.visibleBounds.bottomLat = coords[1] - bottomDistance;
+    } else {
+      const lonRange = this.visibleBounds.rightLon - this.visibleBounds.leftLon;
+      this.visibleBounds.rightLon = this.visibleBounds.leftLon + lonRange / 2;
+      const latRange = this.visibleBounds.topLat - this.visibleBounds.bottomLat;
+      this.visibleBounds.bottomLat = this.visibleBounds.topLat - latRange / 2;
+    }
   }
 
   scrollDown(): number {

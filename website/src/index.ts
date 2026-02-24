@@ -71,6 +71,8 @@ class GisManager {
   coords: [number, number] = [0, 0];
   stepSize: number = 1;
 
+  lastTouchTime: number = 0;
+
   // Initial configuration
   constructor(settings: Settings) {
     const { canvas, ctx } = getCanvas();
@@ -125,6 +127,7 @@ class GisManager {
       e.preventDefault();
       if (e.targetTouches.length > 1) {
         this.stopAudio();
+        this.lastTouchTime = Date.now();
         return;
       }
       const { clientX, clientY } = e.targetTouches[e.targetTouches.length - 1];
@@ -139,6 +142,7 @@ class GisManager {
         return;
       }
       this.stopAudio();
+      this.lastTouchTime = Date.now();
     });
 
     this.canvas.addEventListener("touchcancel", (e) => {
@@ -147,10 +151,15 @@ class GisManager {
         return;
       }
       this.stopAudio();
+      this.lastTouchTime = Date.now();
     });
 
     this.gestureManager.addPinchHandler(() => {
-      this.zoomOut();
+      if (Date.now() - this.lastTouchTime < 50) {
+        this.zoomIn();
+      } else {
+        this.zoomOut();
+      }
     });
 
     this.gestureManager.addSpreadHandler(() => {
@@ -173,6 +182,11 @@ class GisManager {
       this.scrollLeft();
     });
 
+    this.gestureManager.addDoubleTapHandler(() => {
+      const [lat, lon] = this.coordinateManager.screenToCoords(...this.coords);
+      speak(`Latitude ${lat}, Longitude ${lon}`);
+    });
+
     this.canvas.addEventListener("keyup", (e) => {
       this.globalKeyHandler(e);
     });
@@ -190,9 +204,16 @@ class GisManager {
     this.raster.pauseAudio();
   }
 
-  zoomIn() {
-    this.coordinateManager.zoomIn();
-    speak("Zooming in", this.voice);
+  zoomIn(coords?: [number, number]) {
+    if (coords) {
+      this.coordinateManager.zoomIn(
+        this.coordinateManager.screenToCoords(...coords)
+      );
+      speak("Zooming in on last touch point", this.voice);
+    } else {
+      this.coordinateManager.zoomIn();
+      speak("Zooming in, top left corner held constant", this.voice);
+    }
     this.render();
   }
 
