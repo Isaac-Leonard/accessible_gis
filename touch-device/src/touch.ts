@@ -1,3 +1,4 @@
+import { speak } from "./speach.ts";
 import { mean } from "./utils.js";
 
 /**
@@ -197,7 +198,7 @@ export class GestureManager {
 
   private detectTap(start: Touches[], _move: Touches[], end: Touches[]) {
     if (start.length === 1 && end.length === 1) {
-      if (end[0].timeStamp - start[0].timeStamp < 10) {
+      if (end[0].timeStamp - start[0].timeStamp < 200) {
         this.gestureInProgress = true;
         this.tapHandlers.forEach((fn) => fn());
         this.lastTapTime = Date.now();
@@ -206,7 +207,7 @@ export class GestureManager {
   }
 
   private detectDoubleTap() {
-    if (Date.now() - this.lastTapTime < 40) {
+    if (Date.now() - this.lastTapTime < 400) {
       this.doubleTapHandlers.forEach((fn) => fn());
     }
   }

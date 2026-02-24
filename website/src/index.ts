@@ -183,13 +183,9 @@ class GisManager {
       this.scrollLeft();
     });
 
-    this.gestureManager.addTapHandler(() => {
-      speak("Tapped");
-    });
-
     this.gestureManager.addDoubleTapHandler(() => {
       const [lat, lon] = this.coordinateManager.screenToCoords(...this.coords);
-      speak(`Latitude ${lat}, Longitude ${lon}`);
+      speak(`Latitude ${lat.toFixed(3)}, Longitude ${lon.toFixed(3)}`);
     });
 
     this.canvas.addEventListener("keyup", (e) => {
