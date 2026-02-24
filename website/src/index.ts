@@ -155,14 +155,15 @@ class GisManager {
     });
 
     this.gestureManager.addPinchHandler(() => {
-      if (Date.now() - this.lastTouchTime < 50) {
-        this.zoomIn();
-      } else {
-        this.zoomOut();
-      }
+      this.zoomOut();
     });
 
     this.gestureManager.addSpreadHandler(() => {
+      if (Date.now() - this.lastTouchTime < 50) {
+        this.zoomIn();
+      } else {
+        this.zoomIn();
+      }
       this.zoomIn();
     });
 
@@ -180,6 +181,10 @@ class GisManager {
 
     this.gestureManager.addSwipeHandler("left", () => {
       this.scrollLeft();
+    });
+
+    this.gestureManager.addTapHandler(() => {
+      speak("Tapped");
     });
 
     this.gestureManager.addDoubleTapHandler(() => {
