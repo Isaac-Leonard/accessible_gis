@@ -62,10 +62,16 @@ export class GestureManager {
   };
   private pinchHandlers: (() => void)[] = [];
   private spreadHandlers: (() => void)[] = [];
+  private tapHandlers: (() => void)[] = [];
+  private lastTapTime = 0;
+
+  private doubleTapHandlers: (() => void)[] = [];
 
   constructor(private el: HTMLElement) {
     this.gestureHandlers.push(this.handlePinchZoom.bind(this));
     this.gestureHandlers.push(this.detectSwipe.bind(this));
+    this.gestureHandlers.push(this.detectTap.bind(this));
+    this.tapHandlers.push(this.detectDoubleTap.bind(this));
 
     el.addEventListener("touchstart", this.startHandler.bind(this));
     el.addEventListener("touchmove", this.moveHandler.bind(this));
@@ -135,11 +141,6 @@ export class GestureManager {
     this.doubleSwipeHandlers[direction].push(fn);
   }
 
-  // @ts-ignore
-  private calcTimeDifference(a: Touches, b: Touches): number {
-    return Math.abs(a.timeStamp - b.timeStamp);
-  }
-
   private handlePinchZoom(start: Touches[], _moves: Touches[], end: Touches[]) {
     const startTouches = start.map((x) => x.touch);
     const endTouches = end.map((x) => x.touch);
@@ -192,5 +193,29 @@ export class GestureManager {
         this.doubleSwipeHandlers.down.forEach((handler) => handler());
       }
     }
+  }
+
+  private detectTap(start: Touches[], _move: Touches[], end: Touches[]) {
+    if (start.length === 1 && end.length === 1) {
+      if (end[0].timeStamp - start[0].timeStamp < 10) {
+        this.gestureInProgress = true;
+        this.tapHandlers.forEach((fn) => fn());
+        this.lastTapTime = Date.now();
+      }
+    }
+  }
+
+  private detectDoubleTap() {
+    if (Date.now() - this.lastTapTime < 40) {
+      this.doubleTapHandlers.forEach((fn) => fn());
+    }
+  }
+
+  addTapHandler(fn: () => void) {
+    this.tapHandlers.push(fn);
+  }
+
+  addDoubleTapHandler(fn: () => void) {
+    this.doubleTapHandlers.push(fn);
   }
 }
