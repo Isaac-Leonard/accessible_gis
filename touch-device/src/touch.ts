@@ -164,7 +164,7 @@ export class GestureManager {
   }
 
   private detectSwipe(start: Touches[], _move: Touches[], end: Touches[]) {
-    if (start.length !== 3 || end.length !== 3) return;
+    if (start.length !== 2 || end.length !== 2) return;
 
     const startX = mean(start.map((t) => t.touch.pageX));
     const endX = mean(end.map((t) => t.touch.pageX));
