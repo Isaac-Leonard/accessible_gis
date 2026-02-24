@@ -159,8 +159,8 @@ class GisManager {
     });
 
     this.gestureManager.addSpreadHandler(() => {
-      if (Date.now() - this.lastTouchTime < 50) {
-        this.zoomIn();
+      if (Date.now() - this.lastTouchTime < 500) {
+        this.zoomIn(this.coords);
       } else {
         this.zoomIn();
       }
@@ -184,7 +184,7 @@ class GisManager {
     });
 
     this.gestureManager.addDoubleTapHandler(() => {
-      const [lat, lon] = this.coordinateManager.screenToCoords(...this.coords);
+      const [lon, lat] = this.coordinateManager.screenToCoords(...this.coords);
       speak(`Latitude ${lat.toFixed(3)}, Longitude ${lon.toFixed(3)}`);
     });
 
