@@ -151,7 +151,10 @@ class GisManager {
         this.render();
         break;
       case "FetchRaster":
-        await this.raster.updateImage(msg.data);
+        const { src, audioTable } = msg.data;
+        const res = await fetch(src);
+        const buffer = await res.arrayBuffer();
+        await this.raster.updateImage({ buffer, audioTable });
         this.render();
         break;
       case "FetchVector":

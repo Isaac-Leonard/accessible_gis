@@ -45,6 +45,7 @@ export type Raster = {
 };
 
 export type RasterInfo = { src: string; audioTable: AudioTable | null };
+export type RasterData = { buffer: ArrayBuffer; audioTable: AudioTable | null };
 
 const getDefaultSettings = (
   data: TypedArray,
@@ -98,17 +99,24 @@ export class RasterManager {
     private preferedVoice?: SpeechSynthesisVoice
   ) {}
 
-  async updateImage(rasterInfo: RasterInfo): Promise<null> {
-    const sounds = [...(rasterInfo.audioTable?.entries ?? [])];
-    if (rasterInfo.audioTable !== null) {
-      sounds.push(rasterInfo.audioTable.other);
+  async updateImage({ buffer, audioTable }: RasterData): Promise<null> {
+    const sounds = [...(audioTable?.entries ?? [])];
+    if (audioTable !== null) {
+      sounds.push(audioTable.other);
     }
     this.soundManager = new SoundManager(
       sounds
         .filter((sound) => sound.type === "EscSound")
         .map((sound) => sound.value)
     );
-    return this.getRaster(rasterInfo);
+
+    const [data, image] = await Promise.all([
+      this.processGisRaster(buffer),
+      ImageJs.decode(new DataView(buffer)),
+    ]);
+
+    this.raster = { ...data, image, audioTable };
+    return null;
   }
 
   async processGisRaster(buffer: ArrayBuffer): Promise<{
@@ -130,17 +138,6 @@ export class RasterManager {
     const band = bands[0] as TypedArray;
     const settings = getDefaultSettings(band, metadata.noDataValue);
     return { metadata, data: band, settings };
-  }
-
-  async getRaster({ src, audioTable = null }: RasterInfo) {
-    const res = await fetch(src);
-    const buffer = await res.arrayBuffer();
-    const [data, image] = await Promise.all([
-      this.processGisRaster(buffer),
-      ImageJs.decode(new DataView(buffer)),
-    ]);
-    this.raster = { ...data, image, audioTable };
-    return null;
   }
 
   coordsToRaster([lon, lat]: [number, number]): [number, number] | null {
