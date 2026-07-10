@@ -1,57 +1,75 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Image Viewer</title>
-    <style>
-      body { margin: 0 !important; padding: 0 !important; }
-      canvas { margin: 0 !important; padding: 0 !important; }
-      document { margin: 0 !important; padding: 0 !important; }
-    </style>
-  </head>
-  <body">
-    <div id="image">
-      <h1>Accessible Map Viewer</h1>
-      <p>
-	This is a demo application of the accessible GIS application available at <a href="https://github.com/Isaac-leonard/accessible_gis">https://github.com/Isaac-leonard/accessible_gis</a>.
-      </p>
-      <h2>How to use</h2>
-      <p>
-	You can use the following default settings or change them to suit your preferences.
-	The vector and raster settings must be left clear or be links to geojson and geo tiff files respectively.
-      </p>
-      <p>
-	To use this application you must disable any currently active screen readers as this page reacts to direct touch events which screen readers traditionally intercept to prevent unintentionally clicking the wrong thing.
-	To view the map, simply place one finger on the screen and move it about, the names of locations you are touching will be announced.
-	If your finger moves out of a feature on the map, it will announce that you have left that location.
-	Along with this, if you have loaded in a raster file then the values of the pixels under your finger will be turned into sound.
-	The current default sound produced is a simple sine wave with the frequency being modulated by the value of the pixel being touched.
-	In simple terms, this means that a darker pixel will produce a lower pitched sound and a higher valued pixel will produce a higher pitched sound.
-	This will only occur if your finger is touching within the area covered by the loaded raster file, so if it covers only a small region you will likely have to zoom in to view it properly.
-      </p>
-      <p>
-	You are able to zoom out by performing a pinching gesture on the screen with two fingers.
-	Zooming in is done by reversing this gesture, place two fingers next to each other on the screen and then spread them apart.
-	To move the visable area of the map, perform a two finger swipe in the direction you want to drag the map.
-	Zooming out and swiping are only possible if doing so won't move the map off screen.
-      </p>
-      <p>
-        You are also able to have the latitude and longitude of the current location you are touching spoken outloud by performing a double tap.
-      </p>
-      <form id="options">
-	<label for = "vector">Vector:
-	  <input id="vector" type = "text"/>
-	</label>
-	<label for="raster">Raster:
-	  <input id="raster" type = "text"/>
-	</label>
-	<label for="voice">Voice:
-	  <select id="voice"></select>
-	</label>
-	<input type="submit" value="Start"/>
-      </form>
-    </div>
-  <script type="module" src="/src/index.ts"></script>
-  </body>
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Image Viewer</title>
+	<style>
+		body {
+			margin: 0 !important;
+			padding: 0 !important;
+		}
+
+		canvas {
+			margin: 0 !important;
+			padding: 0 !important;
+		}
+
+		document {
+			margin: 0 !important;
+			padding: 0 !important;
+		}
+	</style>
+</head>
+<body">
+	<div id="image">
+		<h1>Accessible Map Viewer</h1>
+		<p>
+			This is a demo application of the accessible GIS application available at <a
+				href="https://github.com/Isaac-leonard/accessible_gis">https://github.com/Isaac-leonard/accessible_gis</a>.
+		</p>
+		<h2>How to use</h2>
+		<p>
+			You can use the following default settings or change them to suit your preferences.
+			The vector and raster settings must be left clear or be links to geojson and geo tiff files respectively.
+		</p>
+		<p>
+			To use this application you must disable any currently active screen readers as this page reacts to direct touch
+			events which screen readers traditionally intercept to prevent unintentionally clicking the wrong thing.
+			To view the map, simply place one finger on the screen and move it about, the names of locations you are touching
+			will be announced.
+			If your finger moves out of a feature on the map, it will announce that you have left that location.
+			Along with this, if you have loaded in a raster file then the values of the pixels under your finger will be
+			turned into sound.
+			The current default sound produced is a simple sine wave with the frequency being modulated by the value of the
+			pixel being touched.
+			In simple terms, this means that a darker pixel will produce a lower pitched sound and a higher valued pixel will
+			produce a higher pitched sound.
+			This will only occur if your finger is touching within the area covered by the loaded raster file, so if it covers
+			only a small region you will likely have to zoom in to view it properly.
+		</p>
+		<p>
+			You are able to zoom out by performing a pinching gesture on the screen with two fingers.
+			Zooming in is done by reversing this gesture, place two fingers next to each other on the screen and then spread
+			them apart.
+			To move the visable area of the map, perform a two finger swipe in the direction you want to drag the map.
+			Zooming out and swiping are only possible if doing so won't move the map off screen.
+		</p>
+		<p>
+			You are also able to have the latitude and longitude of the current location you are touching spoken outloud by
+			performing a double tap.
+		</p>
+		<form id="options">
+			<div id="vector"></div>
+			<div id="raster"></div>
+			<label for="voice">Voice:
+				<select id="voice"></select>
+			</label>
+			<input type="submit" value="Start" />
+		</form>
+	</div>
+	<script type="module" src="/src/index.ts"></script>
+	</body>
+
 </html>

@@ -1,4 +1,4 @@
-type CoordinateBox = {
+export type CoordinateBox = {
   topLat: number;
   leftLon: number;
   bottomLat: number;
