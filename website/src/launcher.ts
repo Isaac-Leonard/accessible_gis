@@ -26,24 +26,24 @@ const vectorInputComponent = (url: string | null) => {
   const fileInput = labeledInput("file", "file");
   const urlInput = labeledInput("url", "url");
   const textInput = labeledInput("textarea", "paste or type geojson");
-  const getData = (): VectorLayerLocator | null => {
+  const getData = (): VectorLayerLocator[] => {
     switch (activeInput) {
       case urlInput:
         if (urlInput.input.value.length > 0) {
-          return { type: "url", url: urlInput.input.value };
+          return [{ type: "url", url: urlInput.input.value }];
         } else {
-          return null;
+          return [];
         }
       case textInput:
-        return { type: "text", text: textInput.input.value };
+        return [{ type: "text", text: textInput.input.value }];
       case fileInput:
         const file = fileInput.input.files?.item(0);
         if (typeof file === "undefined" || file === null) {
-          return null;
+          return [];
         }
-        return { type: "file", file };
+        return [{ type: "file", file }];
       default:
-        return null;
+        return [];
     }
   };
 
@@ -204,7 +204,7 @@ export function app() {
 }
 
 type LauncherData = {
-  vector: VectorLayerLocator | null;
+  vector: VectorLayerLocator[];
   raster: RasterLayerLocator | null;
   audioTable: string | null;
   displaySettings: string | null;
@@ -228,32 +228,30 @@ const loadData = async (settings: LauncherData): Promise<InitialData> => {
 };
 
 const loadVectorData = async (
-  location: VectorLayerLocator | null
-): Promise<InitialVectorData | null> => {
-  if (location === null) {
-    return null;
-  }
-
+  location: VectorLayerLocator[]
+): Promise<InitialVectorData[]> => {
   const displaySettings = null;
-
-  switch (location.type) {
-    case "url": {
-      const res = await fetch(location.url);
-      const json = await res.json();
-      const features = geoJsonParsers.featureCollectionNonNull.parse(json);
-      return { name: location.url, features, displaySettings };
+  const vectors = location.map(async (vector) => {
+    switch (vector.type) {
+      case "url": {
+        const res = await fetch(vector.url);
+        const json = await res.json();
+        const features = geoJsonParsers.featureCollectionNonNull.parse(json);
+        return { name: vector.url, features, displaySettings };
+      }
+      case "file": {
+        const json = JSON.parse(await vector.file.text());
+        const features = geoJsonParsers.featureCollectionNonNull.parse(json);
+        return { name: vector.file.name, features, displaySettings };
+      }
+      case "text": {
+        const json = JSON.parse(vector.text);
+        const features = geoJsonParsers.featureCollectionNonNull.parse(json);
+        return { name: "text", features, displaySettings };
+      }
     }
-    case "file": {
-      const json = JSON.parse(await location.file.text());
-      const features = geoJsonParsers.featureCollectionNonNull.parse(json);
-      return { name: location.file.name, features, displaySettings };
-    }
-    case "text": {
-      const json = JSON.parse(location.text);
-      const features = geoJsonParsers.featureCollectionNonNull.parse(json);
-      return { name: "text", features, displaySettings };
-    }
-  }
+  });
+  return await Promise.all(vectors);
 };
 
 const loadRasterData = async (

@@ -258,13 +258,13 @@ export class GisManager {
           .then(() => this.render())
       );
     }
-    if (initialData.vector) {
-      this.vectorManager.createLayer(initialData.vector.features, {
-        name: initialData.vector.name,
-        settings: initialData.vector.displaySettings ?? defaultVectorSettings,
+    for (let vector of initialData.vector) {
+      this.vectorManager.createLayer(vector.features, {
+        name: vector.name,
+        settings: vector.displaySettings ?? defaultVectorSettings,
       });
-      this.render();
     }
+    this.render();
     try {
       return await Promise.all(promises);
     } catch (e) {

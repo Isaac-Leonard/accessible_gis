@@ -17,7 +17,7 @@ export type InitialVectorData = {
 };
 
 export type InitialData = {
-  vector: InitialVectorData | null;
+  vector: InitialVectorData[];
   raster: ArrayBuffer | null;
   audioTable: string | null;
   voice: SpeechSynthesisVoice;
