@@ -92,8 +92,19 @@ const vectorInputList = (initialUrl: string | null) => {
     const vectorComponent = vectorInputComponent(url);
     vectorComponents.push(vectorComponent);
     li.appendChild(vectorComponent.parent);
+
+    const removeButton = document.createElement("input");
+    removeButton.type = "button";
+    removeButton.value = "Remove";
+    removeButton.addEventListener("click", () => {
+      li.remove();
+      vectorComponents.splice(vectorComponents.indexOf(vectorComponent), 1);
+    });
+    li.appendChild(removeButton);
+
     vectorList.appendChild(li);
   };
+
   addVectorButton.addEventListener("click", (_e) => {
     addVectorFn(null);
   });
