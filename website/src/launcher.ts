@@ -20,30 +20,27 @@ const root = document.getElementById("image");
 
 const vectorInputComponent = (url: string | null) => {
   const wrapper = document.createElement("div");
-  const heading = document.createElement("h2");
-  heading.innerText = "Vector";
-  wrapper.appendChild(heading);
   const fileInput = labeledInput("file", "file");
   const urlInput = labeledInput("url", "url");
   const textInput = labeledInput("textarea", "paste or type geojson");
-  const getData = (): VectorLayerLocator[] => {
+  const getData = (): VectorLayerLocator | null => {
     switch (activeInput) {
       case urlInput:
         if (urlInput.input.value.length > 0) {
-          return [{ type: "url", url: urlInput.input.value }];
+          return { type: "url", url: urlInput.input.value };
         } else {
-          return [];
+          return null;
         }
       case textInput:
-        return [{ type: "text", text: textInput.input.value }];
+        return { type: "text", text: textInput.input.value };
       case fileInput:
         const file = fileInput.input.files?.item(0);
         if (typeof file === "undefined" || file === null) {
-          return [];
+          return null;
         }
-        return [{ type: "file", file }];
+        return { type: "file", file };
       default:
-        return [];
+        return null;
     }
   };
 
@@ -76,6 +73,41 @@ const vectorInputComponent = (url: string | null) => {
   wrapper.appendChild(inputTypeSelector);
   wrapper.appendChild(activeInput.label);
   return { parent: wrapper, getData };
+};
+
+const vectorInputList = (initialUrl: string | null) => {
+  const parent = document.createElement("div");
+  const heading = document.createElement("h2");
+  heading.innerText = "Vector";
+  parent.appendChild(heading);
+  const vectorList = document.createElement("ul");
+  const addVectorButton = document.createElement("input");
+  addVectorButton.type = "button";
+  addVectorButton.value = "Add vector dataset";
+  parent.appendChild(vectorList);
+  parent.appendChild(addVectorButton);
+  const vectorComponents: Array<ReturnType<typeof vectorInputComponent>> = [];
+  const addVectorFn = (url: string | null) => {
+    const li = document.createElement("li");
+    const vectorComponent = vectorInputComponent(url);
+    vectorComponents.push(vectorComponent);
+    li.appendChild(vectorComponent.parent);
+    vectorList.appendChild(li);
+  };
+  addVectorButton.addEventListener("click", (_e) => {
+    addVectorFn(null);
+  });
+
+  if (typeof initialUrl === "string") {
+    addVectorFn(initialUrl);
+  }
+
+  const getData = () => {
+    return vectorComponents
+      .map((component) => component.getData())
+      .filter((vector): vector is VectorLayerLocator => vector !== null);
+  };
+  return { parent, getData };
 };
 
 const rasterInputComponent = (url: string | null) => {
@@ -156,8 +188,8 @@ export function app() {
   const vectorUrl = decodeURIComponent(
     typeof vectorUrlFragment === "string" ? vectorUrlFragment : ""
   );
-  const vectorInputContents = vectorInputComponent(vectorUrl);
-  vectorInput.replaceWith(vectorInputContents.parent);
+  const vectorContents = vectorInputList(vectorUrl);
+  vectorInput.replaceWith(vectorContents.parent);
   const rasterInputContents = rasterInputComponent(
     typeof rasterUrl === "string" ? decodeURIComponent(rasterUrl) : ""
   );
@@ -167,7 +199,7 @@ export function app() {
     e.preventDefault();
     // Speech needs to be ran on a explicit button click to allow it to work for other interactions to work on certain browsers
     const settings = {
-      vector: vectorInputContents.getData(),
+      vector: vectorContents.getData(),
       raster: rasterInputContents.getData(),
       voice: voices[voiceInput.selectedIndex],
       audioTable: null,
