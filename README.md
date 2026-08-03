@@ -1,8 +1,9 @@
 # Accessible GIS
-A GUI application for working with GIS data for the blind
-Note: This is extremely experimental and currently only intended for my own personal use
+A desktop application and website for working with GIS data for the blind.
 ## How to run
-This app requires gdal, nodejs and rustup to be installed.
+The website is available at https://accessible-gis.magellanicclouds.net
+Currently the desktop application must be compiled manually and requires gdal, nodejs and rustup to be installed.
+After cloning this repository:
 Run
 ```
 npm install
@@ -17,9 +18,9 @@ Then run
 ```
 npm run tauri dev
 ```
-in the root directory and the app should open.
+in the root directory and the application should open.
 ## Contributing
-Pull requests and issues are very welcome however any added features must be 100% accessible with the MacOS voiceover screenreader and should preferably be accessible with any other screen reader.
+Pull requests and issues are very welcome however any added features must be fully accessible for voiceover on MacOS and should preferably be accessible with any other screen reader.
 
 ## Features
 ### Raster
