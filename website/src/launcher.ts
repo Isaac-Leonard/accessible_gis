@@ -5,7 +5,7 @@ import {
   InitialVectorData,
 } from "./types";
 import { GisManager } from "./map-viewer";
-import { speak, geoJsonParsers } from "touch-device";
+import { speak, geoJsonParsers, CoordinateBox } from "touch-device";
 
 const params = new URLSearchParams(location.search);
 const vectorUrlFragment = params.get("vector");
@@ -109,7 +109,7 @@ const vectorInputList = (initialUrl: string | null) => {
     addVectorFn(null);
   });
 
-  if (typeof initialUrl === "string") {
+  if (typeof initialUrl === "string" && initialUrl.length > 0) {
     addVectorFn(initialUrl);
   }
 
@@ -171,9 +171,60 @@ const rasterInputComponent = (url: string | null) => {
   return { parent: wrapper, getData };
 };
 
+const boundsInputComponent = () => {
+  const defaultBounds = {
+    leftLon: minLon,
+    rightLon: maxLon,
+    topLat: maxLat,
+    bottomLat: minLat,
+  };
+
+  const parent = document.createElement("div");
+  const heading = document.createElement("h2");
+  heading.innerText = "Bounding box of key data";
+  parent.appendChild(heading);
+  const minLonInput = labeledInput(
+    "number",
+    "Minimum longitude",
+    defaultBounds.leftLon.toString()
+  );
+  const minLatInput = labeledInput(
+    "number",
+    "Minimum latitude",
+    defaultBounds.bottomLat.toString()
+  );
+  const maxLonInput = labeledInput(
+    "number",
+    "Maximum longitude",
+    defaultBounds.rightLon.toString()
+  );
+  const maxLatInput = labeledInput(
+    "number",
+    "Maximum latitude",
+    defaultBounds.topLat.toString()
+  );
+
+  parent.appendChild(minLonInput.label);
+  parent.appendChild(minLatInput.label);
+  parent.appendChild(maxLonInput.label);
+  parent.appendChild(maxLatInput.label);
+
+  const getData = (): CoordinateBox => {
+    return {
+      bottomLat: Number(minLatInput.input.value),
+      leftLon: Number(minLonInput.input.value),
+      topLat: Number(maxLatInput.input.value),
+      rightLon: Number(maxLonInput.input.value),
+    };
+  };
+
+  return { parent, getData };
+};
+
 const labeledInput = <T extends string>(
   inputType: T,
-  labelText: string
+  labelText: string,
+  defaultValue?: string
 ): {
   label: HTMLLabelElement;
   input: T extends "textarea" ? HTMLTextAreaElement : HTMLInputElement;
@@ -184,6 +235,13 @@ const labeledInput = <T extends string>(
   );
   if (input instanceof HTMLInputElement) {
     input.type = inputType;
+    if (typeof defaultValue !== "undefined") {
+      input.value = defaultValue;
+    }
+  } else {
+    if (typeof defaultValue !== "undefined") {
+      input.innerText = defaultValue;
+    }
   }
   label.innerText = labelText;
   label.appendChild(input);
@@ -206,15 +264,18 @@ export function app() {
   );
   rasterInput.replaceWith(rasterInputContents.parent);
 
+  const boundsInput = boundsInputComponent();
+  rasterInputContents.parent.after(boundsInput.parent);
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     // Speech needs to be ran on a explicit button click to allow it to work for other interactions to work on certain browsers
-    const settings = {
+    const settings: LauncherData = {
       vector: vectorContents.getData(),
       raster: rasterInputContents.getData(),
       voice: voices[voiceInput.selectedIndex],
       audioTable: null,
       displaySettings: null,
+      bounds: boundsInput.getData(),
     };
     const data = await loadData(settings);
     root?.replaceChildren();
@@ -252,6 +313,7 @@ type LauncherData = {
   audioTable: string | null;
   displaySettings: string | null;
   voice: SpeechSynthesisVoice;
+  bounds: CoordinateBox;
 };
 
 const loadData = async (settings: LauncherData): Promise<InitialData> => {
@@ -260,14 +322,7 @@ const loadData = async (settings: LauncherData): Promise<InitialData> => {
     loadRasterData(settings.raster),
   ]);
 
-  const bounds = {
-    leftLon: minLon,
-    rightLon: maxLon,
-    topLat: maxLat,
-    bottomLat: minLat,
-  };
-
-  return { ...settings, raster, vector, bounds: bounds };
+  return { ...settings, raster, vector };
 };
 
 const loadVectorData = async (
