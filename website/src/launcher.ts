@@ -99,6 +99,7 @@ const vectorInputList = (initialUrl: string | null) => {
     removeButton.addEventListener("click", () => {
       li.remove();
       vectorComponents.splice(vectorComponents.indexOf(vectorComponent), 1);
+      addVectorButton.focus();
     });
     li.appendChild(removeButton);
 
