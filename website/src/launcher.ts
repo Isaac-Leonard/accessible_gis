@@ -21,7 +21,7 @@ const root = document.getElementById("image");
 const vectorInputComponent = (url: string | null) => {
   const wrapper = document.createElement("div");
   const fileInput = labeledInput("file", "file");
-  const urlInput = labeledInput("url", "url");
+  const urlInput = labeledInput("text", "url");
   const textInput = labeledInput("textarea", "paste or type geojson");
   const getData = (): VectorLayerLocator | null => {
     switch (activeInput) {
@@ -128,7 +128,7 @@ const rasterInputComponent = (url: string | null) => {
   heading.innerText = "Raster";
   wrapper.appendChild(heading);
   const fileInput = labeledInput("file", "file");
-  const urlInput = labeledInput("url", "url");
+  const urlInput = labeledInput("text", "url");
   const getData = (): RasterLayerLocator | null => {
     switch (activeInput) {
       case urlInput:
