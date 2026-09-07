@@ -1,4 +1,3 @@
-import { speak } from "./speach.ts";
 import { mean } from "./utils.js";
 
 /**
@@ -63,7 +62,7 @@ export class GestureManager {
   };
   private pinchHandlers: (() => void)[] = [];
   private spreadHandlers: (() => void)[] = [];
-  private tapHandlers: (() => void)[] = [];
+  private tapHandlers: ((target: HTMLHtmlElement) => void)[] = [];
   private lastTapTime = 0;
 
   private doubleTapHandlers: (() => void)[] = [];
@@ -198,9 +197,16 @@ export class GestureManager {
 
   private detectTap(start: Touches[], _move: Touches[], end: Touches[]) {
     if (start.length === 1 && end.length === 1) {
-      if (end[0].timeStamp - start[0].timeStamp < 200) {
+      // Only trigger tap events if a tap is shorter then 200 ms and the start and end of the tap event are on the same element
+      if (
+        end[0].timeStamp - start[0].timeStamp < 200 &&
+        start[0].touch.target === end[0].touch.target
+      ) {
+        // We cast here as the documentation states that `Touch.target` must be an element which is broader then the EventTarget type specified by default
+        // TODO Raise an issue on the typescript github or see if future versions fix this issue
+        const target = start[0].touch.target as HTMLHtmlElement;
         this.gestureInProgress = true;
-        this.tapHandlers.forEach((fn) => fn());
+        this.tapHandlers.forEach((fn) => fn(target));
         this.lastTapTime = Date.now();
       }
     }
@@ -212,7 +218,7 @@ export class GestureManager {
     }
   }
 
-  addTapHandler(fn: () => void) {
+  addTapHandler(fn: (target: HTMLHtmlElement) => void) {
     this.tapHandlers.push(fn);
   }
 
