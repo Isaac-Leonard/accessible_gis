@@ -95,7 +95,7 @@ class GisManager {
       this.render();
     });
 
-    this.gestureManager.addSwipeHandler("down", () => {
+    this.gestureManager.addTwoFingerSwipeHandler("down", () => {
       const scrollDistance = this.coordinateManager.scrollDown();
       if (scrollDistance != 0) {
         speak("Swiped down");
@@ -105,7 +105,7 @@ class GisManager {
       }
     });
 
-    this.gestureManager.addSwipeHandler("up", () => {
+    this.gestureManager.addTwoFingerSwipeHandler("up", () => {
       const scrollDistance = this.coordinateManager.scrollUp();
       if (scrollDistance != 0) {
         speak("Swiped up");
@@ -115,7 +115,7 @@ class GisManager {
       }
     });
 
-    this.gestureManager.addSwipeHandler("right", () => {
+    this.gestureManager.addTwoFingerSwipeHandler("right", () => {
       const scrollDistance = this.coordinateManager.scrollRight();
       if (scrollDistance != 0) {
         speak("Swiped right");
@@ -125,7 +125,7 @@ class GisManager {
       }
     });
 
-    this.gestureManager.addSwipeHandler("left", () => {
+    this.gestureManager.addTwoFingerSwipeHandler("left", () => {
       const scrollDistance = this.coordinateManager.scrollLeft();
       if (scrollDistance != 0) {
         speak("Swiped left");

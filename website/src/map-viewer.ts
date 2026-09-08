@@ -144,19 +144,19 @@ export class GisManager {
       this.zoomIn();
     });
 
-    this.gestureManager.addSwipeHandler("down", () => {
+    this.gestureManager.addTwoFingerSwipeHandler("down", () => {
       this.scrollDown();
     });
 
-    this.gestureManager.addSwipeHandler("up", () => {
+    this.gestureManager.addTwoFingerSwipeHandler("up", () => {
       this.scrollUp();
     });
 
-    this.gestureManager.addSwipeHandler("right", () => {
+    this.gestureManager.addTwoFingerSwipeHandler("right", () => {
       this.scrollRight();
     });
 
-    this.gestureManager.addSwipeHandler("left", () => {
+    this.gestureManager.addTwoFingerSwipeHandler("left", () => {
       this.scrollLeft();
     });
 

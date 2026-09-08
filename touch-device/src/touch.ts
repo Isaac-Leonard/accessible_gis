@@ -54,7 +54,15 @@ export class GestureManager {
   private startTouches: Touches[] = [];
   private movedTouches: Touches[] = [];
   private endTouches: Touches[] = [];
-  private doubleSwipeHandlers = {
+
+  private oneFingerSwipeHandlers = {
+    left: [] as (() => void)[],
+    right: [] as (() => void)[],
+    up: [] as (() => void)[],
+    down: [] as (() => void)[],
+  };
+
+  private twoFingerSwipeHandlers = {
     left: [] as (() => void)[],
     right: [] as (() => void)[],
     up: [] as (() => void)[],
@@ -69,7 +77,8 @@ export class GestureManager {
 
   constructor(private el: HTMLElement) {
     this.gestureHandlers.push(this.handlePinchZoom.bind(this));
-    this.gestureHandlers.push(this.detectSwipe.bind(this));
+    this.gestureHandlers.push(this.detectOneFingerSwipe.bind(this));
+    this.gestureHandlers.push(this.detectTwoFingerSwipe.bind(this));
     this.gestureHandlers.push(this.detectTap.bind(this));
     this.tapHandlers.push(this.detectDoubleTap.bind(this));
 
@@ -137,8 +146,18 @@ export class GestureManager {
     this.spreadHandlers.push(fn);
   }
 
-  addSwipeHandler(direction: "left" | "right" | "up" | "down", fn: () => void) {
-    this.doubleSwipeHandlers[direction].push(fn);
+  addTwoFingerSwipeHandler(
+    direction: "left" | "right" | "up" | "down",
+    fn: () => void
+  ) {
+    this.twoFingerSwipeHandlers[direction].push(fn);
+  }
+
+  addOneFingerSwipeHandler(
+    direction: "left" | "right" | "up" | "down",
+    fn: () => void
+  ) {
+    this.oneFingerSwipeHandlers[direction].push(fn);
   }
 
   private handlePinchZoom(start: Touches[], _moves: Touches[], end: Touches[]) {
@@ -164,7 +183,46 @@ export class GestureManager {
     return Math.hypot(xDistance, yDistance);
   }
 
-  private detectSwipe(start: Touches[], _move: Touches[], end: Touches[]) {
+  private detectOneFingerSwipe(
+    start: Touches[],
+    _move: Touches[],
+    end: Touches[]
+  ) {
+    if (start.length !== 1 || end.length !== 1) return;
+
+    const startX = start[0].touch.pageX;
+    const endX = end[0].touch.pageX;
+    const startY = start[0].touch.pageY;
+    const endY = end[0].touch.pageY;
+
+    const xDiff = startX - endX;
+    const yDiff = startY - endY;
+
+    if (Math.abs(xDiff) > Math.abs(yDiff)) {
+      if (xDiff > 0) {
+        this.gestureInProgress = true;
+        this.oneFingerSwipeHandlers.left.forEach((handler) => handler());
+      } else {
+        this.gestureInProgress = true;
+        this.oneFingerSwipeHandlers.right.forEach((handler) => handler());
+      }
+    } else {
+      // Use > here because screen coordinates have the origin at the top left and increase towards the bottom.
+      if (yDiff > 0) {
+        this.gestureInProgress = true;
+        this.oneFingerSwipeHandlers.up.forEach((handler) => handler());
+      } else {
+        this.gestureInProgress = true;
+        this.oneFingerSwipeHandlers.down.forEach((handler) => handler());
+      }
+    }
+  }
+
+  private detectTwoFingerSwipe(
+    start: Touches[],
+    _move: Touches[],
+    end: Touches[]
+  ) {
     if (start.length !== 2 || end.length !== 2) return;
 
     const startX = mean(start.map((t) => t.touch.pageX));
@@ -178,19 +236,19 @@ export class GestureManager {
     if (Math.abs(xDiff) > Math.abs(yDiff)) {
       if (xDiff > 0) {
         this.gestureInProgress = true;
-        this.doubleSwipeHandlers.left.forEach((handler) => handler());
+        this.twoFingerSwipeHandlers.left.forEach((handler) => handler());
       } else {
         this.gestureInProgress = true;
-        this.doubleSwipeHandlers.right.forEach((handler) => handler());
+        this.twoFingerSwipeHandlers.right.forEach((handler) => handler());
       }
     } else {
       // Use > here because screen coordinates have the origin at the top left and increase towards the bottom.
       if (yDiff > 0) {
         this.gestureInProgress = true;
-        this.doubleSwipeHandlers.up.forEach((handler) => handler());
+        this.twoFingerSwipeHandlers.up.forEach((handler) => handler());
       } else {
         this.gestureInProgress = true;
-        this.doubleSwipeHandlers.down.forEach((handler) => handler());
+        this.twoFingerSwipeHandlers.down.forEach((handler) => handler());
       }
     }
   }
