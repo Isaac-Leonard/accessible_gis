@@ -48,6 +48,14 @@ export class ScreenReader {
         throw new Error("no content to read error,no next sibling");
       }
     });
+
+    this.gestureManager.addDoubleTapHandler(() => {
+      if (this.focusedNode instanceof HTMLHtmlElement) {
+        this.focusedNode.click();
+      }
+      {
+      }
+    });
   }
 
   speak(content: string | HTMLHtmlElement | Node) {
