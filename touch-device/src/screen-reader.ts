@@ -10,8 +10,14 @@ export class ScreenReader {
   root: HTMLHtmlElement;
   gestureManager: GestureManager;
 
+  focusedNode: Node;
+
   constructor(root: HTMLHtmlElement) {
     this.root = root;
+    this.focusedNode = root;
+    while (this.focusedNode.firstChild !== null) {
+      this.focusedNode = this.focusedNode.firstChild;
+    }
     this.gestureManager = new GestureManager(root);
     this.attachEventHandlers();
   }
@@ -20,13 +26,41 @@ export class ScreenReader {
     this.gestureManager.addTapHandler((target) => {
       this.speak(target);
     });
+
+    this.gestureManager.addOneFingerSwipeHandler("right", () => {
+      const nextNode = this.focusedNode.nextSibling;
+      if (nextNode !== null) {
+        this.focusedNode = nextNode;
+        this.speak(this.focusedNode);
+      } else {
+        // TODO Actually handle this case properly
+        throw new Error("no content to read error,no next sibling");
+      }
+    });
+
+    this.gestureManager.addOneFingerSwipeHandler("left", () => {
+      const prevNode = this.focusedNode.previousSibling;
+      if (prevNode !== null) {
+        this.focusedNode = prevNode;
+        this.speak(this.focusedNode);
+      } else {
+        // TODO Actually handle this case properly
+        throw new Error("no content to read error,no next sibling");
+      }
+    });
   }
 
-  speak(content: string | HTMLHtmlElement) {
+  speak(content: string | HTMLHtmlElement | Node) {
     if (typeof content === "string") {
       this.speakText(content);
+    } else if (content instanceof HTMLHtmlElement) {
+      const text = content.innerText;
+      const contentType = content.tagName;
+      const textToSpeak = `${text}\n${contentType}`;
+      this.speakText(textToSpeak);
     } else {
-      // TODO transform DOM structure into speakable text
+      const text = content.textContent ?? "";
+      this.speakText(text);
     }
   }
 
